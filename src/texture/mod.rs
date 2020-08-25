@@ -1,18 +1,16 @@
+use crate::FromReader;
 use ddsfile::{AlphaMode, D3D10ResourceDimension, Dds};
 use std::cmp;
 use std::convert::TryInto;
+use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::mem;
 
 pub mod ztex;
 
 /// Convert ZTEX to DDS image format
 pub fn convert_ztex_to_dds<'a>(ztex_data: &[u8]) -> Result<Dds, &'a str> {
-    let mut index = mem::size_of::<ztex::Header>();
-    // TODO überprüfe ob header richtiges Format bekommt
-    let header: ztex::Header = match ztex_data.get(0..index) {
-        Some(header) => bincode::deserialize(header).unwrap(),
-        None => return Err("Could not read ZTEX Header."),
-    };
+    let mut reader = Cursor::new(ztex_data);
+    let header = ztex::Header::from_reader(&mut reader);
     if header.get_signature() != ztex::FILE_SIGNATURE || header.get_version() != ztex::FILE_VERSION
     {
         return Err("Wrong ZTEX Signature or Version");
@@ -46,23 +44,10 @@ pub fn convert_ztex_to_dds<'a>(ztex_data: &[u8]) -> Result<Dds, &'a str> {
 
     let _palette = match header.get_format() == ztex::Format::P8 {
         true => {
-            // let new_index = index + mem::size_of::<ztex::Palette>();
-            // let palette: ztex::Palette = match ztex_data.get(index..new_index) {
-            //     Some(palette) => bincode::deserialize(palette).unwrap(),
-            //     None => return Err("Could not read P8 palette"),
-            // };
-            // index = new_index;
             let mut palette = ztex::Palette::new();
             for _ in 0..ztex::PALETTE_ENTRIES {
-                let new_index = index + mem::size_of::<ztex::Entry>();
-                match ztex_data.get(index..new_index) {
-                    Some(entry) => {
-                        let entry: ztex::Entry = bincode::deserialize(entry).unwrap();
-                        palette.push(entry);
-                        index = new_index;
-                    }
-                    None => return Err("Could not read entry of P8 palette"),
-                }
+                let entry = ztex::Entry::from_reader(&mut reader);
+                palette.push(entry);
             }
             match palette.len() == ztex::PALETTE_ENTRIES {
                 true => Some(palette),
@@ -81,25 +66,27 @@ pub fn convert_ztex_to_dds<'a>(ztex_data: &[u8]) -> Result<Dds, &'a str> {
             layer,
         );
     }
-    index += size_of_all_mip_maps;
+    let size_of_biggest_mip_map = get_mip_map_size(
+        &header.get_format(),
+        header.get_width(),
+        header.get_height(),
+        0,
+    );
+    let pos_of_biggest_mip_map = size_of_all_mip_maps - size_of_biggest_mip_map;
+    reader
+        .seek(SeekFrom::Current(pos_of_biggest_mip_map as i64))
+        .unwrap();
+    let mut biggest_mip_map_buf = vec![0_u8; size_of_biggest_mip_map as usize];
+    reader.read_exact(&mut biggest_mip_map_buf).unwrap();
+    dds.set_data(0, biggest_mip_map_buf).unwrap();
 
-    let new_index = index
-        - get_mip_map_size(
-            &header.get_format(),
-            header.get_width(),
-            header.get_height(),
-            0,
-        );
-    let ztex_layer_data = ztex_data.get(new_index..index).unwrap();
-    dds.set_data(0, Vec::from(ztex_layer_data)).unwrap();
-    //index = new_index;
     Ok(dds)
 }
 
 /// level 0 = highest, ztex is built other way round, 0 = lowest
-fn get_mip_map_size(format: &ztex::Format, width: u32, height: u32, level: u32) -> usize {
-    let mut x = cmp::max(1, width) as usize;
-    let mut y = cmp::max(1, height) as usize;
+fn get_mip_map_size(format: &ztex::Format, width: u32, height: u32, level: u32) -> u32 {
+    let mut x = cmp::max(1, width);
+    let mut y = cmp::max(1, height);
     for _ in 0..level {
         if x > 1 {
             x >>= 1;

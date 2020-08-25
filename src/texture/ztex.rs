@@ -1,7 +1,9 @@
+use crate::FromReader;
 use ddsfile::D3DFormat;
 use ddsfile::DxgiFormat;
 use serde::Deserialize;
 use std::convert::TryInto;
+use std::io::Read;
 
 // Definitions for compressed ZenGin Textures (.tex)
 // Gothic stores its textures in a proprietary format called ZTEX, which is basically DDS
@@ -89,7 +91,7 @@ impl TryInto<DxgiFormat> for Format {
 }
 
 /// Info Block
-#[derive(Deserialize, Debug)]
+#[derive(FromReader, Deserialize, Debug)]
 pub struct Info {
     format: Format,
     width: u32,        // mipmap 0
@@ -100,7 +102,7 @@ pub struct Info {
     avg_color: u32,    // A8R8G8B8
 }
 /// File Header
-#[derive(Deserialize, Debug)]
+#[derive(FromReader, Deserialize, Debug)]
 pub struct Header {
     signature: u32,
     version: u32,
@@ -129,7 +131,7 @@ impl Header {
 }
 
 /// Palette Entry
-#[derive(Deserialize, Debug)]
+#[derive(FromReader, Deserialize, Debug)]
 pub struct Entry {
     r: u8,
     g: u8,
