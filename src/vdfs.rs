@@ -1,3 +1,4 @@
+use crate::FromReader;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::io::prelude::*;
@@ -65,29 +66,12 @@ impl<R: Read + Seek> Vdfs<R> {
             return Err("Signature of file does not match Gothic 1 or 2.");
         }
 
-        let mut count_buf = [0_u8; 4];
-        reader.read_exact(&mut count_buf).unwrap();
-        let count = u32::from_le_bytes(count_buf);
-
-        let mut num_files_buf = [0_u8; 4];
-        reader.read_exact(&mut num_files_buf).unwrap();
-        let num_files = u32::from_le_bytes(num_files_buf);
-
-        let mut timestamp_buf = [0_u8; 4];
-        reader.read_exact(&mut timestamp_buf).unwrap();
-        let timestamp = u32::from_le_bytes(timestamp_buf);
-
-        let mut data_size_buf = [0_u8; 4];
-        reader.read_exact(&mut data_size_buf).unwrap();
-        let data_size = u32::from_le_bytes(data_size_buf);
-
-        let mut root_cat_offset_buf = [0_u8; 4];
-        reader.read_exact(&mut root_cat_offset_buf).unwrap();
-        let root_cat_offset = u32::from_le_bytes(root_cat_offset_buf) as u64;
-
-        let mut version_buf = [0_u8; 4];
-        reader.read_exact(&mut version_buf).unwrap();
-        let version = u32::from_le_bytes(version_buf);
+        let count = u32::from_reader(&mut reader);
+        let num_files = u32::from_reader(&mut reader);
+        let timestamp = u32::from_reader(&mut reader);
+        let data_size = u32::from_reader(&mut reader);
+        let root_cat_offset = u32::from_reader(&mut reader) as u64;
+        let version = u32::from_reader(&mut reader);
 
         if version != 0x50 {
             return Err("Vdfs Version is not supported.");
@@ -112,22 +96,10 @@ impl<R: Read + Seek> Vdfs<R> {
                     name.push(*c as char);
                 }
             }
-
-            let mut offset_buf = [0_u8; 4];
-            reader.read_exact(&mut offset_buf).unwrap();
-            let offset = u32::from_le_bytes(offset_buf) as u64;
-
-            let mut size_buf = [0_u8; 4];
-            reader.read_exact(&mut size_buf).unwrap();
-            let size = u32::from_le_bytes(size_buf);
-
-            let mut kind_buf = [0_u8; 4];
-            reader.read_exact(&mut kind_buf).unwrap();
-            let kind = u32::from_le_bytes(kind_buf);
-
-            let mut attr_buf = [0_u8; 4];
-            reader.read_exact(&mut attr_buf).unwrap();
-            let attr = u32::from_le_bytes(attr_buf);
+            let offset = u32::from_reader(&mut reader) as u64;
+            let size = u32::from_reader(&mut reader);
+            let kind = u32::from_reader(&mut reader);
+            let attr = u32::from_reader(&mut reader);
 
             if kind & ENTRY_DIR == 0 {
                 let properties = Properties::new(name.clone(), offset, size, kind, attr);
