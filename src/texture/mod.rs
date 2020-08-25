@@ -1,7 +1,6 @@
 use ddsfile::{AlphaMode, D3D10ResourceDimension, Dds};
 use std::cmp;
 use std::convert::TryInto;
-use std::io::prelude::*;
 use std::mem;
 
 pub mod ztex;
@@ -18,7 +17,7 @@ pub fn convert_ztex_to_dds<'a>(ztex_data: &[u8]) -> Result<Dds, &'a str> {
     {
         return Err("Wrong ZTEX Signature or Version");
     }
-    let dds = match header.get_format().try_into() {
+    let mut dds = match header.get_format().try_into() {
         Ok(format) => Dds::new_d3d(
             header.get_height(),
             header.get_width(),
@@ -73,29 +72,31 @@ pub fn convert_ztex_to_dds<'a>(ztex_data: &[u8]) -> Result<Dds, &'a str> {
         false => None,
     };
     let mipmap_count = cmp::max(1, header.get_mipmap_level());
-    let mut buffer_size = 0;
-    for val in 0..mipmap_count {
-        buffer_size += get_mip_map_size(
+    let mut size_of_all_mip_maps = 0;
+    for layer in 0..mipmap_count {
+        size_of_all_mip_maps += get_mip_map_size(
             &header.get_format(),
             header.get_width(),
             header.get_height(),
-            val,
+            layer,
         );
     }
-    let buffer = {
-        let new_index = index + buffer_size;
-        match ztex_data.get(index..new_index) {
-            Some(buf) => {
-                //index = new_index; // value never read anyways
-                buf
-            }
-            None => return Err("Error reading..."),
-        }
-    };
-    dds.write(&mut Vec::from(buffer)).unwrap();
+    index += size_of_all_mip_maps;
+
+    let new_index = index
+        - get_mip_map_size(
+            &header.get_format(),
+            header.get_width(),
+            header.get_height(),
+            0,
+        );
+    let ztex_layer_data = ztex_data.get(new_index..index).unwrap();
+    dds.set_data(0, Vec::from(ztex_layer_data)).unwrap();
+    //index = new_index;
     Ok(dds)
 }
 
+/// level 0 = highest, ztex is built other way round, 0 = lowest
 fn get_mip_map_size(format: &ztex::Format, width: u32, height: u32, level: u32) -> usize {
     let mut x = cmp::max(1, width) as usize;
     let mut y = cmp::max(1, height) as usize;

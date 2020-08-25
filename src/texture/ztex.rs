@@ -99,7 +99,6 @@ pub struct Info {
     ref_height: u32,   // ingame y
     avg_color: u32,    // A8R8G8B8
 }
-
 /// File Header
 #[derive(Deserialize, Debug)]
 pub struct Header {
