@@ -50,6 +50,21 @@ impl FromBufReader for String {
     }
 }
 
+pub fn skip_spaces<R: Read>(mut reader: R) {
+    loop {
+        let mut buf = [0_u8; 1];
+        match reader.read_exact(&mut buf) {
+            Ok(_) => (),
+            Err(_) => break,
+        }
+        let c = u8::from_le_bytes(buf) as char;
+        match c {
+            ' ' | '\r' | '\t' | '\n' => (),
+            _ => break,
+        }
+    }
+}
+
 #[derive(FromReader, Deserialize, Debug)]
 struct Date {
     year: u32,
