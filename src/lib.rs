@@ -2,10 +2,10 @@
 
 use serde::Deserialize;
 use std::fmt;
-use std::io::BufRead;
-use std::io::Read;
+use std::io::{BufRead, Read};
 use zen_loader_from_reader::FromReader;
 
+pub mod deserializer;
 pub mod material;
 pub mod math;
 pub mod mesh;
@@ -40,6 +40,22 @@ impl FromReader for u16 {
     }
 }
 
+impl FromReader for u8 {
+    fn from_reader<R: Read>(mut reader: R) -> Self {
+        let mut buf = [0_u8; std::mem::size_of::<Self>()];
+        reader.read_exact(&mut buf).unwrap();
+        bincode::deserialize(&buf).unwrap()
+    }
+}
+
+impl FromReader for char {
+    fn from_reader<R: Read>(mut reader: R) -> Self {
+        let mut buf = [0_u8; std::mem::size_of::<Self>()];
+        reader.read_exact(&mut buf).unwrap();
+        bincode::deserialize(&buf).unwrap()
+    }
+}
+
 impl FromBufReader for String {
     fn from_buf_reader<R: Read + BufRead>(mut reader: R) -> Self {
         let mut buf = vec![];
@@ -65,6 +81,53 @@ pub fn skip_spaces<R: Read>(mut reader: R) {
     }
 }
 
+pub fn skip_string<R: Read>(mut reader: R, pattern: &str) -> bool {
+    skip_spaces(&mut reader);
+    match pattern.is_empty() {
+        true => loop {
+            let c = char::from_reader(reader);
+            if c == '\n' || c == ' ' {
+                return true;
+            }
+        },
+        false => {
+            for pattern_char in pattern.chars() {
+                let c = char::from_reader(reader);
+                if c != pattern_char {
+                    return false;
+                }
+            }
+            true
+        }
+    }
+}
+
+pub fn read_i32_ascii<'a, R: Read>(mut reader: R) -> Result<i32, &'a str> {
+    skip_spaces(reader);
+    let num = String::new();
+    loop {
+        let digit = u8::from_reader(reader);
+        if digit <= '0' as u8 || digit >= '9' as u8 {
+            break;
+        }
+        num.push(digit as char);
+    }
+    match num.is_empty() {
+        true => Err("No number found."),
+        false => Ok(i32::from_str_radix(num.as_str(), 10).unwrap()),
+    }
+}
+
+pub fn read_bool_ascii<'a, R: Read>(mut reader: R) -> Result<bool, &'a str> {
+    skip_spaces(reader);
+    let val = char::from_reader(reader);
+    match val {
+        '0' => Ok(false),
+        '1' => Ok(true),
+        _ => Err("Value is not a bool."),
+    }
+}
+
 #[derive(FromReader, Deserialize, Debug)]
 struct Date {
     year: u32,
@@ -84,14 +147,6 @@ impl fmt::Display for Date {
         )
     }
 }
-
-/// Possible filetypes this zen-file can have
-pub enum Kind {
-    Unknown,
-    Ascii,
-    Binary,
-    BinSafe,
-}
 /// Information about one of the chunks in a zen-file
 pub struct ChunkHeader {
     start_position: u32,
@@ -107,20 +162,4 @@ pub struct ChunkHeader {
 pub struct Chunk {
     pub id: u16,
     pub length: u32,
-}
-
-/// File Header for zen-files
-pub struct Header {
-    version: i32,
-    kind: Kind,
-    save_game: bool,
-    date: String,
-    user: String,
-    object_count: i32,
-}
-
-/// Header for BinSafe file kind
-pub struct BinSafeHeader {
-    version: u32,
-    hash_table_offset: u32,
 }

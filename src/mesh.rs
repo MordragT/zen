@@ -1,5 +1,6 @@
+use crate::material::{self, AdvancedMaterial, BasicMaterial, Material};
 use crate::math::{Float3, Float4};
-use crate::{Chunk, Date};
+use crate::{Chunk, Date, Header};
 use crate::{FromBufReader, FromReader};
 use serde::Deserialize;
 use std::io::{Cursor, Seek, SeekFrom};
@@ -14,10 +15,11 @@ const FEATLIST: u16 = 0xB040;
 const POLYLIST: u16 = 0xB050;
 const MESH_END: u16 = 0xB060;
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug)]
 pub struct Mesh {
     vertices: Vec<Float3>,
     indices: Vec<u32>,
+    materials: Vec<Material>,
 }
 
 impl Mesh {
@@ -29,6 +31,7 @@ impl Mesh {
         loop {
             let chunk = Chunk::from_reader(&mut reader);
             let chunk_end = SeekFrom::Current(chunk.length as i64);
+            let mut materials = vec![];
             match chunk.id {
                 MESH => {
                     let version = u32::from_reader(&mut reader);
@@ -47,6 +50,7 @@ impl Mesh {
                     reader.seek(chunk_end).unwrap();
                 }
                 MATLIST => {
+                    let _header = 
                     // Skip name and chunk headers
                     let _material_name = String::from_buf_reader(&mut reader);
                     let _chunk_size = u32::from_reader(&mut reader);
@@ -59,6 +63,12 @@ impl Mesh {
                     let _class_name = String::from_buf_reader(&mut reader);
 
                     // Save into Vec
+                    let material: Material = if version == material::GOTHIC1 {
+                        BasicMaterial::from_reader(&mut reader).into()
+                    } else {
+                        AdvancedMaterial::from_reader(&mut reader).into()
+                    };
+                    materials.push(material);
                 }
                 _ => {
                     reader.seek(chunk_end).unwrap();

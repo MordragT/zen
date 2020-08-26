@@ -1,8 +1,12 @@
 use crate::math::Float2;
+use crate::FromReader;
 use serde::Deserialize;
+use std::io::Read;
+
+pub const GOTHIC1: u16 = 39939;
 
 #[repr(u8)]
-#[derive(Deserialize, Debug)]
+#[derive(FromReader, Deserialize, Debug)]
 pub enum Group {
     Undef,
     Metal,
@@ -13,13 +17,14 @@ pub enum Group {
     Snow,
 }
 
-pub enum Material<'a> {
-    Basic(&'a mut BasicMaterial),
-    Advanced(&'a mut AdvancedMaterial),
+#[derive(Debug)]
+pub enum Material {
+    Basic(BasicMaterial),
+    Advanced(AdvancedMaterial),
 }
 
 /// Materials that are used in Gothic 1
-#[derive(Deserialize, Debug)]
+#[derive(FromReader, Deserialize, Debug)]
 pub struct BasicMaterial {
     name: String,
     group: Group,
@@ -37,8 +42,14 @@ pub struct BasicMaterial {
     default_mapping: Float2,
 }
 
+impl Into<Material> for BasicMaterial {
+    fn into(self) -> Material {
+        Material::Basic(self)
+    }
+}
+
 /// Materials used in Gothic 2
-#[derive(Deserialize, Debug)]
+#[derive(FromReader, Deserialize, Debug)]
 pub struct AdvancedMaterial {
     name: String,
     group: Group,
@@ -64,4 +75,10 @@ pub struct AdvancedMaterial {
     ignore_sun: u8,
     aplha_func: u8,
     default_mapping: Float2,
+}
+
+impl Into<Material> for AdvancedMaterial {
+    fn into(self) -> Material {
+        Material::Advanced(self)
+    }
 }
