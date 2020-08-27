@@ -10,7 +10,6 @@ edition = "2018"
 ddsfile = { git = "https://github.com/MordragT/ddsfile", branch = "master" }
 bincode = "1.3.1"
 serde = { version = "1.0.115", features = ["derive"] }
-zen-loader_from_reader = { path = "./zen-loader_from_reader" }
 
 [dev-dependencies]
 image = "0.23.8"

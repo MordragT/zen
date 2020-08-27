@@ -10,12 +10,12 @@ pub struct AsciiDeserializer<'a> {
     bytes: Bytes<'a>,
 }
 
-impl<'de, 'a> Deserializer<'de> for &'a mut AsciiDeserializer<'de> {
-    type Error = Error;
+// impl<'de, 'a> Deserializer<'de> for &'a mut AsciiDeserializer<'de> {
+//     type Error = Error;
 
-    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-    }
-}
+//     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value>
+//     where
+//         V: Visitor<'de>,
+//     {
+//     }
+// }

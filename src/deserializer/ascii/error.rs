@@ -33,10 +33,11 @@ pub enum ErrorCode {
     Message(String),
     InvalidDescriptor,
     Eof,
-    UnknownValueKind,
+    UnknownValueKind(String),
     ParseIntError(ParseIntError),
     ParseFloatError(ParseFloatError),
     ParseBoolError,
+    ParseColorError,
 }
 
 impl fmt::Display for ErrorCode {
@@ -45,10 +46,11 @@ impl fmt::Display for ErrorCode {
             ErrorCode::Message(s) => f.write_str(s),
             ErrorCode::InvalidDescriptor => f.write_str("Invalid Descriptor"),
             ErrorCode::Eof => f.write_str("Reached end of file"),
-            ErrorCode::UnknownValueKind => f.write_str("Unknown Value Kind"),
+            ErrorCode::UnknownValueKind(s) => f.write_str(s),
             ErrorCode::ParseIntError(e) => fmt::Display::fmt(e, f),
             ErrorCode::ParseFloatError(e) => fmt::Display::fmt(e, f),
             ErrorCode::ParseBoolError => f.write_str("Error parsing Bool, value outside 1 or 0"),
+            ErrorCode::ParseColorError => f.write_str("Error parsing Color, no (u8, u8, u8, u8)"),
         }
     }
 }

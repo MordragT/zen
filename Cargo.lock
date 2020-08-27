@@ -415,14 +415,4 @@ dependencies = [
  "ddsfile",
  "image",
  "serde",
- "zen-loader_from_reader",
-]
-
-[[package]]
-name = "zen-loader_from_reader"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "quote",
- "syn",
 ]

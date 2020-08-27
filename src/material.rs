@@ -1,12 +1,11 @@
 use crate::math::Float2;
-use crate::FromReader;
 use serde::Deserialize;
 use std::io::Read;
 
 pub const GOTHIC1: u16 = 39939;
 
 #[repr(u8)]
-#[derive(FromReader, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub enum Group {
     Undef,
     Metal,
@@ -24,7 +23,7 @@ pub enum Material {
 }
 
 /// Materials that are used in Gothic 1
-#[derive(FromReader, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct BasicMaterial {
     name: String,
     group: Group,
@@ -49,7 +48,7 @@ impl Into<Material> for BasicMaterial {
 }
 
 /// Materials used in Gothic 2
-#[derive(FromReader, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct AdvancedMaterial {
     name: String,
     group: Group,

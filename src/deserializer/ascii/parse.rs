@@ -25,50 +25,59 @@ impl<'a> Bytes<'a> {
         let value = self.parse_string_until('\n')?;
         match kind.as_str() {
             "string" => Ok(Value::String(value)),
-            "int" => Ok(Value::Int(match i32::from_str_radix(value.as_str(), 10) {
-                Ok(i) => i,
-                Err(e) => return Err(self.error(e.into())),
-            })),
-            "float" => Ok(Value::Float(match value.parse::<f32>() {
-                Ok(f) => f,
-                Err(e) => return Err(self.error(e.into())),
-            })),
-            "bool" => Ok(Value::Bool(match value.as_str() {
-                "1" => true,
-                "0" => false,
-                _ => return Err(self.error(ErrorCode::ParseBoolError)),
-            })),
+            "int" => {
+                let int = self.str_to_i32(value.as_str())?;
+                Ok(Value::Int(int))
+            }
+            "float" => {
+                let float = self.str_to_f32(value.as_str())?;
+                Ok(Value::Float(float))
+            }
+            "bool" => {
+                let boolean = self.str_to_bool(value.as_str())?;
+                Ok(Value::Bool(boolean))
+            }
+            "color" => {
+                let color = self.str_to_color(value.as_str())?;
+                Ok(Value::Color(color))
+            }
             "raw" => Ok(Value::Raw(Vec::from(value.as_bytes()))),
-            _ => Err(self.error(ErrorCode::UnknownValueKind)),
+            "enum" => {
+                let enum_val = self.str_to_i32(value.as_str())?;
+                Ok(Value::Enum(enum_val))
+            }
+            _ => Err(self.error(ErrorCode::UnknownValueKind(kind))),
         }
     }
-    pub fn parse_string_until(&mut self, char: char) -> Result<String> {
-        let result = String::new();
-        while let c = match self.peek() {
-            Some(c) => c as char,
-            None => return Err(self.error(ErrorCode::Eof)),
-        } {
+    pub fn parse_string_until(&mut self, character: char) -> Result<String> {
+        let mut result = String::new();
+        loop {
+            let c = match self.peek() {
+                Some(c) => c as char,
+                None => return Err(self.error(ErrorCode::Eof)),
+            };
             self.advance_single();
-            match c {
-                char => return Ok(result),
-                _ => result.push(c),
+            if c == character {
+                return Ok(result);
+            } else {
+                result.push(c);
             }
         }
-        Err(self.error(ErrorCode::Eof))
     }
     pub fn parse_until(&mut self, byte: u8) -> Result<Vec<u8>> {
-        let result = vec![];
-        while let c = match self.peek() {
-            Some(c) => c,
-            None => return Err(self.error(ErrorCode::Eof)),
-        } {
+        let mut result = vec![];
+        loop {
+            let b = match self.peek() {
+                Some(b) => b,
+                None => return Err(self.error(ErrorCode::Eof)),
+            };
             self.advance_single();
-            match c {
-                byte => return Ok(result),
-                _ => result.push(c),
+            if b == byte {
+                return Ok(result);
+            } else {
+                result.push(b);
             }
         }
-        Err(self.error(ErrorCode::Eof))
     }
     pub fn advance(&mut self, bytes: usize) -> Result<()> {
         for _ in 0..bytes {
@@ -120,5 +129,37 @@ impl<'a> Bytes<'a> {
         s.bytes()
             .enumerate()
             .all(|(i, b)| self.bytes.get(i).map_or(false, |t| *t == b))
+    }
+    fn str_to_color(&self, string: &str) -> Result<(u8, u8, u8, u8)> {
+        let mut nums = vec![];
+        for s in string.split_ascii_whitespace() {
+            match u8::from_str_radix(s, 10) {
+                Ok(n) => nums.push(n),
+                Err(e) => return Err(self.error(e.into())),
+            }
+        }
+        match nums.len() > 4 {
+            true => Err(self.error(ErrorCode::ParseColorError)),
+            false => Ok((nums[0], nums[1], nums[2], nums[3])),
+        }
+    }
+    fn str_to_i32(&self, string: &str) -> Result<i32> {
+        match i32::from_str_radix(string, 10) {
+            Ok(i) => Ok(i),
+            Err(e) => return Err(self.error(e.into())),
+        }
+    }
+    fn str_to_f32(&self, string: &str) -> Result<f32> {
+        match string.parse::<f32>() {
+            Ok(f) => Ok(f),
+            Err(e) => return Err(self.error(e.into())),
+        }
+    }
+    fn str_to_bool(&self, string: &str) -> Result<bool> {
+        match string {
+            "1" => Ok(true),
+            "0" => Ok(false),
+            _ => return Err(self.error(ErrorCode::ParseBoolError)),
+        }
     }
 }

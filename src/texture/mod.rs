@@ -1,4 +1,3 @@
-use crate::FromReader;
 use ddsfile::{AlphaMode, D3D10ResourceDimension, Dds};
 use std::cmp;
 use std::convert::TryInto;
@@ -10,7 +9,8 @@ pub mod ztex;
 /// Convert ZTEX to DDS image format
 pub fn convert_ztex_to_dds<'a>(ztex_data: &[u8]) -> Result<Dds, &'a str> {
     let mut reader = Cursor::new(ztex_data);
-    let header = ztex::Header::from_reader(&mut reader);
+    let header =
+        bincode::deserialize_from::<&mut Cursor<&[u8]>, ztex::Header>(&mut reader).unwrap(); //ztex::Header::from_reader(&mut reader);
     if header.get_signature() != ztex::FILE_SIGNATURE || header.get_version() != ztex::FILE_VERSION
     {
         return Err("Wrong ZTEX Signature or Version");
@@ -46,7 +46,9 @@ pub fn convert_ztex_to_dds<'a>(ztex_data: &[u8]) -> Result<Dds, &'a str> {
         true => {
             let mut palette = ztex::Palette::new();
             for _ in 0..ztex::PALETTE_ENTRIES {
-                let entry = ztex::Entry::from_reader(&mut reader);
+                let entry =
+                    bincode::deserialize_from::<&mut Cursor<&[u8]>, ztex::Entry>(&mut reader)
+                        .unwrap();
                 palette.push(entry);
             }
             match palette.len() == ztex::PALETTE_ENTRIES {
