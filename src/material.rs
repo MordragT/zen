@@ -1,6 +1,5 @@
 use crate::math::Float2;
 use serde::Deserialize;
-use std::io::Read;
 
 pub const GOTHIC1: u16 = 39939;
 

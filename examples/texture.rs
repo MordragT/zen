@@ -22,7 +22,7 @@ fn main() {
     decoder.read_image(&mut dds_bytes).unwrap();
 
     let mut output_jpeg = File::create("/home/tom/out.png").unwrap();
-    let mut encoder = PNGEncoder::new(&mut output_jpeg);
+    let encoder = PNGEncoder::new(&mut output_jpeg);
     encoder
         .encode(dds_bytes.as_slice(), width, height, color_type)
         .unwrap();

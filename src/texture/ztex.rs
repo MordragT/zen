@@ -2,7 +2,6 @@ use ddsfile::D3DFormat;
 use ddsfile::DxgiFormat;
 use serde::Deserialize;
 use std::convert::TryInto;
-use std::io::Read;
 
 // Definitions for compressed ZenGin Textures (.tex)
 // Gothic stores its textures in a proprietary format called ZTEX, which is basically DDS

@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use std::fmt;
-use std::io::Read;
+use std::io::{Cursor, Read};
 
 pub mod ascii;
 pub mod bin_safe;
@@ -18,6 +18,7 @@ impl fmt::Display for Position {
 }
 
 /// Possible filetypes this zen-file can have
+#[derive(Debug)]
 pub enum Kind {
     Unknown,
     Ascii,
@@ -25,98 +26,117 @@ pub enum Kind {
     BinSafe,
 }
 
-/// Possible value-types
-#[repr(i32)]
-pub enum Value {
-    Zero,                    // 0x0
-    String(String),          // 0x1
-    Int(i32),                // 0x2
-    Float(f32),              // 0x3
-    Byte(u8),                // 0x4
-    Word(u16),               // 0x5
-    Bool(bool),              // 0x6
-    Vec3((f32, f32, f32)),   // 0x7
-    Color((u8, u8, u8, u8)), // 0x8
-    Raw(Vec<u8>),            // 0x9
-    Undef1,                  // 0xA
-    Undef2,                  // 0xB
-    Undef3,                  // 0xC
-    Undef4,                  // 0xD
-    Undef5,                  // 0xE
-    Undef6,                  // 0xF
-    RawFloat,                // 0x10
-    Enum(i32),               // 0x11
-    Hash,                    // 0x12
-}
+// /// Possible value-types
+// #[repr(i32)]
+// pub enum Value {
+//     Zero,                    // 0x0
+//     String(String),          // 0x1
+//     Int(i32),                // 0x2
+//     Float(f32),              // 0x3
+//     Byte(u8),                // 0x4
+//     Word(u16),               // 0x5
+//     Bool(bool),              // 0x6
+//     Vec3((f32, f32, f32)),   // 0x7
+//     Color((u8, u8, u8, u8)), // 0x8
+//     Raw(Vec<u8>),            // 0x9
+//     Undef1,                  // 0xA
+//     Undef2,                  // 0xB
+//     Undef3,                  // 0xC
+//     Undef4,                  // 0xD
+//     Undef5,                  // 0xE
+//     Undef6,                  // 0xF
+//     RawFloat,                // 0x10
+//     Enum(i32),               // 0x11
+//     Hash,                    // 0x12
+// }
 /// File Header for zen-files
+#[derive(Debug)]
 pub struct Header {
     version: i32,
     kind: Kind,
     save_game: bool,
-    date: String,
-    user: String,
+    date: Option<String>,
+    user: Option<String>,
     object_count: i32,
 }
 
 impl Header {
-    fn from_reader<'a, R: Read>(mut reader: R) -> Result<Self, &'a str> {
-        if !skip_string(&mut reader, "ZenGin Archive") {
-            return Err("Not a valid format.");
-        }
-        if !skip_string(&mut reader, "ver") {
-            return Err("Not a valid header.");
-        }
-        // Version should always be 1
-        let version = read_i32_ascii(&mut reader)?;
-
-        // Skip archiver type
-        skip_string(&mut reader, "");
-
-        // Read file-type, to create the right archiver implementation
-        let file_kind_string = bincode::deserialize_from::<&mut R, String>(&mut reader).unwrap();
-
-        let file_kind = match file_kind_string.as_str() {
-            "ASCII" => Kind::Ascii,
-            "BINARY" => Kind::Binary,
-            "BIN_SAFE" => Kind::BinSafe,
-            _ => return Err("Unsupported file format."),
-        };
-        let save_game = read_bool_ascii(&mut reader)?;
-        let date = match skip_string(&mut reader, "date") {
-            true => {
-                let mut date = bincode::deserialize_from::<&mut R, String>(&mut reader).unwrap();
-
-                date.push_str(" ");
-                date.push_str(
-                    bincode::deserialize_from::<&mut R, String>(&mut reader)
-                        .unwrap()
-                        .as_str(),
-                );
-                date
-            }
-            false => String::new(),
-        };
-
-        let user = match skip_string(&mut reader, "user") {
-            true => bincode::deserialize_from::<&mut R, String>(&mut reader).unwrap(),
-            false => String::new(),
-        };
-
-        match skip_string(&mut reader, "END") {
-            true => {
-                skip_spaces(&mut reader);
-                Ok(Self {
-                    version,
-                    kind: file_kind,
-                    save_game,
-                    date,
-                    user,
-                    object_count: 0,
-                })
-            }
-            false => Err("No END in header(1)"),
+    pub fn new(
+        version: i32,
+        kind: Kind,
+        save_game: bool,
+        date: Option<String>,
+        user: Option<String>,
+        object_count: i32,
+    ) -> Self {
+        Self {
+            version,
+            kind,
+            save_game,
+            date,
+            user,
+            object_count,
         }
     }
+    // pub fn from_bytes<'a>(bytes: &[u8]) -> Result<Self, &'a str> {
+    //     let reader = Cursor::new(bytes);
+    //     if !skip_string(&mut reader, "ZenGin Archive") {
+    //         return Err("Not a valid format.");
+    //     }
+    //     if !skip_string(&mut reader, "ver") {
+    //         return Err("Not a valid header.");
+    //     }
+    //     // Version should always be 1
+    //     let version = read_i32_ascii(&mut reader)?;
+
+    //     // Skip archiver type
+    //     skip_string(&mut reader, "");
+
+    //     // Read file-type, to create the right archiver implementation
+    //     let file_kind_string = bincode::deserialize_from::<&mut R, String>(&mut reader).unwrap();
+
+    //     let file_kind = match file_kind_string.as_str() {
+    //         "ASCII" => Kind::Ascii,
+    //         "BINARY" => Kind::Binary,
+    //         "BIN_SAFE" => Kind::BinSafe,
+    //         _ => return Err("Unsupported file format."),
+    //     };
+    //     let save_game = read_bool_ascii(&mut reader)?;
+    //     let date = match skip_string(&mut reader, "date") {
+    //         true => {
+    //             let mut date = bincode::deserialize_from::<&mut R, String>(&mut reader).unwrap();
+
+    //             date.push_str(" ");
+    //             date.push_str(
+    //                 bincode::deserialize_from::<&mut R, String>(&mut reader)
+    //                     .unwrap()
+    //                     .as_str(),
+    //             );
+    //             date
+    //         }
+    //         false => String::new(),
+    //     };
+
+    //     let user = match skip_string(&mut reader, "user") {
+    //         true => bincode::deserialize_from::<&mut R, String>(&mut reader).unwrap(),
+    //         false => String::new(),
+    //     };
+
+    //     match skip_string(&mut reader, "END") {
+    //         true => {
+    //             skip_spaces(&mut reader);
+    //             Ok(Self {
+    //                 version,
+    //                 kind: file_kind,
+    //                 save_game,
+    //                 date,
+    //                 user,
+    //                 object_count: 0,
+    //             })
+    //         }
+    //         false => Err("No END in header(1)"),
+    //     }
+    // }
 }
 
 pub fn skip_spaces<R: Read>(mut reader: R) {

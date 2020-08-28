@@ -1,7 +1,7 @@
 use crate::deserializer::Position;
 use serde::de;
 use std::fmt;
-use std::num::{ParseFloatError, ParseIntError};
+use std::num::{ParseFloatError, ParseIntError, TryFromIntError};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -31,26 +31,64 @@ impl fmt::Display for Error {
 #[derive(Clone, Debug, PartialEq)]
 pub enum ErrorCode {
     Message(String),
+    InvalidHeader,
+    ExpectedAsciiHeader,
+    ExpectedAsciiHeaderEnd,
     InvalidDescriptor,
-    Eof,
+    EndOfFile,
     UnknownValueKind(String),
     ParseIntError(ParseIntError),
     ParseFloatError(ParseFloatError),
     ParseBoolError,
     ParseColorError,
+    ParseBytesError,
+    ExpectedInt,
+    ExpectedFloat,
+    ExpectedBool,
+    ExpectedColor,
+    ExpectedString,
+    ExpectedBytes,
+    ExpectedStructHeader,
+    ExpectedStructVersion,
+    ExpectedStructId,
+    ExpectedStructEnd,
+    InvalidStructHeader,
+    TryFromInt(TryFromIntError),
+    DeserializeNotSupported(String),
 }
 
 impl fmt::Display for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            ErrorCode::InvalidHeader => f.write_str("Invalid header"),
+            ErrorCode::ExpectedAsciiHeader => f.write_str("Expeted Ascii header: object count"),
+            ErrorCode::ExpectedAsciiHeaderEnd => f.write_str("Expected Ascii header: END"),
             ErrorCode::Message(s) => f.write_str(s),
             ErrorCode::InvalidDescriptor => f.write_str("Invalid Descriptor"),
-            ErrorCode::Eof => f.write_str("Reached end of file"),
+            ErrorCode::EndOfFile => f.write_str("Reached end of file"),
             ErrorCode::UnknownValueKind(s) => f.write_str(s),
             ErrorCode::ParseIntError(e) => fmt::Display::fmt(e, f),
             ErrorCode::ParseFloatError(e) => fmt::Display::fmt(e, f),
             ErrorCode::ParseBoolError => f.write_str("Error parsing Bool, value outside 1 or 0"),
             ErrorCode::ParseColorError => f.write_str("Error parsing Color, no (u8, u8, u8, u8)"),
+            ErrorCode::ParseBytesError => {
+                f.write_str("Error parsing raw bytes, containing invalid digits")
+            }
+            ErrorCode::ExpectedInt => f.write_str("Expected integer"),
+            ErrorCode::ExpectedFloat => f.write_str("Expected float"),
+            ErrorCode::ExpectedBool => f.write_str("Expected boolean"),
+            ErrorCode::ExpectedColor => f.write_str("Expected color"),
+            ErrorCode::ExpectedString => f.write_str("Expected string"),
+            ErrorCode::ExpectedBytes => f.write_str("Expected bytes"),
+            ErrorCode::ExpectedStructHeader => f.write_str("Expected struct header"),
+            ErrorCode::ExpectedStructVersion => f.write_str("Expected struct version"),
+            ErrorCode::ExpectedStructId => f.write_str("Expected struct id"),
+            ErrorCode::ExpectedStructEnd => f.write_str("Expected struct end"),
+            ErrorCode::InvalidStructHeader => f.write_str("Invalid struct header"),
+            ErrorCode::TryFromInt(e) => fmt::Display::fmt(e, f),
+            ErrorCode::DeserializeNotSupported(s) => {
+                f.write_str(format!("Deserialize not supported: {}", s).as_str())
+            }
         }
     }
 }
@@ -64,5 +102,11 @@ impl From<ParseIntError> for ErrorCode {
 impl From<ParseFloatError> for ErrorCode {
     fn from(e: ParseFloatError) -> Self {
         Self::ParseFloatError(e)
+    }
+}
+
+impl From<TryFromIntError> for ErrorCode {
+    fn from(e: TryFromIntError) -> Self {
+        Self::TryFromInt(e)
     }
 }

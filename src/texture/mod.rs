@@ -2,7 +2,6 @@ use ddsfile::{AlphaMode, D3D10ResourceDimension, Dds};
 use std::cmp;
 use std::convert::TryInto;
 use std::io::{Cursor, Read, Seek, SeekFrom};
-use std::mem;
 
 pub mod ztex;
 

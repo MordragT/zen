@@ -1,0 +1,206 @@
+ZenGin Archive
+ver 0
+ASCII
+saveGame 0
+objects 0
+END
+
+[% zCLensFlareFX 0 0]
+		name=string:ZSUN_FLARE
+		numFlares=int:7
+		[% % 0 0]
+			texName=string:sun_01.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:2 
+			size=float:0.7
+			alpha=float:60
+			rangeMin=float:0
+			posScale=float:0.3
+		[]
+		[% % 0 0]
+			texName=string:sun_02.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:2
+			size=float:0.5
+			alpha=float:60
+			rangeMin=float:0
+			posScale=float:0.5
+		[]
+		[% % 0 0]
+			texName=string:sun_03.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:2
+			size=float:0.7
+			alpha=float:60
+			rangeMin=float:0
+			posScale=float:0.9
+		[]
+		[% % 0 0]
+			texName=string:sun_05.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:2
+			size=float:1.3
+			alpha=float:60
+			rangeMin=float:0
+			posScale=float:1.1
+		[]
+		[% % 0 0]
+			texName=string:sun_03.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:2
+			size=float:0.5
+			alpha=float:60
+			rangeMin=float:0
+			posScale=float:1.3
+		[]
+		[% % 0 0]
+			texName=string:sun_02.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:2
+			size=float:0.3
+			alpha=float:60
+			rangeMin=float:0
+			posScale=float:1.8
+		[]
+		[% % 0 0]
+			texName=string:sun_04.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:2
+			size=float:2
+			alpha=float:60
+			rangeMin=float:0
+			posScale=float:2.1
+		[]
+	[]
+
+[LensFlareFXList % 0 0]
+	[% zCLensFlareFX 0 0]
+		name=string:ZSUN_FLARE
+		numFlares=int:7
+		[% % 0 0]
+			texName=string:sun_01.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:2 
+			size=float:0.7
+			alpha=float:60
+			rangeMin=float:0
+			posScale=float:0.3
+		[]
+		[% % 0 0]
+			texName=string:sun_02.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:2
+			size=float:0.5
+			alpha=float:60
+			rangeMin=float:0
+			posScale=float:0.5
+		[]
+		[% % 0 0]
+			texName=string:sun_03.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:2
+			size=float:0.7
+			alpha=float:60
+			rangeMin=float:0
+			posScale=float:0.9
+		[]
+		[% % 0 0]
+			texName=string:sun_05.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:2
+			size=float:1.3
+			alpha=float:60
+			rangeMin=float:0
+			posScale=float:1.1
+		[]
+		[% % 0 0]
+			texName=string:sun_03.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:2
+			size=float:0.5
+			alpha=float:60
+			rangeMin=float:0
+			posScale=float:1.3
+		[]
+		[% % 0 0]
+			texName=string:sun_02.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:2
+			size=float:0.3
+			alpha=float:60
+			rangeMin=float:0
+			posScale=float:1.8
+		[]
+		[% % 0 0]
+			texName=string:sun_04.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:2
+			size=float:2
+			alpha=float:60
+			rangeMin=float:0
+			posScale=float:2.1
+		[]
+	[]
+	[% zCLensFlareFX 0 0]
+		name=string:GLOW0
+		numFlares=int:1
+		[% % 0 0]
+			texName=string:zflare1.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:1
+			size=float:1.5
+			alpha=float:150
+			rangeMin=float:100
+			posScale=float:0.0
+		[]
+	[]
+	[% zCLensFlareFX 0 0]
+		name=string:CORONA0
+		numFlares=int:1
+		[% % 0 0]
+			texName=string:zflare1.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:0
+			size=float:1.0
+			alpha=float:155
+			rangeMin=float:100
+			posScale=float:0.0
+		[]
+	[]	
+	[% zCLensFlareFX 0 0]
+		name=string:GLOW1
+		numFlares=int:1
+		[% % 0 0]
+			texName=string:zflare1.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:1
+			size=float:0.5
+			alpha=float:200
+			rangeMin=float:5
+			posScale=float:0.0
+		[]
+	[]
+	[% zCLensFlareFX 0 0]
+		name=string:TorchFX01
+		numFlares=int:1
+		[% % 0 0]
+			texName=string:zflare1.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:1
+			size=float:0.5
+			alpha=float:80
+			rangeMin=float:0
+			rangeMax=float:4500
+			posScale=float:0.0
+		[]
+	[]
+	[% zCLensFlareFX 0 0]
+		name=string:TempleFX01
+		numFlares=int:1
+		[% % 0 0]
+			texName=string:cflareblue.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:1
+			size=float:0.6
+			alpha=float:80
+			rangeMin=float:0
+			rangeMax=float:4500
+			posScale=float:0.0
+		[]
+	[]
+	[% zCLensFlareFX 0 0]
+		name=string:TempleFX02
+		numFlares=int:1
+		[% % 0 0]
+			texName=string:zflare6.tga
+			type=enum;FT_CORONA;FT_GLOW;FT_FLARE:1
+			size=float:0.6
+			alpha=float:80
+			rangeMin=float:0
+			rangeMax=float:4500
+			posScale=float:0.0
+		[]
+	[]	
+[]
+
