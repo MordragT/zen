@@ -1,5 +1,5 @@
 use std::fs::File;
-use zen_loader::vdfs::Vdfs;
+use zen_archive::Vdfs;
 
 fn main() {
     let vdf_file = File::open("/home/tom/Steam/common/Gothic/Data/meshes.VDF").unwrap();

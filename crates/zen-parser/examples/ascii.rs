@@ -1,7 +1,7 @@
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use std::fs::File;
 use std::io::Read;
-use zen_loader::deserializer::ascii::AsciiDeserializer;
+use zen_parser::prelude::AsciiDeserializer;
 
 #[derive(Deserialize, Debug)]
 struct LensFlareFX {
@@ -21,10 +21,12 @@ struct Texture {
 }
 
 fn main() {
-    let mut file = File::open("/home/tom/Git/zen-loader/examples/example.zen").unwrap();
+    let mut file =
+        File::open("/home/tom/Git/zen-loader/crates/zen-parser/examples/example.zen").unwrap();
     let mut contents = vec![];
     file.read_to_end(&mut contents).unwrap();
-    let mut de = AsciiDeserializer::new(&mut contents).unwrap();
+    let mut de = AsciiDeserializer::from_bytes(&mut contents);
+    de.read_header().unwrap();
     let lens_flare = LensFlareFX::deserialize(&mut de).unwrap();
     println!("{:?}", lens_flare);
 }

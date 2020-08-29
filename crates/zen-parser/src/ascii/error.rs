@@ -1,6 +1,7 @@
-use crate::deserializer::Position;
+use super::Position;
 use serde::de;
 use std::fmt;
+use std::io;
 use std::num::{ParseFloatError, ParseIntError, TryFromIntError};
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -30,6 +31,7 @@ impl fmt::Display for Error {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ErrorCode {
+    Io(String),
     Message(String),
     InvalidHeader,
     ExpectedAsciiHeader,
@@ -60,6 +62,7 @@ pub enum ErrorCode {
 impl fmt::Display for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            ErrorCode::Io(s) => f.write_str(s),
             ErrorCode::InvalidHeader => f.write_str("Invalid header"),
             ErrorCode::ExpectedAsciiHeader => f.write_str("Expeted Ascii header: object count"),
             ErrorCode::ExpectedAsciiHeaderEnd => f.write_str("Expected Ascii header: END"),
@@ -108,5 +111,14 @@ impl From<ParseFloatError> for ErrorCode {
 impl From<TryFromIntError> for ErrorCode {
     fn from(e: TryFromIntError) -> Self {
         Self::TryFromInt(e)
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(e: io::Error) -> Self {
+        Error {
+            code: ErrorCode::Io(e.to_string()),
+            position: Position { line: 0, column: 0 },
+        }
     }
 }

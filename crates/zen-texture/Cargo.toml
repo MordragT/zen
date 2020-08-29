@@ -1,0 +1,16 @@
+[package]
+name = "zen-texture"
+version = "0.1.0"
+authors = ["MordragT <scrat_games@gmx.de>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bincode = "1.3.1"
+serde = { version = "1.0.115", features = ["derive"] }
+ddsfile = { git = "https://github.com/MordragT/ddsfile", branch = "master" }
+
+[dev-dependencies]
+zen-archive = { path = "../zen-archive" }
+image = "0.23.8"

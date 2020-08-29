@@ -7,9 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ddsfile = { git = "https://github.com/MordragT/ddsfile", branch = "master" }
-bincode = "1.3.1"
-serde = { version = "1.0.115", features = ["derive"] }
+zen-archive = { path = "crates/zen-archive" }
+zen-material = { path = "crates/zen-material" }
+zen-mesh = { path = "crates/zen-mesh" }
+zen-parser = { path = "crates/zen-parser" }
+zen-texture = { path = "crates/zen-texture" }
 
-[dev-dependencies]
-image = "0.23.8"

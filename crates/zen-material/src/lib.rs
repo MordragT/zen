@@ -1,4 +1,3 @@
-use crate::math::Float2;
 use serde::Deserialize;
 
 pub const GOTHIC1: u16 = 39939;
@@ -37,7 +36,7 @@ pub struct BasicMaterial {
     no_light_map: bool,
     load_dont_collapse: u8,
     detail_object: String,
-    default_mapping: Float2,
+    default_mapping: (f32, f32),
 }
 
 impl Into<Material> for BasicMaterial {
@@ -72,7 +71,7 @@ pub struct AdvancedMaterial {
     wave_grid_size: f32,
     ignore_sun: u8,
     aplha_func: u8,
-    default_mapping: Float2,
+    default_mapping: (f32, f32),
 }
 
 impl Into<Material> for AdvancedMaterial {
