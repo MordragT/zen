@@ -55,6 +55,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_repr"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2dc6b7951b17b051f3210b063f12cc17320e2fe30ae05b0fe2a3abb068551c76"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -75,6 +86,24 @@ checksum = "f7fe0bb3479651439c9112f72b6c505038574c9fbb575ed1bf3b797fa39dd564"
 name = "zen-archive"
 version = "0.1.0"
 dependencies = [
+ "serde",
+ "zen-parser",
+]
+
+[[package]]
+name = "zen-parser"
+version = "0.1.0"
+dependencies = [
  "bincode",
  "serde",
+ "zen-types",
+]
+
+[[package]]
+name = "zen-types"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "serde",
+ "serde_repr",
 ]

@@ -33,6 +33,7 @@ impl fmt::Display for Error {
 pub enum ErrorCode {
     Io(String),
     Message(String),
+    Expected(String),
     InvalidHeader,
     ExpectedAsciiHeader,
     ExpectedAsciiHeaderEnd,
@@ -56,12 +57,12 @@ pub enum ErrorCode {
     ExpectedStructEnd,
     InvalidStructHeader,
     TryFromInt(TryFromIntError),
-    DeserializeNotSupported(String),
 }
 
 impl fmt::Display for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            ErrorCode::Expected(s) => f.write_str(s),
             ErrorCode::Io(s) => f.write_str(s),
             ErrorCode::InvalidHeader => f.write_str("Invalid header"),
             ErrorCode::ExpectedAsciiHeader => f.write_str("Expeted Ascii header: object count"),
@@ -89,9 +90,6 @@ impl fmt::Display for ErrorCode {
             ErrorCode::ExpectedStructEnd => f.write_str("Expected struct end"),
             ErrorCode::InvalidStructHeader => f.write_str("Invalid struct header"),
             ErrorCode::TryFromInt(e) => fmt::Display::fmt(e, f),
-            ErrorCode::DeserializeNotSupported(s) => {
-                f.write_str(format!("Deserialize not supported: {}", s).as_str())
-            }
         }
     }
 }

@@ -8,8 +8,8 @@ edition = "2018"
 
 [dependencies]
 zen-archive = { path = "crates/zen-archive" }
-zen-material = { path = "crates/zen-material" }
 zen-mesh = { path = "crates/zen-mesh" }
 zen-parser = { path = "crates/zen-parser" }
 zen-texture = { path = "crates/zen-texture" }
+zen-types = { path = "crates/zen-types" }
 

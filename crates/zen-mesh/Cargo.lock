@@ -62,16 +62,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ddsfile"
-version = "0.5.0-unstable"
-source = "git+https://github.com/MordragT/ddsfile?branch=master#4b1c65d4f3f961741098f3f409d11272e2b06acb"
-dependencies = [
- "bitflags",
- "byteorder",
- "enum_primitive",
-]
-
-[[package]]
 name = "deflate"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -79,15 +69,6 @@ checksum = "73770f8e1fe7d64df17ca66ad28994a0a623ea497fa69486e14984e715c5d174"
 dependencies = [
  "adler32",
  "byteorder",
-]
-
-[[package]]
-name = "enum_primitive"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be4551092f4d519593039259a9ed8daedf0da12e5109c5280338073eaeb81180"
-dependencies = [
- "num-traits 0.1.43",
 ]
 
 [[package]]
@@ -138,7 +119,7 @@ dependencies = [
  "jpeg-decoder",
  "num-iter",
  "num-rational",
- "num-traits 0.2.12",
+ "num-traits",
  "png",
 ]
 
@@ -185,7 +166,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d59457e662d541ba17869cf51cf177c0b5f0cbf476c66bdc90bf1edac4f875b"
 dependencies = [
  "autocfg",
- "num-traits 0.2.12",
+ "num-traits",
 ]
 
 [[package]]
@@ -196,7 +177,7 @@ checksum = "7a6e6b7c748f995c4c29c5f5ae0248536e04a5739927c74ec0fa564805094b9f"
 dependencies = [
  "autocfg",
  "num-integer",
- "num-traits 0.2.12",
+ "num-traits",
 ]
 
 [[package]]
@@ -207,16 +188,7 @@ checksum = "a5b4d7360f362cfb50dde8143501e6940b22f644be75a4cc90b2d81968908138"
 dependencies = [
  "autocfg",
  "num-integer",
- "num-traits 0.2.12",
-]
-
-[[package]]
-name = "num-traits"
-version = "0.1.43"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92e5113e9fd4cc14ded8e499429f396a20f98c772a47cc8622a736e1ec843c31"
-dependencies = [
- "num-traits 0.2.12",
+ "num-traits",
 ]
 
 [[package]]
@@ -332,23 +304,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "zen-loader"
-version = "0.1.0"
-dependencies = [
- "zen-archive",
- "zen-mesh",
- "zen-parser",
- "zen-texture",
- "zen-types",
-]
-
-[[package]]
 name = "zen-mesh"
 version = "0.1.0"
 dependencies = [
  "gltf",
  "gltf-json",
  "serde",
+ "zen-archive",
  "zen-parser",
  "zen-types",
 ]
@@ -360,15 +322,6 @@ dependencies = [
  "bincode",
  "serde",
  "zen-types",
-]
-
-[[package]]
-name = "zen-texture"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "ddsfile",
- "serde",
 ]
 
 [[package]]

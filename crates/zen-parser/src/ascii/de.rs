@@ -1,95 +1,109 @@
 use super::error::*;
-use super::parse::{AsciiRead, Bytes};
+use super::read::AsciiRead;
+use crate::binary::{BinaryDeserializer, BinaryRead};
 use crate::{Header, Kind};
 use serde::de::{self, Deserializer, Visitor};
 use std::convert::TryFrom;
-use std::io::Cursor;
+use std::io::{Read, Seek, SeekFrom};
 
 pub struct AsciiDeserializer<R> {
-    pub header: Option<Header>,
-    parser: R,
+    pub parser: R,
 }
 
-impl<'a> AsciiDeserializer<Bytes<'a>> {
-    pub fn from_bytes(bytes: &'a [u8]) -> Self {
-        let parser = Bytes::from_bytes(bytes);
-        Self {
-            header: None,
-            parser,
-        }
+impl<R: AsciiRead> From<R> for AsciiDeserializer<R> {
+    fn from(parser: R) -> Self {
+        Self { parser }
     }
 }
 
-impl<'a> AsciiDeserializer<Cursor<&'a [u8]>> {
-    pub fn from_cursor(cursor: Cursor<&'a [u8]>) -> Self {
-        Self {
-            header: None,
-            parser: cursor,
-        }
-    }
-    pub fn into_cursor(self) -> Cursor<&'a [u8]> {
-        self.parser
+impl<R: BinaryRead + AsciiRead> From<BinaryDeserializer<R>> for AsciiDeserializer<R> {
+    fn from(b: BinaryDeserializer<R>) -> Self {
+        b.parser.into()
     }
 }
 
-impl<'de, R: AsciiRead<'de>> AsciiDeserializer<R> {
+impl<R: AsciiRead> Read for AsciiDeserializer<R> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.parser.read(buf)
+    }
+}
+
+impl<R: AsciiRead> Seek for AsciiDeserializer<R> {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        self.parser.seek(pos)
+    }
+}
+
+impl<R: AsciiRead> AsciiDeserializer<R> {
     fn has_element(&mut self) -> Result<bool> {
-        self.parser.advance_for_whitespaces()?;
+        self.parser.consume_whitespaces()?;
         match self.parser.peek_tuple() {
-            Some(val) if val.0 == b'[' && val.1 == b']' => Ok(false),
-            None => Err(self.parser.error(ErrorCode::EndOfFile)),
+            Ok(val) if val.0 == b'[' && val.1 == b']' => Ok(false),
+            Err(_) => Err(self.parser.error(ErrorCode::EndOfFile)),
             _ => Ok(true),
         }
     }
-    pub fn read_header<'a>(&mut self) -> Result<()> {
-        if !self.parser.consume("ZenGin Archive\n") {
+    pub fn read_header<'a>(&mut self) -> Result<Header> {
+        if !self.parser.consume("ZenGin Archive\n")? {
             return Err(self.parser.error(ErrorCode::InvalidHeader));
         }
-        if !self.parser.consume("ver ") {
+        if !self.parser.consume("ver ")? {
             return Err(self.parser.error(ErrorCode::InvalidHeader));
         }
         // Version should always be 1
         let version = self.parser.unchecked_int()?;
         // Skip optional Archiver type
-        if !self.parser.consume("zCArchiverGeneric") {
+        if !self.parser.consume("zCArchiverGeneric")? {
             println!("Optional archiver type not declared, maybe non default archiver type ?");
         }
+        self.parser.consume_whitespaces()?;
         // File type
-        let kind = self.parser.parse_string_until_whitespace()?;
+        let kind = self.parser.string_until(b'\n')?;
         let kind = match kind.as_str() {
             "ASCII" => Kind::Ascii,
             "BINARY" => Kind::Binary,
             "BIN_SAFE" => Kind::BinSafe,
-            _ => return Err(self.parser.error(ErrorCode::InvalidHeader)),
+            _ => Kind::Unknown,
         };
-        let save_game = match self.parser.consume("saveGame ") {
+        let save_game = match self.parser.consume("saveGame ")? {
             true => self.parser.unchecked_bool()?,
-            false => return Err(self.parser.error(ErrorCode::InvalidHeader)),
+            false => {
+                let e = self.parser.string_until_whitespace()?;
+                return Err(self
+                    .parser
+                    .error(ErrorCode::Expected(format!("'saveGame ', got: '{}'", e))));
+            }
         };
-        let date = match self.parser.consume("date ") {
-            true => Some(self.parser.parse_string_until('\n')?),
+        let date = match self.parser.consume("date ")? {
+            true => Some(self.parser.string_until(b'\n')?),
             false => None,
         };
-        let user = match self.parser.consume("user ") {
-            true => Some(self.parser.parse_string_until('\n')?),
+        let user = match self.parser.consume("user ")? {
+            true => Some(self.parser.string_until(b'\n')?),
             false => None,
         };
         // Skip optional END
-        self.parser.consume("END\n");
-        let object_count = match self.parser.consume("objects ") {
+        self.parser.consume("END\n")?;
+        let object_count = match self.parser.consume("objects ")? {
             true => self.parser.unchecked_int()?,
-            false => return Err(self.parser.error(ErrorCode::InvalidHeader)),
+            false => {
+                let e = self.parser.string_until_whitespace()?;
+                return Err(self
+                    .parser
+                    .error(ErrorCode::Expected(format!("'objects ', got: '{}'", e))));
+            }
         };
-        if !self.parser.consume("END\n") {
+        self.parser.consume_whitespaces()?;
+        if !self.parser.consume("END\n")? {
             return Err(self.parser.error(ErrorCode::ExpectedAsciiHeaderEnd));
         }
+        self.parser.consume_whitespaces()?;
         let header = Header::new(version, kind, save_game, date, user, object_count);
-        self.header = Some(header);
-        Ok(())
+        Ok(header)
     }
 }
 
-impl<'de, 'a, R: AsciiRead<'de>> Deserializer<'de> for &'a mut AsciiDeserializer<R> {
+impl<'de, 'a, R: AsciiRead> Deserializer<'de> for &'a mut AsciiDeserializer<R> {
     type Error = Error;
     fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value>
     where
@@ -219,14 +233,14 @@ impl<'de, 'a, R: AsciiRead<'de>> Deserializer<'de> for &'a mut AsciiDeserializer
     where
         V: Visitor<'de>,
     {
-        let bytes = self.parser.bytes()?;
+        let bytes = self.parser.raw()?;
         visitor.visit_bytes(bytes.as_slice())
     }
     fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        let bytes = self.parser.bytes()?;
+        let bytes = self.parser.raw()?;
         visitor.visit_byte_buf(bytes)
     }
     fn deserialize_struct<V>(
@@ -238,19 +252,19 @@ impl<'de, 'a, R: AsciiRead<'de>> Deserializer<'de> for &'a mut AsciiDeserializer
     where
         V: Visitor<'de>,
     {
-        self.parser.advance_for_whitespaces()?;
-        if !self.parser.consume("[") {
+        self.parser.consume_whitespaces()?;
+        if !self.parser.consume("[")? {
             return Err(self.parser.error(ErrorCode::ExpectedStructHeader));
         }
         // Expected header not footer
-        if self.parser.peek_or_eof()? == b']' {
+        if self.parser.peek()? == b']' {
             return Err(self.parser.error(ErrorCode::ExpectedStructHeader));
         }
         // ignore object name
-        self.parser.advance_until(b' ')?;
+        self.parser.consume_until(b' ')?;
 
         // // reference
-        // let reference = self.parser.parse_string_until(' ')?;
+        // let reference = self.parser.string_until(' ')?;
         // let create_object = match reference.as_str() {
         //     "%" => true,
         //     "§" => false,
@@ -258,28 +272,28 @@ impl<'de, 'a, R: AsciiRead<'de>> Deserializer<'de> for &'a mut AsciiDeserializer
         // };
 
         // check if struct name is given
-        let _struct_name = match self.parser.consume("% ") {
+        let _struct_name = match self.parser.consume("% ")? {
             true => None,
-            false => Some(self.parser.parse_string_until(' ')?),
+            false => Some(self.parser.string_until(b' ')?),
         };
 
         let _version = self.parser.unchecked_int()?;
-        let _id = match (self.parser.peek_or_eof()? as char).to_digit(10) {
+        let _id = match (self.parser.peek()? as char).to_digit(10) {
             Some(val) => {
-                self.parser.advance_single()?;
+                self.parser.seek(SeekFrom::Current(1))?;
                 val
             }
             None => return Err(self.parser.error(ErrorCode::InvalidStructHeader)),
         };
 
-        if !self.parser.consume("]\n") {
+        if !self.parser.consume("]\n")? {
             return Err(self.parser.error(ErrorCode::InvalidStructHeader));
         }
 
         let value = visitor.visit_seq(&mut self)?;
 
-        self.parser.advance_for_whitespaces()?;
-        if self.parser.consume("[]") {
+        self.parser.consume_whitespaces()?;
+        if self.parser.consume("[]")? {
             Ok(value)
         } else {
             Err(self.parser.error(ErrorCode::ExpectedStructEnd))
@@ -290,8 +304,8 @@ impl<'de, 'a, R: AsciiRead<'de>> Deserializer<'de> for &'a mut AsciiDeserializer
         V: Visitor<'de>,
     {
         let value = visitor.visit_seq(&mut self)?;
-        self.parser.advance_for_whitespaces()?;
-        if self.parser.peek_tuple() == Some((b'[', b']')) {
+        self.parser.consume_whitespaces()?;
+        if self.parser.peek_tuple()? == (b'[', b']') {
             Ok(value)
         } else {
             Err(self.parser.error(ErrorCode::ExpectedStructEnd))
@@ -369,7 +383,7 @@ impl<'de, 'a, R: AsciiRead<'de>> Deserializer<'de> for &'a mut AsciiDeserializer
     }
 }
 
-impl<'de, 'a, R: AsciiRead<'de>> de::SeqAccess<'de> for AsciiDeserializer<R> {
+impl<'de, 'a, R: AsciiRead> de::SeqAccess<'de> for AsciiDeserializer<R> {
     type Error = Error;
 
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>

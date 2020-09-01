@@ -1,9 +1,10 @@
 use serde::Deserialize;
+use serde_repr::Deserialize_repr;
 
-pub const GOTHIC1: u16 = 39939;
+pub const GOTHIC2: u16 = 39939;
 
+#[derive(Deserialize_repr, Debug)]
 #[repr(u8)]
-#[derive(Deserialize, Debug)]
 pub enum Group {
     Undef,
     Metal,
@@ -12,6 +13,13 @@ pub enum Group {
     Earth,
     Water,
     Snow,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ChunkHeader {
+    pub chunk_size: u32,
+    pub version: u16,
+    pub object_index: u32,
 }
 
 #[derive(Debug)]

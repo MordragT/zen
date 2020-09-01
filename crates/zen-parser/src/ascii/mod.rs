@@ -1,8 +1,11 @@
+pub use de::AsciiDeserializer;
+pub use error::Error;
+pub use read::AsciiRead;
 use std::fmt;
 
 pub mod de;
 pub mod error;
-pub mod parse;
+pub mod read;
 
 #[derive(Debug)]
 pub struct Position {
