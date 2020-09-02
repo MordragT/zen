@@ -1,5 +1,6 @@
-use crate::material::Material;
+use super::Plane;
 use serde::Deserialize;
+use vek::{Vec2, Vec3};
 
 #[derive(Deserialize)]
 #[repr(C, packed(4))]
@@ -22,52 +23,6 @@ pub struct Date {
 //     }
 // }
 /// Information about one of the chunks in a zen-file
-pub struct ChunkHeader {
-    start_position: u32,
-    size: u32,
-    verison: u16,
-    object_id: u32,
-    name: String,
-    class_name: String,
-    create_object: bool,
-}
-
-#[derive(Deserialize)]
-#[repr(C, packed(4))]
-pub struct Chunk {
-    pub id: u16,
-    pub length: u32,
-}
-
-#[derive(Deserialize)]
-#[repr(C, packed(4))]
-pub struct FeatureChunk {
-    uv: (f32, f32),
-    light_stat: u32,
-    vert_normal: (f32, f32, f32),
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Plane {
-    distance: f32,
-    normal: (f32, f32, f32),
-}
-
-impl From<PlanePacked> for Plane {
-    fn from(p: PlanePacked) -> Self {
-        Self {
-            distance: p.distance,
-            normal: p.normal,
-        }
-    }
-}
-
-#[derive(Deserialize)]
-#[repr(C, packed(4))]
-pub struct PlanePacked {
-    distance: f32,
-    normal: (f32, f32, f32),
-}
 
 // gothic 2 flags = 24 bits
 #[derive(Deserialize, Debug)]
@@ -149,7 +104,7 @@ impl PolyGothicTwoFlags {
 // }
 
 // TODO: gothic 1 hat eigentlich 1 bit mehr an flags daher deserialize eig nicht wünschenswert
-#[derive(Deserialize)]
+#[derive(Debug)]
 pub enum PolyFlags {
     Gothic2(PolyGothicTwoFlags),
 }
@@ -182,6 +137,14 @@ impl<T: Into<u32>> From<IndexPacked<T>> for Index {
     }
 }
 
+#[derive(Deserialize)]
+#[repr(C, packed(4))]
+pub struct FeatureChunk {
+    uv: Vec2<f32>,
+    light_stat: u32,
+    vert_normal: Vec3<f32>,
+}
+
 // Data in memory is packed therefor unable to utilize serde Deserialization
 pub struct Polygon {
     material_index: i16,
@@ -212,90 +175,18 @@ impl Polygon {
     }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct Vertex {
-    position: (f32, f32, f32),
-    normal: (f32, f32, f32),
-    tex_coord: (f32, f32),
-    color: u32,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Triangle {
-    flags: PolyGothicTwoFlags,
-    light_map_index: i16,
-    vertices: [Vertex; 3],
-    submesh_index: i16,
-}
-#[derive(Deserialize, Debug)]
-pub struct DataEntry {
-    pub offset: u32,
-    pub size: u32,
-}
-#[derive(Deserialize, Debug)]
-pub struct Offset {
-    pub position: DataEntry,
-    pub normal: DataEntry,
-}
-#[derive(Deserialize, Debug)]
-pub struct SubMeshOffsets {
-    pub triangles: DataEntry,
-    pub wedges: DataEntry,
-    pub colors: DataEntry,
-    pub triangle_plane_indices: DataEntry,
-    pub triangle_planes: DataEntry,
-    pub wedge_map: DataEntry,
-    pub vertex_updates: DataEntry,
-    pub triangle_edges: DataEntry,
-    pub edges: DataEntry,
-    pub edge_scores: DataEntry,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Wedge {
-    normal: (f32, f32, f32),
-    tex_coord: (f32, f32),
-    vertex_index: u16,
-}
-
-#[derive(Debug)]
-pub struct SubMesh {
-    material: Material,
-    triangles: Vec<Triangle>,
-    wedges: Vec<Wedge>,
-    colors: Vec<f32>,
-    triangle_plane_indices: Vec<u16>,
-    triangle_planes: Vec<Plane>,
-    triangle_edges: Vec<(u16, u16, u16)>,
-    wedge_map: Vec<u16>,
-    edges: Vec<(u16, u16)>,
-    edge_scores: Vec<f32>,
-}
-
-impl SubMesh {
-    pub fn new(
-        material: Material,
-        triangles: Vec<Triangle>,
-        wedges: Vec<Wedge>,
-        colors: Vec<f32>,
-        triangle_plane_indices: Vec<u16>,
-        triangle_planes: Vec<Plane>,
-        triangle_edges: Vec<(u16, u16, u16)>,
-        wedge_map: Vec<u16>,
-        edges: Vec<(u16, u16)>,
-        edge_scores: Vec<f32>,
-    ) -> Self {
+impl From<PlanePacked> for Plane {
+    fn from(p: PlanePacked) -> Self {
         Self {
-            material,
-            triangles,
-            wedges,
-            colors,
-            triangle_plane_indices,
-            triangle_planes,
-            triangle_edges,
-            wedge_map,
-            edges,
-            edge_scores,
+            distance: p.distance,
+            normal: p.normal,
         }
     }
+}
+
+#[derive(Deserialize)]
+#[repr(C, packed(4))]
+pub struct PlanePacked {
+    distance: f32,
+    normal: Vec3<f32>,
 }

@@ -1,9 +1,10 @@
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
+use vek::Vec2;
 
 pub const GOTHIC2: u16 = 39939;
 
-#[derive(Deserialize_repr, Debug)]
+#[derive(Deserialize_repr, Debug, Clone)]
 #[repr(u8)]
 pub enum Group {
     Undef,
@@ -22,14 +23,23 @@ pub struct ChunkHeader {
     pub object_index: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Material {
     Basic(BasicMaterial),
     Advanced(AdvancedMaterial),
 }
 
+impl Material {
+    pub fn get_color(&self) -> u32 {
+        match self {
+            Material::Basic(b) => b.color,
+            Material::Advanced(a) => a.color,
+        }
+    }
+}
+
 /// Materials that are used in Gothic 1
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct BasicMaterial {
     name: String,
     group: Group,
@@ -44,7 +54,7 @@ pub struct BasicMaterial {
     no_light_map: bool,
     load_dont_collapse: u8,
     detail_object: String,
-    default_mapping: (f32, f32),
+    default_mapping: Vec2<f32>,
 }
 
 impl Into<Material> for BasicMaterial {
@@ -54,7 +64,7 @@ impl Into<Material> for BasicMaterial {
 }
 
 /// Materials used in Gothic 2
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct AdvancedMaterial {
     name: String,
     group: Group,
@@ -79,7 +89,7 @@ pub struct AdvancedMaterial {
     wave_grid_size: f32,
     ignore_sun: u8,
     aplha_func: u8,
-    default_mapping: (f32, f32),
+    default_mapping: Vec2<f32>,
 }
 
 impl Into<Material> for AdvancedMaterial {

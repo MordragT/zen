@@ -19,7 +19,7 @@ pub trait BinaryRead: Read + Seek {
         self.seek(SeekFrom::Current(-(mem::size_of::<u8>() as i64)))?;
         Ok(u8::from_le_bytes(buf))
     }
-    fn seek_whitespaces(&mut self) -> Result<()> {
+    fn consume_whitespaces(&mut self) -> Result<()> {
         loop {
             let p = self.peek()?;
             if p == b' ' || p == b'\r' || p == b'\t' || p == b'\n' || p == 0 {
