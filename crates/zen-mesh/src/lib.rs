@@ -9,22 +9,6 @@ pub mod gltf;
 pub mod object;
 pub mod scene;
 
-// #[derive(Debug, Copy, Clone)]
-// pub struct Vertex {
-//     pub position: Vec3<f32>,
-//     pub color: Vec3<f32>,
-//     pub normal: Vec3<f32>,
-//     //pub tex_coord: Vec2<f32>,
-// }
-
-// pub struct SubMesh {
-//     //pub materials: Vec<Material>,
-//     pub indices: Vec<u32>,
-//     pub positions: Vec<f32>,
-//     pub colors: Vec<f32>,
-//     pub normals: Vec<f32>,
-// }
-
 pub struct GeneralMesh {
     pub name: String,
     pub mesh: Mesh,
