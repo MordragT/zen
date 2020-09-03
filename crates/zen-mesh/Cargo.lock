@@ -699,6 +699,7 @@ dependencies = [
 name = "zen-types"
 version = "0.1.0"
 dependencies = [
+ "lazy_static",
  "serde",
  "serde_repr",
  "vek",

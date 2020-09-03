@@ -42,7 +42,21 @@ impl GeneralMaterial {
             GeneralMaterial::Advanced(a) => &a.texture,
         }
     }
+    pub fn get_texture_scale(&self) -> Vec2<u32> {
+        match self {
+            GeneralMaterial::Basic(b) => tex_scale_to_vec(&b.tex_scale),
+            GeneralMaterial::Advanced(a) => tex_scale_to_vec(&a.tex_scale),
+        }
+    }
     //pub fn get_texture(&self, )
+}
+
+fn tex_scale_to_vec(scale_str: &str) -> Vec2<u32> {
+    let first_str = scale_str.split_whitespace().next().unwrap();
+    let first = u32::from_str_radix(first_str, 10).unwrap();
+    let second_str = scale_str.split_whitespace().next().unwrap();
+    let second = u32::from_str_radix(second_str, 10).unwrap();
+    Vec2::from((first, second))
 }
 
 /// Materials that are used in Gothic 1

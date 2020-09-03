@@ -6,10 +6,11 @@ use std::io::Cursor;
 use zen_archive::Vdfs;
 
 fn main() {
-    let vdf_file = File::open("/home/tom/Steam/common/Gothic/Data/textures.VDF").unwrap();
+    let vdf_file = File::open("/home/tom/Steam/common/Gothic II/Data/Textures.vdf").unwrap();
     let vdf = Vdfs::new(vdf_file).unwrap();
-    let yellow_tex = vdf.get_by_name("ORC_BODYSHAMAN_V-C.TEX").unwrap().unwrap();
-    let data = Cursor::new(yellow_tex.data);
+    let tex = vdf.get_by_name_slice("MOSTORCTHRONE02").unwrap().unwrap();
+    println!("Name: {}", tex.name);
+    let data = Cursor::new(tex.data);
     let dds = zen_texture::convert_ztex_to_dds(data).unwrap();
     let mut dds_file_buf = vec![];
     dds.write(&mut dds_file_buf).unwrap();

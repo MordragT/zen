@@ -26,7 +26,7 @@ struct Properties {
 }
 #[derive(Debug)]
 pub struct Entry<'a> {
-    name: String,
+    pub name: String,
     properties: &'a Properties,
     pub data: Vec<u8>,
 }
@@ -84,7 +84,7 @@ impl<R: BinaryRead> Vdfs<R> {
                     || *c == '_' as u8
                     || *c == '.' as u8
                     || *c == '-' as u8
-                    || *c >= '1' as u8 && *c <= '9' as u8
+                    || *c >= '0' as u8 && *c <= '9' as u8
                 {
                     name.push(*c as char);
                 }
