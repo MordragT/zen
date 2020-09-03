@@ -1,0 +1,57 @@
+use image::dds::DdsDecoder;
+use image::jpeg::JpegEncoder;
+use image::ImageDecoder;
+use std::{
+    cmp,
+    fs::File,
+    io::{Cursor, Read, Write},
+    path::Path,
+};
+use vek::Vec3;
+use zen_archive::Vdfs;
+use zen_types::material::GeneralMaterial;
+
+pub struct Material<T: Write> {
+    texture: T,
+    color: Vec3<f32>,
+}
+
+impl From<GeneralMaterial> for Material<Cursor<Vec<u8>>> {
+    fn from(mat: GeneralMaterial) -> Material<Cursor<Vec<u8>>> {
+        let vdfs_file = File::open("/home/tom/Steam/common/Gothic II/Data/Textures.vdf").unwrap();
+        let vdfs = Vdfs::new(vdfs_file).unwrap();
+        let texture_entry = vdfs.get_by_name(mat.get_texture()).unwrap().unwrap();
+        let texture_data = Cursor::new(texture_entry.data);
+        let dds = zen_texture::convert_ztex_to_dds(texture_data).unwrap();
+        let mut dds_file_buf = vec![];
+        dds.write(&mut dds_file_buf).unwrap();
+        let dds_file = Cursor::new(dds_file_buf);
+        let decoder = DdsDecoder::new(dds_file).unwrap();
+        let (width, height) = decoder.dimensions();
+        let color_type = decoder.color_type();
+        let mut dds_bytes = vec![0_u8; decoder.total_bytes() as usize];
+        decoder.read_image(&mut dds_bytes).unwrap();
+
+        let mut output_jpeg = Cursor::new(vec![]);
+        let mut encoder = JpegEncoder::new(&mut output_jpeg);
+        encoder
+            .encode(dds_bytes.as_slice(), width, height, color_type)
+            .unwrap();
+        //vdf.list();
+        let color = to_rgb(mat.get_color());
+        Self {
+            texture: output_jpeg,
+            color,
+        }
+    }
+}
+
+fn to_rgb(num: u32) -> Vec3<f32> {
+    let layer = |i| {
+        cmp::max(
+            0,
+            cmp::min(1, 3 * i32::abs(1 - 2 * (((num as i32) - i / 3) % 2)) - 1),
+        )
+    };
+    Vec3::new(layer(0) as f32, layer(1) as f32, layer(2) as f32)
+}

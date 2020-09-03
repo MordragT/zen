@@ -14,6 +14,6 @@ fn main() {
     let object_mesh = ObjectMesh::new(cursor, "ORC_MASTERTHRONE").unwrap();
     let mesh = GeneralMesh::from(object_mesh);
     //mesh.to_obj("ORC_MASTERTHRONE.obj");
-    let gltf = gltf::to_gltf(mesh, gltf::Output::Binary);
+    let gltf = gltf::to_gltf(mesh, gltf::Output::Standard);
     //println!("{:?}", gltf);
 }

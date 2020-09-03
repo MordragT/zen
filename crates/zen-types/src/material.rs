@@ -24,18 +24,25 @@ pub struct ChunkHeader {
 }
 
 #[derive(Debug, Clone)]
-pub enum Material {
+pub enum GeneralMaterial {
     Basic(BasicMaterial),
     Advanced(AdvancedMaterial),
 }
 
-impl Material {
+impl GeneralMaterial {
     pub fn get_color(&self) -> u32 {
         match self {
-            Material::Basic(b) => b.color,
-            Material::Advanced(a) => a.color,
+            GeneralMaterial::Basic(b) => b.color,
+            GeneralMaterial::Advanced(a) => a.color,
         }
     }
+    pub fn get_texture(&self) -> &str {
+        match self {
+            GeneralMaterial::Basic(b) => &b.texture,
+            GeneralMaterial::Advanced(a) => &a.texture,
+        }
+    }
+    //pub fn get_texture(&self, )
 }
 
 /// Materials that are used in Gothic 1
@@ -57,9 +64,9 @@ pub struct BasicMaterial {
     default_mapping: Vec2<f32>,
 }
 
-impl Into<Material> for BasicMaterial {
-    fn into(self) -> Material {
-        Material::Basic(self)
+impl Into<GeneralMaterial> for BasicMaterial {
+    fn into(self) -> GeneralMaterial {
+        GeneralMaterial::Basic(self)
     }
 }
 
@@ -92,8 +99,8 @@ pub struct AdvancedMaterial {
     default_mapping: Vec2<f32>,
 }
 
-impl Into<Material> for AdvancedMaterial {
-    fn into(self) -> Material {
-        Material::Advanced(self)
+impl Into<GeneralMaterial> for AdvancedMaterial {
+    fn into(self) -> GeneralMaterial {
+        GeneralMaterial::Advanced(self)
     }
 }

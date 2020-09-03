@@ -1,5 +1,5 @@
 use super::Plane;
-use crate::material::Material;
+use crate::material::GeneralMaterial;
 use serde::Deserialize;
 use vek::{Vec2, Vec3};
 
@@ -38,7 +38,7 @@ pub struct Wedge {
 
 #[derive(Debug, Clone)]
 pub struct SubMesh {
-    pub material: Material,
+    pub material: GeneralMaterial,
     pub triangles: Vec<Vec3<u16>>,
     pub wedges: Vec<Wedge>,
     pub colors: Vec<f32>,
@@ -52,7 +52,7 @@ pub struct SubMesh {
 
 impl SubMesh {
     pub fn new(
-        material: Material,
+        material: GeneralMaterial,
         triangles: Vec<Vec3<u16>>,
         wedges: Vec<Wedge>,
         colors: Vec<f32>,

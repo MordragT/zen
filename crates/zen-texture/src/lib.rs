@@ -1,15 +1,16 @@
 use ddsfile::{AlphaMode, D3D10ResourceDimension, Dds};
+use serde::Deserialize;
 use std::cmp;
 use std::convert::TryInto;
-use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::io::{Seek, SeekFrom};
+use zen_parser::prelude::{BinaryDeserializer, BinaryRead};
 
 pub mod ztex;
 
 /// Convert ZTEX to DDS image format
-pub fn convert_ztex_to_dds<'a>(ztex_data: &[u8]) -> Result<Dds, &'a str> {
-    let mut reader = Cursor::new(ztex_data);
-    let header =
-        bincode::deserialize_from::<&mut Cursor<&[u8]>, ztex::Header>(&mut reader).unwrap(); //ztex::Header::from_reader(&mut reader);
+pub fn convert_ztex_to_dds<'a, R: BinaryRead>(reader: R) -> Result<Dds, &'a str> {
+    let mut deserializer = BinaryDeserializer::from(reader);
+    let header = ztex::Header::deserialize(&mut deserializer).unwrap();
     if header.get_signature() != ztex::FILE_SIGNATURE || header.get_version() != ztex::FILE_VERSION
     {
         return Err("Wrong ZTEX Signature or Version");
@@ -43,17 +44,19 @@ pub fn convert_ztex_to_dds<'a>(ztex_data: &[u8]) -> Result<Dds, &'a str> {
 
     let _palette = match header.get_format() == ztex::Format::P8 {
         true => {
-            let mut palette = ztex::Palette::new();
-            for _ in 0..ztex::PALETTE_ENTRIES {
-                let entry =
-                    bincode::deserialize_from::<&mut Cursor<&[u8]>, ztex::Entry>(&mut reader)
-                        .unwrap();
-                palette.push(entry);
-            }
-            match palette.len() == ztex::PALETTE_ENTRIES {
-                true => Some(palette),
-                false => None,
-            }
+            deserializer.len_queue.push(ztex::PALETTE_ENTRIES);
+            Some(ztex::Palette::deserialize(&mut deserializer).unwrap())
+            // let mut palette = ztex::Palette::new();
+            // for _ in 0..ztex::PALETTE_ENTRIES {
+            //     let entry =
+            //         bincode::deserialize_from::<&mut Cursor<&[u8]>, ztex::Entry>(&mut reader)
+            //             .unwrap();
+            //     palette.push(entry);
+            // }
+            // match palette.len() == ztex::PALETTE_ENTRIES {
+            //     true => Some(palette),
+            //     false => None,
+            // }
         }
         false => None,
     };
@@ -74,12 +77,14 @@ pub fn convert_ztex_to_dds<'a>(ztex_data: &[u8]) -> Result<Dds, &'a str> {
         0,
     );
     let pos_of_biggest_mip_map = size_of_all_mip_maps - size_of_biggest_mip_map;
-    reader
+    deserializer
         .seek(SeekFrom::Current(pos_of_biggest_mip_map as i64))
         .unwrap();
-    let mut biggest_mip_map_buf = vec![0_u8; size_of_biggest_mip_map as usize];
-    reader.read_exact(&mut biggest_mip_map_buf).unwrap();
-    dds.set_data(0, biggest_mip_map_buf).unwrap();
+    deserializer
+        .len_queue
+        .push(size_of_biggest_mip_map as usize);
+    let biggest_mip_map = <Vec<u8>>::deserialize(&mut deserializer).unwrap();
+    dds.set_data(0, biggest_mip_map).unwrap();
 
     Ok(dds)
 }

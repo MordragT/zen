@@ -8,9 +8,9 @@ use zen_archive::Vdfs;
 fn main() {
     let vdf_file = File::open("/home/tom/Steam/common/Gothic/Data/textures.VDF").unwrap();
     let vdf = Vdfs::new(vdf_file).unwrap();
-    let yellow_tex = vdf.get_by_name("ORC_BODYSHAMAN_V-C.TEX").unwrap();
-    let data = yellow_tex.data;
-    let dds = zen_texture::convert_ztex_to_dds(data.as_slice()).unwrap();
+    let yellow_tex = vdf.get_by_name("ORC_BODYSHAMAN_V-C.TEX").unwrap().unwrap();
+    let data = Cursor::new(yellow_tex.data);
+    let dds = zen_texture::convert_ztex_to_dds(data).unwrap();
     let mut dds_file_buf = vec![];
     dds.write(&mut dds_file_buf).unwrap();
     let dds_file = Cursor::new(dds_file_buf);

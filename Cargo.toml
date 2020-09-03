@@ -11,5 +11,6 @@ zen-archive = { path = "crates/zen-archive" }
 zen-mesh = { path = "crates/zen-mesh" }
 zen-parser = { path = "crates/zen-parser" }
 zen-texture = { path = "crates/zen-texture" }
+zen-material = { path = "crates/zen-material" }
 zen-types = { path = "crates/zen-types" }
 

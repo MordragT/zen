@@ -13,6 +13,7 @@ gltf = "0.15.2"
 tri-mesh = "0.5.0"
 zen-parser = { path = "../zen-parser" }
 zen-types = { path = "../zen-types" }
+zen-material = { path = "../zen-material" }
 vek = { version = "0.12.0", features = ["serde"] }
 
 [dev-dependencies]

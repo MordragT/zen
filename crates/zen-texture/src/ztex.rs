@@ -1,6 +1,7 @@
 use ddsfile::D3DFormat;
 use ddsfile::DxgiFormat;
 use serde::Deserialize;
+use serde_repr::Deserialize_repr;
 use std::convert::TryInto;
 
 // Definitions for compressed ZenGin Textures (.tex)
@@ -22,7 +23,7 @@ pub const FILE_VERSION: u32 = 0x0;
 pub const PALETTE_ENTRIES: usize = 0x100;
 /// Render Formats
 
-#[derive(Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Deserialize_repr, Eq, PartialEq, Debug, Copy, Clone)]
 #[repr(u32)]
 pub enum Format {
     B8G8R8A8, // 0, 32-bit ARGB pixel format with alpha, using 8 bits per channel
@@ -137,19 +138,16 @@ pub struct Entry {
 }
 
 /// Stored Palette
-#[derive(Deserialize, Debug)]
-pub struct Palette {
-    entries: Vec<Entry>,
-}
+pub type Palette = Vec<Entry>;
 
-impl Palette {
-    pub fn new() -> Self {
-        Self { entries: vec![] }
-    }
-    pub fn len(&self) -> usize {
-        self.entries.len()
-    }
-    pub fn push(&mut self, entry: Entry) {
-        self.entries.push(entry);
-    }
-}
+// impl Palette {
+//     pub fn new() -> Self {
+//         Self { entries: vec![] }
+//     }
+//     pub fn len(&self) -> usize {
+//         self.entries.len()
+//     }
+//     pub fn push(&mut self, entry: Entry) {
+//         self.entries.push(entry);
+//     }
+// }

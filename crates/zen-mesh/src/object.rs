@@ -57,7 +57,7 @@ impl ObjectMesh {
 
                 let mut materials = (0..num_sub_meshes)
                     .map(|_| {
-                        let material: material::Material = {
+                        let material: material::GeneralMaterial = {
                             let _name = String::deserialize(&mut deserializer)?;
                             // Skip name and chunk headers
                             let material_header =
@@ -80,7 +80,7 @@ impl ObjectMesh {
                         };
                         Ok(material)
                     })
-                    .collect::<Result<Vec<material::Material>>>()?;
+                    .collect::<Result<Vec<material::GeneralMaterial>>>()?;
 
                 // TODO gothic 1 should not read byte
                 alpha_test = bool::deserialize(&mut deserializer)?;
