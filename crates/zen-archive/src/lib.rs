@@ -18,6 +18,7 @@ const ENTRY_NAME_LENGTH: usize = 64;
 const ENTRY_DIR: u32 = 0x80000000;
 
 #[derive(Deserialize, Debug)]
+/// Entry Properties
 struct Properties {
     offset: u32,
     size: u32,
@@ -25,6 +26,7 @@ struct Properties {
     attr: u32,
 }
 #[derive(Debug)]
+/// Vdfs Entry
 pub struct Entry<'a> {
     pub name: String,
     properties: &'a Properties,
@@ -41,6 +43,7 @@ impl<'a> Entry<'a> {
     }
 }
 #[derive(Deserialize, Debug)]
+/// Vdfs Header attributes
 struct Header {
     signature: [u8; SIGNATURE_LENGTH],
     count: u32,
@@ -50,7 +53,7 @@ struct Header {
     offset: u32,
     version: u32,
 }
-
+/// Vdfs reader
 pub struct Vdfs<R: BinaryRead> {
     deserializer: UnsafeCell<BinaryDeserializer<R>>,
     header: Header,
@@ -73,28 +76,33 @@ impl<R: BinaryRead> Vdfs<R> {
 
         deserializer.seek(SeekFrom::Start(header.offset as u64))?;
 
-        let mut entries = HashMap::new();
+        let entries = (0..header.count)
+            .map(|_| -> Result<(String, Properties)> {
+                let mut name_buf = [0_u8; ENTRY_NAME_LENGTH];
+                deserializer.read_exact(&mut name_buf)?;
+                let name = name_buf
+                    .iter()
+                    .filter_map(|c| {
+                        if *c >= 'A' as u8 && *c <= 'Z' as u8
+                            || *c == '_' as u8
+                            || *c == '.' as u8
+                            || *c == '-' as u8
+                            || *c >= '1' as u8 && *c <= '9' as u8
+                        {
+                            Some(*c as char)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<String>();
+                Ok((name, Properties::deserialize(&mut deserializer)?))
+            })
+            .filter(|res| match res {
+                Ok((_, properties)) => properties.kind & ENTRY_DIR == 0,
+                Err(_) => true,
+            })
+            .collect::<Result<HashMap<String, Properties>>>()?;
 
-        for _ in 0..header.count {
-            let mut name_buf = [0_u8; ENTRY_NAME_LENGTH];
-            deserializer.read_exact(&mut name_buf)?;
-            let mut name = String::new();
-            for c in name_buf.iter() {
-                if *c >= 'A' as u8 && *c <= 'Z' as u8
-                    || *c == '_' as u8
-                    || *c == '.' as u8
-                    || *c == '-' as u8
-                    || *c >= '0' as u8 && *c <= '9' as u8
-                {
-                    name.push(*c as char);
-                }
-            }
-            let properties = Properties::deserialize(&mut deserializer)?;
-
-            if properties.kind & ENTRY_DIR == 0 {
-                entries.insert(name, properties);
-            }
-        }
         Ok(Vdfs {
             deserializer: UnsafeCell::new(deserializer),
             entries,
@@ -103,28 +111,35 @@ impl<R: BinaryRead> Vdfs<R> {
     }
     /// Get raw data of a specified entry
     fn get_raw_data(&self, properties: &Properties) -> Result<Vec<u8>> {
-        let deserializer = unsafe { self.deserializer.get().as_mut().unwrap() };
+        let deserializer = unsafe {
+            self.deserializer
+                .get()
+                .as_mut()
+                .expect("Deserializer should be available.")
+        };
         deserializer.seek(SeekFrom::Start(properties.offset as u64))?;
         let mut data_buf = vec![0_u8; properties.size as usize];
         deserializer.read(&mut data_buf)?;
         Ok(data_buf)
     }
     /// Get an entry, the name specified can be a subset of the real name
-    pub fn get_by_name_slice(&self, name: &str) -> Result<Option<Entry>> {
+    pub fn get_by_name_slice(&self, name: &str) -> Option<Entry> {
         let key = match self.entries.keys().find(|k| k.contains(name)) {
             Some(k) => k,
-            None => return Ok(None),
+            None => return None,
         };
         self.get_by_name(key)
     }
     /// Get an entry by the exact name that was given as input
-    pub fn get_by_name(&self, name: &str) -> Result<Option<Entry>> {
+    pub fn get_by_name(&self, name: &str) -> Option<Entry> {
         let properties = match self.entries.get(name) {
             Some(p) => p,
-            None => return Err(Error::EntryNotFound),
+            None => return None,
         };
-        let data = self.get_raw_data(properties)?;
-        Ok(Some(Entry::new(name, properties, data)))
+        let data = self
+            .get_raw_data(properties)
+            .expect("Should always find specified properties.");
+        Some(Entry::new(name, properties, data))
     }
     /// Lists all vdfs entries and some generic information
     pub fn list(&self) {

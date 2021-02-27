@@ -25,7 +25,7 @@ impl From<GeneralMaterial> for Material {
         let vdfs = Vdfs::new(vdfs_file).unwrap();
         //println!("Texture: {}", mat.get_texture());
         let texture_name = mat.get_texture().split('.').next().unwrap();
-        let texture_entry = vdfs.get_by_name_slice(texture_name).unwrap().unwrap();
+        let texture_entry = vdfs.get_by_name_slice(texture_name).unwrap();
         let texture_data = Cursor::new(texture_entry.data);
         let dds = zen_texture::convert_ztex_to_dds(texture_data).unwrap();
         let mut dds_file_buf = vec![];
