@@ -40,8 +40,10 @@ impl ObjectMesh {
 
         let _version = u16::deserialize(&mut deserializer)?;
         let data_size = u32::deserialize(&mut deserializer)?;
-        let data_seek = deserializer.seek(SeekFrom::Current(0))?;
-        deserializer.seek(SeekFrom::Current(data_size as i64))?;
+        let data_seek = deserializer.parser.seek(SeekFrom::Current(0))?;
+        deserializer
+            .parser
+            .seek(SeekFrom::Current(data_size as i64))?;
 
         let num_sub_meshes = u8::deserialize(&mut deserializer)?;
         let main_offsets = <object::Offset>::deserialize(&mut deserializer)?;
@@ -83,7 +85,7 @@ impl ObjectMesh {
         let (min, max) = <(Vec4<f32>, Vec4<f32>)>::deserialize(&mut deserializer)?;
         let bounding_box = (min.xyz(), max.xyz());
 
-        deserializer.seek(SeekFrom::Start(
+        deserializer.parser.seek(SeekFrom::Start(
             data_seek + main_offsets.position.offset as u64,
         ))?;
         deserializer
@@ -91,7 +93,7 @@ impl ObjectMesh {
             .push(main_offsets.position.size as usize);
         let vertices = <Vec<Vec3<f32>>>::deserialize(&mut deserializer)?;
 
-        deserializer.seek(SeekFrom::Start(
+        deserializer.parser.seek(SeekFrom::Start(
             data_seek + main_offsets.normal.offset as u64,
         ))?;
         deserializer
@@ -102,19 +104,25 @@ impl ObjectMesh {
         let sub_meshes = sub_mesh_offsets
             .into_iter()
             .map(|offset| {
-                deserializer.seek(SeekFrom::Start(data_seek + offset.triangles.offset as u64))?;
+                deserializer
+                    .parser
+                    .seek(SeekFrom::Start(data_seek + offset.triangles.offset as u64))?;
                 deserializer.len_queue.push(offset.triangles.size as usize);
                 let triangles = <Vec<Vec3<u16>>>::deserialize(&mut deserializer)?;
 
-                deserializer.seek(SeekFrom::Start(data_seek + offset.wedges.offset as u64))?;
+                deserializer
+                    .parser
+                    .seek(SeekFrom::Start(data_seek + offset.wedges.offset as u64))?;
                 deserializer.len_queue.push(offset.wedges.size as usize);
                 let wedges = <Vec<object::Wedge>>::deserialize(&mut deserializer)?;
 
-                deserializer.seek(SeekFrom::Start(data_seek + offset.colors.offset as u64))?;
+                deserializer
+                    .parser
+                    .seek(SeekFrom::Start(data_seek + offset.colors.offset as u64))?;
                 deserializer.len_queue.push(offset.colors.size as usize);
                 let colors = <Vec<f32>>::deserialize(&mut deserializer)?;
 
-                deserializer.seek(SeekFrom::Start(
+                deserializer.parser.seek(SeekFrom::Start(
                     data_seek + offset.triangle_plane_indices.offset as u64,
                 ))?;
                 deserializer
@@ -122,7 +130,7 @@ impl ObjectMesh {
                     .push(offset.triangle_plane_indices.size as usize);
                 let triangle_plane_indices = <Vec<u16>>::deserialize(&mut deserializer)?;
 
-                deserializer.seek(SeekFrom::Start(
+                deserializer.parser.seek(SeekFrom::Start(
                     data_seek + offset.triangle_planes.offset as u64,
                 ))?;
                 deserializer
@@ -130,7 +138,7 @@ impl ObjectMesh {
                     .push(offset.triangle_planes.size as usize);
                 let triangle_planes = <Vec<mesh::Plane>>::deserialize(&mut deserializer)?;
 
-                deserializer.seek(SeekFrom::Start(
+                deserializer.parser.seek(SeekFrom::Start(
                     data_seek + offset.triangle_edges.offset as u64,
                 ))?;
                 deserializer
@@ -138,11 +146,13 @@ impl ObjectMesh {
                     .push(offset.triangle_edges.size as usize);
                 let triangle_edges = <Vec<Vec3<u16>>>::deserialize(&mut deserializer)?;
 
-                deserializer.seek(SeekFrom::Start(data_seek + offset.edges.offset as u64))?;
+                deserializer
+                    .parser
+                    .seek(SeekFrom::Start(data_seek + offset.edges.offset as u64))?;
                 deserializer.len_queue.push(offset.edges.size as usize);
                 let edges = <Vec<Vec2<u16>>>::deserialize(&mut deserializer)?;
 
-                deserializer.seek(SeekFrom::Start(
+                deserializer.parser.seek(SeekFrom::Start(
                     data_seek + offset.edge_scores.offset as u64,
                 ))?;
                 deserializer
@@ -150,7 +160,9 @@ impl ObjectMesh {
                     .push(offset.edge_scores.size as usize);
                 let edge_scores = <Vec<f32>>::deserialize(&mut deserializer)?;
 
-                deserializer.seek(SeekFrom::Start(data_seek + offset.wedge_map.offset as u64))?;
+                deserializer
+                    .parser
+                    .seek(SeekFrom::Start(data_seek + offset.wedge_map.offset as u64))?;
                 deserializer.len_queue.push(offset.wedge_map.size as usize);
                 let wedge_map = <Vec<u16>>::deserialize(&mut deserializer)?;
 
@@ -168,7 +180,7 @@ impl ObjectMesh {
                 ))
             })
             .collect::<Result<Vec<object::SubMesh>>>()?;
-        deserializer.seek(chunk_end)?;
+        deserializer.parser.seek(chunk_end)?;
         Ok(Self {
             name: name.to_string(),
             vertices,

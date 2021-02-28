@@ -78,6 +78,7 @@ pub fn convert_ztex_to_dds<'a, R: BinaryRead>(reader: R) -> Result<Dds, &'a str>
     );
     let pos_of_biggest_mip_map = size_of_all_mip_maps - size_of_biggest_mip_map;
     deserializer
+        .parser
         .seek(SeekFrom::Current(pos_of_biggest_mip_map as i64))
         .unwrap();
     deserializer

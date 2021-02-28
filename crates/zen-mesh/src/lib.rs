@@ -91,3 +91,9 @@ impl From<ObjectMesh> for GeneralMesh {
         }
     }
 }
+
+impl From<SceneMesh> for GeneralMesh {
+    fn from(scene_mesh: SceneMesh) -> Self {
+        todo!()
+    }
+}

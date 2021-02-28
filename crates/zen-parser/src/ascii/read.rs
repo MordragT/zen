@@ -12,6 +12,8 @@ impl AsciiRead for Cursor<Vec<u8>> {}
 
 impl AsciiRead for File {}
 
+impl<R: AsciiRead> AsciiRead for &mut R {}
+
 pub trait AsciiRead: Read + Seek {
     fn error(&mut self, kind: ErrorCode) -> Error {
         let bak_seek = self.seek(SeekFrom::Current(0)).unwrap();

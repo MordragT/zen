@@ -1,10 +1,6 @@
 use error::*;
 use serde::Deserialize;
-use std::{
-    cell::UnsafeCell,
-    collections::HashMap,
-    io::{prelude::*, SeekFrom},
-};
+use std::{cell::UnsafeCell, collections::HashMap, io::SeekFrom};
 use zen_parser::prelude::*;
 
 pub mod error;
@@ -64,7 +60,7 @@ impl<R: BinaryRead> Vdfs<R> {
     /// Creates a new Vdfs struct that holds the data of all entries
     pub fn new<'a>(reader: R) -> Result<Vdfs<R>> {
         let mut deserializer = BinaryDeserializer::from(reader);
-        deserializer.seek(SeekFrom::Start(COMMENT_LENGTH))?;
+        deserializer.parser.seek(SeekFrom::Start(COMMENT_LENGTH))?;
         let header = Header::deserialize(&mut deserializer)?;
         if header.signature != SIGNATURE_G1 && header.signature != SIGNATURE_G2 {
             return Err(Error::UnknownSignature);
@@ -74,12 +70,14 @@ impl<R: BinaryRead> Vdfs<R> {
             return Err(Error::UnsupportedVersion);
         }
 
-        deserializer.seek(SeekFrom::Start(header.offset as u64))?;
+        deserializer
+            .parser
+            .seek(SeekFrom::Start(header.offset as u64))?;
 
         let entries = (0..header.count)
             .map(|_| -> Result<(String, Properties)> {
                 let mut name_buf = [0_u8; ENTRY_NAME_LENGTH];
-                deserializer.read_exact(&mut name_buf)?;
+                deserializer.parser.read_exact(&mut name_buf)?;
                 let name = name_buf
                     .iter()
                     .filter_map(|c| {
@@ -117,9 +115,11 @@ impl<R: BinaryRead> Vdfs<R> {
                 .as_mut()
                 .expect("Deserializer should be available.")
         };
-        deserializer.seek(SeekFrom::Start(properties.offset as u64))?;
+        deserializer
+            .parser
+            .seek(SeekFrom::Start(properties.offset as u64))?;
         let mut data_buf = vec![0_u8; properties.size as usize];
-        deserializer.read(&mut data_buf)?;
+        deserializer.parser.read(&mut data_buf)?;
         Ok(data_buf)
     }
     /// Get an entry, the name specified can be a subset of the real name

@@ -11,6 +11,8 @@ impl BinaryRead for Cursor<Vec<u8>> {}
 
 impl BinaryRead for File {}
 
+impl<R: BinaryRead> BinaryRead for &mut R {}
+
 pub trait BinaryRead: Read + Seek {
     /// Peek for next byte without advancing the reader
     fn peek(&mut self) -> Result<u8> {

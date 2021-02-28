@@ -11,6 +11,7 @@ pub enum Error {
     Ascii(ascii::Error),
     UnknownGameVersion,
     ExpectedIdentifier(String),
+    ExpectedValue(String),
 }
 
 impl fmt::Display for Error {
@@ -22,6 +23,7 @@ impl fmt::Display for Error {
             Self::Ascii(e) => f.write_str(&e.to_string()),
             Self::UnknownGameVersion => f.write_str("Unknown game version, please patch"),
             Self::ExpectedIdentifier(s) => f.write_str(&s),
+            Self::ExpectedValue(s) => f.write_str(&s),
         }
     }
 }
