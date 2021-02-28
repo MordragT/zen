@@ -1,7 +1,6 @@
 pub use object::ObjectMesh;
 pub use scene::SceneMesh;
-use std::{cmp, fs, io::Cursor, path::Path};
-use vek::{Vec2, Vec3};
+use vek::Vec3;
 use zen_material::Material;
 
 pub mod error;
@@ -63,14 +62,14 @@ impl From<ObjectMesh> for GeneralMesh {
                     .map(|pos| pos as u32)
                     .collect::<Vec<u32>>();
 
-                let mut mesh = sub_mesh.wedges.into_iter().enumerate().fold(
+                let mut mesh = sub_mesh.wedges.into_iter().fold(
                     Mesh {
                         positions: vec![],
                         indices: vec![],
                         normals: vec![],
                         tex_coords: vec![],
                     },
-                    |mut mesh, (count, wedge)| {
+                    |mut mesh, wedge| {
                         mesh.positions
                             .append(&mut object_vertices[wedge.vertex_index as usize].to_vec());
                         mesh.normals.append(&mut wedge.normal.to_vec());

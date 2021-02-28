@@ -1,12 +1,5 @@
-use image::dds::DdsDecoder;
-use image::jpeg::JpegEncoder;
-use image::ImageDecoder;
-use std::{
-    cmp,
-    fs::File,
-    io::{Cursor, Read, Write},
-    path::PathBuf,
-};
+use image::{dds::DdsDecoder, jpeg::JpegEncoder, ImageDecoder};
+use std::{cmp, fs::File, io::Cursor, path::PathBuf};
 use vek::Vec3;
 use zen_archive::Vdfs;
 use zen_types::{

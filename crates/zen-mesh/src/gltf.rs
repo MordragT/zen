@@ -8,7 +8,6 @@ use std::{
     mem,
     path::{Path, PathBuf},
 };
-use vek::Vec2;
 use zen_types::path::FILES_INSTANCE;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
