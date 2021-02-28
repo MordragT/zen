@@ -53,12 +53,10 @@ pub fn to_gltf(input: GeneralMesh, output: Output) -> PathBuf {
     let length = if output == Output::Binary {
         let mut byte_length = 0;
         for sub_mesh in input.sub_meshes.iter() {
-            byte_length +=
-                (sub_mesh.mesh.positions_buffer_f32().len() * mem::size_of::<f32>()) as u32;
-            byte_length += (sub_mesh.mesh.indices_buffer().len() * mem::size_of::<u32>()) as u32;
-            byte_length +=
-                (sub_mesh.mesh.normals_buffer_f32().len() * mem::size_of::<f32>()) as u32;
-            byte_length += (sub_mesh.tex_coords.len() * mem::size_of::<f32>()) as u32;
+            byte_length += (sub_mesh.mesh.positions.len() * mem::size_of::<f32>()) as u32;
+            byte_length += (sub_mesh.mesh.indices.len() * mem::size_of::<u32>()) as u32;
+            byte_length += (sub_mesh.mesh.normals.len() * mem::size_of::<f32>()) as u32;
+            byte_length += (sub_mesh.mesh.tex_coords.len() * mem::size_of::<f32>()) as u32;
             // byte_length +=
             //     (dbg!(sub_mesh.material.texture.get_ref().len()) * mem::size_of::<u8>()) as u32;
         }
@@ -76,11 +74,11 @@ pub fn to_gltf(input: GeneralMesh, output: Output) -> PathBuf {
     };
 
     for (i, sub_mesh) in input.sub_meshes.into_iter().enumerate() {
-        let positions_vec = sub_mesh.mesh.positions_buffer_f32();
-        let indices_vec = sub_mesh.mesh.indices_buffer();
-        let normals_vec = sub_mesh.mesh.normals_buffer_f32();
-        let tex_coords_vec = sub_mesh.tex_coords;
-        let bound = sub_mesh.mesh.extreme_coordinates();
+        let bound = dbg!(sub_mesh.mesh.extreme_coordinates());
+        let positions_vec = sub_mesh.mesh.positions;
+        let indices_vec = sub_mesh.mesh.indices;
+        let normals_vec = sub_mesh.mesh.normals;
+        let tex_coords_vec = sub_mesh.mesh.tex_coords;
 
         let positions_buffer_length = (positions_vec.len() * mem::size_of::<f32>()) as u32;
         let indices_buffer_length = (indices_vec.len() * mem::size_of::<u32>()) as u32;
@@ -285,6 +283,7 @@ pub fn to_gltf(input: GeneralMesh, output: Output) -> PathBuf {
                     extensions: None,
                     extras: Default::default(),
                 }),
+                metallic_factor: json::material::StrengthFactor(0.0),
                 ..Default::default()
             },
             ..Default::default()

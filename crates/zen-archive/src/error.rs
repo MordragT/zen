@@ -9,7 +9,6 @@ pub enum Error {
     Binary(binary::Error),
     UnsupportedVersion,
     UnknownSignature,
-    EntryNotFound,
 }
 
 impl fmt::Display for Error {
@@ -20,7 +19,6 @@ impl fmt::Display for Error {
             Self::Binary(e) => f.write_str(&e.to_string()),
             Self::UnsupportedVersion => f.write_str("Unsupported version number in Vdfs header"),
             Self::UnknownSignature => f.write_str("Unknown signature in Vdfs header"),
-            Self::EntryNotFound => f.write_str("Could not find entry"),
         }
     }
 }

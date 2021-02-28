@@ -87,7 +87,7 @@ impl<R: BinaryRead> Vdfs<R> {
                             || *c == '_' as u8
                             || *c == '.' as u8
                             || *c == '-' as u8
-                            || *c >= '1' as u8 && *c <= '9' as u8
+                            || *c >= '0' as u8 && *c <= '9' as u8
                         {
                             Some(*c as char)
                         } else {

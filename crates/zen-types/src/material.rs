@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 use vek::Vec2;
@@ -22,6 +24,12 @@ pub struct ChunkHeader {
     pub version: u16,
     pub object_index: u32,
 }
+
+// pub trait GeneralMaterial: Debug + Clone + Sized {
+//     fn get_color(&self) -> u32;
+//     fn get_texture(&self) -> &str;
+//     fn get_texture_scale(&self) -> Vec2<u32>;
+// }
 
 #[derive(Debug, Clone)]
 pub enum GeneralMaterial {
@@ -84,6 +92,18 @@ impl Into<GeneralMaterial> for BasicMaterial {
     }
 }
 
+// impl GeneralMaterial for BasicMaterial {
+//     fn get_color(&self) -> u32 {
+//         self.color
+//     }
+//     fn get_texture(&self) -> &str {
+//         &self.texture
+//     }
+//     fn get_texture_scale(&self) -> Vec2<u32> {
+//         tex_scale_to_vec(&self.tex_scale)
+//     }
+// }
+
 /// Materials used in Gothic 2
 #[derive(Deserialize, Debug, Clone)]
 pub struct AdvancedMaterial {
@@ -118,3 +138,15 @@ impl Into<GeneralMaterial> for AdvancedMaterial {
         GeneralMaterial::Advanced(self)
     }
 }
+
+// impl GeneralMaterial for AdvancedMaterial {
+//     fn get_color(&self) -> u32 {
+//         self.color
+//     }
+//     fn get_texture(&self) -> &str {
+//         &self.texture
+//     }
+//     fn get_texture_scale(&self) -> Vec2<u32> {
+//         tex_scale_to_vec(&self.tex_scale)
+//     }
+// }

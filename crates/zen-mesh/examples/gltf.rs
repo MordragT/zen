@@ -9,7 +9,7 @@ fn main() {
     let vdf_file = File::open(INSTANCE.meshes()).unwrap();
     let vdf = Vdfs::new(vdf_file).unwrap();
     //vdf.list();
-    let mesh_entry = vdf.get_by_name("ORC_MASTERTHRONE.MRM").unwrap().unwrap();
+    let mesh_entry = vdf.get_by_name("ORC_MASTERTHRONE.MRM").unwrap();
     println!("Data length: {}", mesh_entry.data.len());
     let cursor = Cursor::new(mesh_entry.data);
     let object_mesh = ObjectMesh::new(cursor, "ORC_MASTERTHRONE").unwrap();

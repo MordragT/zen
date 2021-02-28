@@ -1,8 +1,7 @@
 pub use object::ObjectMesh;
 pub use scene::SceneMesh;
 use std::{cmp, fs, io::Cursor, path::Path};
-use tri_mesh::prelude::*;
-use vek::Vec2;
+use vek::{Vec2, Vec3};
 use zen_material::Material;
 
 pub mod error;
@@ -10,10 +9,40 @@ pub mod gltf;
 pub mod object;
 pub mod scene;
 
+pub struct Mesh {
+    pub positions: Vec<f32>,
+    pub indices: Vec<u32>,
+    pub normals: Vec<f32>,
+    pub tex_coords: Vec<f32>,
+}
+
+impl Mesh {
+    pub fn extreme_coordinates(&self) -> (Vec3<f32>, Vec3<f32>) {
+        self.positions.iter().enumerate().fold(
+            (
+                Vec3::new(std::f32::MAX, std::f32::MAX, std::f32::MAX),
+                Vec3::new(std::f32::MIN, std::f32::MIN, std::f32::MIN),
+            ),
+            |(mut min, mut max), (count, pos)| {
+                if count % 3 == 0 {
+                    min.x = min.x.min(*pos);
+                    max.x = max.x.max(*pos);
+                } else if count % 3 == 1 {
+                    min.y = min.y.min(*pos);
+                    max.y = max.y.max(*pos);
+                } else if count % 3 == 2 {
+                    min.z = min.z.min(*pos);
+                    max.z = max.z.max(*pos);
+                }
+                (min, max)
+            },
+        )
+    }
+}
+
 pub struct SubMesh {
     pub mesh: Mesh,
     pub material: Material,
-    pub tex_coords: Vec<f32>,
 }
 
 pub struct GeneralMesh {
@@ -21,60 +50,42 @@ pub struct GeneralMesh {
     pub sub_meshes: Vec<SubMesh>,
 }
 
-// impl GeneralMesh {
-//     pub fn to_obj<P: AsRef<Path>>(&self, destination: P) {
-//         let wavefront = self.mesh.parse_as_obj();
-//         fs::write(destination, wavefront).unwrap();
-//     }
-// }
-
 impl From<ObjectMesh> for GeneralMesh {
     fn from(object_mesh: ObjectMesh) -> Self {
-        let mut sub_meshes = vec![];
+        let (object_sub_meshes, object_vertices) = (object_mesh.sub_meshes, object_mesh.vertices);
+        let sub_meshes = object_sub_meshes
+            .into_iter()
+            .map(|sub_mesh| {
+                let indices = sub_mesh
+                    .triangles
+                    .into_iter()
+                    .flatten()
+                    .map(|pos| pos as u32)
+                    .collect::<Vec<u32>>();
 
-        for sub_mesh in object_mesh.sub_meshes {
-            let mut vertices = vec![];
-            let mut indices = vec![];
-            let mut tex_coords = vec![];
+                let mut mesh = sub_mesh.wedges.into_iter().enumerate().fold(
+                    Mesh {
+                        positions: vec![],
+                        indices: vec![],
+                        normals: vec![],
+                        tex_coords: vec![],
+                    },
+                    |mut mesh, (count, wedge)| {
+                        mesh.positions
+                            .append(&mut object_vertices[wedge.vertex_index as usize].to_vec());
+                        mesh.normals.append(&mut wedge.normal.to_vec());
+                        mesh.tex_coords.append(&mut wedge.tex_coord.to_vec());
+                        mesh
+                    },
+                );
 
-            for wedge in sub_mesh.wedges {
-                vertices.push(object_mesh.vertices[wedge.vertex_index as usize]);
-                tex_coords.push(wedge.tex_coord);
-            }
-            for triangle in sub_mesh.triangles {
-                for position in triangle {
-                    indices.push(position as usize);
-                }
-            }
+                mesh.indices = indices;
 
-            let material = sub_mesh.material.into();
+                let material = sub_mesh.material.into();
 
-            let mut positions = vec![];
-            let mut final_tex_coords = vec![];
-            for index in indices {
-                for pos in vertices[index] {
-                    //final_indices.push(final_vertices.len() as u32);
-                    positions.push(pos as f64);
-                }
-                for tex_coord in tex_coords[index] {
-                    final_tex_coords.push(tex_coord);
-                }
-            }
-
-            let mesh = MeshBuilder::new()
-                .with_positions(positions)
-                .build()
-                .unwrap();
-            //mesh.fix_orientation();
-            //mesh.remove_lonely_primitives();
-
-            let sub_mesh = SubMesh {
-                material,
-                mesh,
-                tex_coords: final_tex_coords,
-            };
-            sub_meshes.push(sub_mesh);
-        }
+                SubMesh { material, mesh }
+            })
+            .collect::<Vec<SubMesh>>();
         Self {
             name: object_mesh.name,
             sub_meshes,

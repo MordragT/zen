@@ -8,7 +8,7 @@ lazy_static! {
     //     GothicTwo::new("/home/tom/Steam/common/Gothic II/");
     pub static ref INSTANCE: GameInstance =
         GameInstance::GothicTwo(GothicTwo::new("/home/tom/Steam/common/Gothic II/"));
-    pub static ref FILES_INSTANCE: Files = Files::new("/home/tom/Git/Rust/zen-loader/files/");
+    pub static ref FILES_INSTANCE: Files = Files::new("/home/tom/Git/zen-loader/files/");
 }
 
 pub struct Files {
