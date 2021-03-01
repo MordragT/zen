@@ -3,15 +3,22 @@ use vek::Vec3;
 
 pub mod object;
 pub mod scene;
-pub struct ChunkHeader {
-    start_position: u32,
-    size: u32,
-    verison: u16,
-    object_id: u32,
-    name: String,
-    class_name: String,
-    create_object: bool,
-}
+
+// pub struct ChunkHeader {
+//     pub start_position: u32,
+//     pub size: u32,
+//     pub verison: u16,
+//     pub object_id: u32,
+//     pub name: String,
+//     pub class_name: String,
+//     pub create_object: bool,
+// }
+
+// impl ChunkHeader {
+//     pub fn read<R: BinaryRead + AsciiRead>(reader: &mut R) -> Self {
+
+//     }
+// }
 
 #[derive(Deserialize)]
 #[repr(C, packed(4))]

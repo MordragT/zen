@@ -43,64 +43,6 @@ impl<R: AsciiRead> AsciiDeserializer<R> {
             _ => Ok(true),
         }
     }
-    pub fn read_header<'a>(&mut self) -> Result<Header> {
-        if !self.parser.consume("ZenGin Archive\n")? {
-            return Err(self.parser.error(ErrorCode::InvalidHeader));
-        }
-        if !self.parser.consume("ver ")? {
-            return Err(self.parser.error(ErrorCode::InvalidHeader));
-        }
-        // Version should always be 1
-        let version = self.parser.unchecked_int()?;
-        // Skip optional Archiver type
-        if !self.parser.consume("zCArchiverGeneric")? {
-            println!("Optional archiver type not declared, maybe non default archiver type ?");
-        }
-        self.parser.consume_whitespaces()?;
-        // File type
-        let kind = self.parser.string_until(b'\n')?;
-        let kind = match kind.as_str() {
-            "ASCII" => Kind::Ascii,
-            "BINARY" => Kind::Binary,
-            "BIN_SAFE" => Kind::BinSafe,
-            _ => Kind::Unknown,
-        };
-        let save_game = match self.parser.consume("saveGame ")? {
-            true => self.parser.unchecked_bool()?,
-            false => {
-                let e = self.parser.string_until_whitespace()?;
-                return Err(self
-                    .parser
-                    .error(ErrorCode::Expected(format!("'saveGame ', got: '{}'", e))));
-            }
-        };
-        let date = match self.parser.consume("date ")? {
-            true => Some(self.parser.string_until(b'\n')?),
-            false => None,
-        };
-        let user = match self.parser.consume("user ")? {
-            true => Some(self.parser.string_until(b'\n')?),
-            false => None,
-        };
-        // Skip optional END
-        self.parser.consume("END\n")?;
-        let object_count = match self.parser.consume("objects ")? {
-            true => self.parser.unchecked_int()?,
-            false => {
-                let e = self.parser.string_until_whitespace()?;
-                return Err(self
-                    .parser
-                    .error(ErrorCode::Expected(format!("'objects ', got: '{}'", e))));
-            }
-        };
-        self.parser.consume_whitespaces()?;
-        if !self.parser.consume("END\n")? {
-            return Err(self.parser.error(ErrorCode::ExpectedAsciiHeaderEnd));
-        }
-        self.parser.consume_whitespaces()?;
-        let header = Header::new(version, kind, save_game, date, user, object_count);
-        Ok(header)
-    }
 }
 
 impl<'de, 'a, R: AsciiRead> Deserializer<'de> for &'a mut AsciiDeserializer<R> {

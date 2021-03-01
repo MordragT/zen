@@ -1,6 +1,6 @@
 use error::*;
 use serde::Deserialize;
-use std::{cell::UnsafeCell, collections::HashMap, io::SeekFrom};
+use std::{cell::UnsafeCell, collections::HashMap, io::prelude::*, io::SeekFrom};
 use zen_parser::prelude::*;
 
 pub mod error;
@@ -60,7 +60,7 @@ impl<R: BinaryRead> Vdfs<R> {
     /// Creates a new Vdfs struct that holds the data of all entries
     pub fn new<'a>(reader: R) -> Result<Vdfs<R>> {
         let mut deserializer = BinaryDeserializer::from(reader);
-        deserializer.parser.seek(SeekFrom::Start(COMMENT_LENGTH))?;
+        deserializer.seek(SeekFrom::Start(COMMENT_LENGTH))?;
         let header = Header::deserialize(&mut deserializer)?;
         if header.signature != SIGNATURE_G1 && header.signature != SIGNATURE_G2 {
             return Err(Error::UnknownSignature);

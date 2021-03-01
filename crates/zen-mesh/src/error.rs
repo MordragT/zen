@@ -54,4 +54,13 @@ impl From<ascii::Error> for Error {
     }
 }
 
+impl From<zen_parser::Error> for Error {
+    fn from(e: zen_parser::Error) -> Self {
+        match e {
+            zen_parser::Error::Ascii(e) => Self::Ascii(e),
+            zen_parser::Error::Binary(e) => Self::Binary(e),
+        }
+    }
+}
+
 pub type Result<T> = std::result::Result<T, Error>;

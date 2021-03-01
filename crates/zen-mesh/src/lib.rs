@@ -7,6 +7,7 @@ pub mod error;
 pub mod gltf;
 pub mod object;
 pub mod scene;
+pub mod world;
 
 pub struct Mesh {
     pub positions: Vec<f32>,
