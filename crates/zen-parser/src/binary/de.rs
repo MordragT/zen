@@ -27,18 +27,6 @@ impl<R: BinaryRead + AsciiRead> From<AsciiDeserializer<R>> for BinaryDeserialize
     }
 }
 
-// impl<R: BinaryRead> Read for &mut BinaryDeserializer<R> {
-//     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-//         self.parser.read(buf)
-//     }
-// }
-
-// impl<R: BinaryRead> Seek for &mut BinaryDeserializer<R> {
-//     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-//         self.parser.seek(pos)
-//     }
-// }
-
 impl<R: BinaryRead> Read for BinaryDeserializer<R> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.parser.read(buf)

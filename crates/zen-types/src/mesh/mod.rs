@@ -1,8 +1,8 @@
 use serde::Deserialize;
 use vek::Vec3;
 
-pub mod object;
-pub mod scene;
+pub mod mrm;
+pub mod msh;
 
 // pub struct ChunkHeader {
 //     pub start_position: u32,

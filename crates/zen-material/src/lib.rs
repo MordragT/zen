@@ -12,13 +12,12 @@ pub struct Material {
     pub color: Vec3<f32>,
 }
 
-impl From<GeneralMaterial> for Material {
-    fn from(mat: GeneralMaterial) -> Material {
+impl From<&GeneralMaterial> for Material {
+    fn from(mat: &GeneralMaterial) -> Material {
         let vdfs_file = File::open(INSTANCE.textures()).unwrap();
         let vdfs = Vdfs::new(vdfs_file).unwrap();
         //println!("Texture: {}", mat.get_texture());
         let texture_name = mat.get_texture().split('.').next().unwrap();
-        dbg!(texture_name);
         //vdfs.list();
         let texture_entry = vdfs.get_by_name_slice(texture_name).unwrap();
         let texture_data = Cursor::new(texture_entry.data);

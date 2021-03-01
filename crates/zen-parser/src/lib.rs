@@ -142,7 +142,7 @@ impl<R: BinaryRead + AsciiRead> Reader<R> {
             count
         } else {
             let mut binary = BinaryDeserializer::from(ascii);
-            let binsafe = <binsafe::BinSafeHeader>::deserialize(&mut binary)?;
+            let binsafe = dbg!(<binsafe::BinSafeHeader>::deserialize(&mut binary)?);
             binsafe.object_count as i32
         };
 

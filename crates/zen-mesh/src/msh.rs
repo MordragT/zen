@@ -1,12 +1,13 @@
 use crate::error::*;
 use material::GeneralMaterial;
 use serde::Deserialize;
+use std::convert::TryFrom;
 use std::io::{Read, Seek, SeekFrom};
 use vek::Vec3;
 use zen_parser::prelude::*;
 use zen_types::{
     material,
-    mesh::{self, scene},
+    mesh::{self, msh},
 };
 
 const MESH: u16 = 0xB000;
@@ -19,18 +20,45 @@ const FEAT_LIST: u16 = 0xB040;
 const POLY_LIST: u16 = 0xB050;
 const MESH_END: u16 = 0xB060;
 
-pub struct SceneMesh {
+pub struct MshMesh {
     pub name: String,
+    pub materials: Vec<GeneralMaterial>,
+    pub vertices: Vec<Vec3<f32>>,
+    pub features: Vec<msh::FeatureChunk>,
+    pub polygons: Vec<msh::Polygon>,
 }
 
-impl From<Box<SceneMeshBuilder>> for SceneMesh {
-    fn from(builder: Box<SceneMeshBuilder>) -> Self {
-        todo!()
+impl TryFrom<Box<MshMeshBuilder>> for MshMesh {
+    type Error = Error;
+    fn try_from(builder: Box<MshMeshBuilder>) -> Result<Self> {
+        let materials = match builder.materials {
+            Some(m) => m,
+            None => return Err(Error::ExpectedValue("Expected material vec.".to_owned())),
+        };
+        let vertices = match builder.vertices {
+            Some(v) => v,
+            None => return Err(Error::ExpectedValue("Expected vertices vec.".to_owned())),
+        };
+        let features = match builder.features {
+            Some(f) => f,
+            None => return Err(Error::ExpectedValue("Expected features vec.".to_owned())),
+        };
+        let polygons = match builder.polygons {
+            Some(p) => p,
+            None => return Err(Error::ExpectedValue("Expected polygons vec.".to_owned())),
+        };
+        Ok(Self {
+            name: builder.name,
+            materials,
+            vertices,
+            features,
+            polygons,
+        })
     }
 }
 
 #[derive(Default)]
-pub struct SceneMeshBuilder {
+pub struct MshMeshBuilder {
     pub name: String,
     pub version: Option<u32>,
     //pub mesh: Option<()>,
@@ -38,45 +66,37 @@ pub struct SceneMeshBuilder {
     pub materials: Option<Vec<GeneralMaterial>>,
     pub light_maps: Option<()>,
     pub vertices: Option<Vec<Vec3<f32>>>,
-    pub features: Option<Vec<scene::FeatureChunk>>,
-    pub polygons: Option<Vec<scene::Polygon>>,
+    pub features: Option<Vec<msh::FeatureChunk>>,
+    pub polygons: Option<Vec<msh::Polygon>>,
 }
 
-fn deserialize_version<R: BinaryRead + AsciiRead>(
-    reader: &mut R,
-    chunk_end: SeekFrom,
-) -> Result<u32> {
+fn deserialize_version<R: BinaryRead + AsciiRead>(reader: &mut R, chunk_end: u64) -> Result<u32> {
     let mut deserializer = BinaryDeserializer::from(reader);
     #[derive(Deserialize)]
     struct Info {
         version: u32,
-        date: scene::Date,
+        date: msh::Date,
         name: String,
     }
+
     let info = Info::deserialize(&mut deserializer)?;
-    println!("Reading mesh {} with version: {}", info.name, info.version);
-    deserializer.seek(chunk_end)?;
+    deserializer.seek(SeekFrom::Start(chunk_end))?;
     Ok(info.version)
 }
 
-fn deserialize_bbox3d<R: BinaryRead + AsciiRead>(
-    reader: &mut R,
-    chunk_end: SeekFrom,
-) -> Result<()> {
+fn deserialize_bbox3d<R: BinaryRead + AsciiRead>(reader: &mut R, chunk_end: u64) -> Result<()> {
     let mut deserializer = BinaryDeserializer::from(reader);
-    println!("Reading bounding box");
     let (_min, _max) =
         <((f32, f32, f32, f32), (f32, f32, f32, f32))>::deserialize(&mut deserializer)?;
     //bounding_box = ((min.0, min.1, min.2), (max.0, max.1, max.2));
-    deserializer.seek(chunk_end)?;
+    deserializer.seek(SeekFrom::Start(chunk_end))?;
     Ok(())
 }
 
 fn deserialize_materials<R: BinaryRead + AsciiRead>(
     reader: &mut R,
-    chunk_end: SeekFrom,
+    chunk_end: u64,
 ) -> Result<Vec<material::GeneralMaterial>> {
-    println!("Reading material list");
     let mut deserializer = BinaryDeserializer::from(reader);
     let _header = Reader::from(&mut deserializer.parser).read_header()?;
 
@@ -101,53 +121,46 @@ fn deserialize_materials<R: BinaryRead + AsciiRead>(
             }
         })
         .collect::<Result<Vec<material::GeneralMaterial>>>()?;
-    deserializer.seek(chunk_end)?;
+    deserializer.seek(SeekFrom::Start(chunk_end))?;
     Ok(materials)
 }
 
-fn deserialize_light_maps<R: BinaryRead + AsciiRead>(
-    reader: &mut R,
-    chunk_end: SeekFrom,
-) -> Result<()> {
-    println!("Reading light maps");
+fn deserialize_light_maps<R: BinaryRead + AsciiRead>(reader: &mut R, chunk_end: u64) -> Result<()> {
     let mut deserializer = BinaryDeserializer::from(reader);
-    deserializer.seek(chunk_end)?;
+    deserializer.seek(SeekFrom::Start(chunk_end))?;
     Ok(())
 }
 
 fn deserialize_vertices<R: BinaryRead + AsciiRead>(
     reader: &mut R,
-    chunk_end: SeekFrom,
+    chunk_end: u64,
 ) -> Result<Vec<Vec3<f32>>> {
     let mut deserializer = BinaryDeserializer::from(reader);
-    println!("Reading vertice list");
     let num_vertices = u32::deserialize(&mut deserializer)?;
     deserializer.len_queue.push(num_vertices as usize);
     //vertices = <Vec<(f32, f32, f32)>>::deserialize(&mut deserializer)?;
     let vertices = <Vec<Vec3<f32>>>::deserialize(&mut deserializer)?;
-    deserializer.seek(chunk_end)?;
+    deserializer.seek(SeekFrom::Start(chunk_end))?;
     Ok(vertices)
 }
 
 fn deserialize_features<R: BinaryRead + AsciiRead>(
     reader: &mut R,
-    chunk_end: SeekFrom,
-) -> Result<Vec<scene::FeatureChunk>> {
+    chunk_end: u64,
+) -> Result<Vec<msh::FeatureChunk>> {
     let mut deserializer = BinaryDeserializer::from(reader);
-    println!("Reading feature list");
     let num_feats = u32::deserialize(&mut deserializer)?;
     deserializer.len_queue.push(num_feats as usize);
-    let features = <Vec<scene::FeatureChunk>>::deserialize(&mut deserializer)?;
-    deserializer.seek(chunk_end)?;
+    let features = <Vec<msh::FeatureChunk>>::deserialize(&mut deserializer)?;
+    deserializer.seek(SeekFrom::Start(chunk_end))?;
     Ok(features)
 }
 
 fn deserialize_poly_list<R: BinaryRead + AsciiRead>(
     reader: &mut R,
-    chunk_end: SeekFrom,
+    chunk_end: u64,
     version: u32,
-) -> Result<Vec<scene::Polygon>> {
-    println!("Reading polygon list");
+) -> Result<Vec<msh::Polygon>> {
     let mut deserializer = BinaryDeserializer::from(reader);
     let num_polys = u32::deserialize(&mut deserializer)?;
     let polygons = (0..num_polys)
@@ -163,12 +176,12 @@ fn deserialize_poly_list<R: BinaryRead + AsciiRead>(
             struct PolygonData {
                 pub material_index: i16,
                 pub light_map_index: i16,
-                pub plane: scene::PlanePacked,
+                pub plane: msh::PlanePacked,
             }
             let polygon_data = PolygonData::deserialize(&mut deserializer)?;
 
-            let flags: scene::PolyFlags = match version {
-                GOTHIC2_6 => <scene::PolyGothicTwoFlags>::deserialize(&mut deserializer)?.into(),
+            let flags: msh::PolyFlags = match version {
+                GOTHIC2_6 => <msh::PolyGothicTwoFlags>::deserialize(&mut deserializer)?.into(),
                 GOTHIC1_08K => todo!(),
                 _ => return Err(Error::UnknownGameVersion),
             };
@@ -177,20 +190,20 @@ fn deserialize_poly_list<R: BinaryRead + AsciiRead>(
 
             let indices = (0..num_indices)
                 .map(|_| {
-                    let index: scene::Index = match version {
+                    let index: msh::Index = match version {
                         GOTHIC2_6 => {
-                            <scene::IndexPacked<u32>>::deserialize(&mut deserializer)?.into()
+                            <msh::IndexPacked<u32>>::deserialize(&mut deserializer)?.into()
                         }
                         GOTHIC1_08K => {
-                            <scene::IndexPacked<u16>>::deserialize(&mut deserializer)?.into()
+                            <msh::IndexPacked<u16>>::deserialize(&mut deserializer)?.into()
                         }
                         _ => return Err(Error::UnknownGameVersion),
                     };
                     return Ok(index);
                 })
-                .collect::<Result<Vec<scene::Index>>>()?;
+                .collect::<Result<Vec<msh::Index>>>()?;
 
-            Ok(scene::Polygon::new(
+            Ok(msh::Polygon::new(
                 polygon_data.material_index,
                 polygon_data.light_map_index,
                 polygon_data.plane.into(),
@@ -199,23 +212,18 @@ fn deserialize_poly_list<R: BinaryRead + AsciiRead>(
                 indices,
             ))
         })
-        .collect::<Result<Vec<scene::Polygon>>>()?;
-    deserializer.seek(chunk_end)?;
+        .collect::<Result<Vec<msh::Polygon>>>()?;
+    deserializer.seek(SeekFrom::Start(chunk_end))?;
     Ok(polygons)
 }
 
 fn read_chunk<R: BinaryRead + AsciiRead>(
     mut reader: R,
-    mut builder: Box<SceneMeshBuilder>,
-) -> Result<SceneMesh> {
-    println!("Read chunk...");
-
+    mut builder: Box<MshMeshBuilder>,
+) -> Result<MshMesh> {
     let mut deserializer = BinaryDeserializer::from(&mut reader);
     let chunk = <mesh::Chunk>::deserialize(&mut deserializer)?;
-    let chunk_end = SeekFrom::Current(chunk.length as i64);
-
-    dbg!(chunk.id);
-    dbg!(chunk_end);
+    let chunk_end = deserializer.seek(SeekFrom::Current(0))? + chunk.length as u64;
 
     match chunk.id {
         MESH => {
@@ -254,36 +262,20 @@ fn read_chunk<R: BinaryRead + AsciiRead>(
             builder.polygons = Some(deserialize_poly_list::<R>(&mut reader, chunk_end, version)?);
             read_chunk(reader, builder)
         }
-        MESH_END => Ok(builder.into()),
+        MESH_END => MshMesh::try_from(builder),
         _ => {
-            println!("Unknown chunk.");
-            deserializer.seek(chunk_end)?;
+            eprintln!("Unknown chunk.");
+            deserializer.seek(SeekFrom::Start(chunk_end))?;
             read_chunk(reader, builder)
         }
     }
 }
 
-impl SceneMesh {
-    pub fn new<R: BinaryRead + AsciiRead>(mut reader: R, name: &str) -> Result<SceneMesh> {
-        let _header = Reader::from(&mut reader).read_header()?;
-        //let mut deserializer = BinaryDeserializer::from(&mut reader);
-        //let _binsafe_header = <binsafe::BinSafeHeader>::deserialize(&mut deserializer)?;
-
-        // // skip bytes dunno what it is
-        // let mut buf = [0_u8; 182];
-        // reader.read(&mut buf);
-        // //buf.into_iter().for_each(|u| print!("{}", *u));
-
-        // let header = AsciiDeserializer::from(&mut reader).read_header()?;
-        // dbg!(header);
-
-        // let mut buf = [0_u8; 182];
-        // reader.read(&mut buf);
-        // buf.into_iter().for_each(|u| print!("{}", *u as char));
-
+impl MshMesh {
+    pub fn new<R: BinaryRead + AsciiRead>(reader: R, name: &str) -> Result<MshMesh> {
         read_chunk(
             reader,
-            Box::new(SceneMeshBuilder {
+            Box::new(MshMeshBuilder {
                 name: name.to_owned(),
                 ..Default::default()
             }),

@@ -98,7 +98,7 @@ pub trait BinaryRead: Read + Seek {
         let mut res = String::new();
         loop {
             match self.u8()? {
-                0 => return Ok(res),
+                0 | 10 => return Ok(res),
                 x if x > 0 && x < 128 => res.push(x as char),
                 x => return Err(Error::ExpectedAsciiChar(x)),
                 //x => res.push(x as char),

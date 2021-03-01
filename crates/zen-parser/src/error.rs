@@ -7,6 +7,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     Binary(binary::Error),
     Ascii(ascii::Error),
+    Message(String),
 }
 
 impl From<binary::Error> for Error {
@@ -26,8 +27,15 @@ impl fmt::Display for Error {
         match self {
             Self::Ascii(e) => f.write_str(&e.to_string()),
             Self::Binary(e) => f.write_str(&e.to_string()),
+            Self::Message(s) => f.write_str(&s),
         }
     }
 }
 
 impl std::error::Error for Error {}
+
+impl serde::de::Error for Error {
+    fn custom<T: fmt::Display>(msg: T) -> Self {
+        Error::Message(msg.to_string())
+    }
+}

@@ -73,7 +73,7 @@ pub fn to_gltf(input: GeneralMesh, output: Output) -> PathBuf {
     };
 
     for (i, sub_mesh) in input.sub_meshes.into_iter().enumerate() {
-        let bound = dbg!(sub_mesh.mesh.extreme_coordinates());
+        let bound = sub_mesh.mesh.extreme_coordinates();
         let positions_vec = sub_mesh.mesh.positions;
         let indices_vec = sub_mesh.mesh.indices;
         let normals_vec = sub_mesh.mesh.normals;

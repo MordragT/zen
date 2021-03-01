@@ -56,6 +56,13 @@ pub struct Vdfs<R: BinaryRead> {
     entries: HashMap<String, Properties>,
 }
 
+fn print_entry(name: &str, properties: &Properties) {
+    println!(
+        "Name: {}, Offset: {:x}, Size: {:x}, Kind: {:x}, Attr: {:x}",
+        name, properties.offset, properties.size, properties.kind, properties.attr
+    );
+}
+
 impl<R: BinaryRead> Vdfs<R> {
     /// Creates a new Vdfs struct that holds the data of all entries
     pub fn new<'a>(reader: R) -> Result<Vdfs<R>> {
@@ -143,12 +150,19 @@ impl<R: BinaryRead> Vdfs<R> {
     }
     /// Lists all vdfs entries and some generic information
     pub fn list(&self) {
-        for (name, prop) in &self.entries {
-            println!(
-                "Name: {}, Offset: {:x}, Size: {:x}, Kind: {:x}, Attr: {:x}",
-                name, prop.offset, prop.size, prop.kind, prop.attr
-            );
-        }
+        self.entries
+            .iter()
+            .for_each(|(name, prop)| print_entry(name, prop));
+        self.print_archive_information();
+    }
+    pub fn filter_list(&self, input: &str) {
+        self.entries
+            .iter()
+            .filter(|(name, _)| name.contains(input))
+            .for_each(|(name, prop)| print_entry(name, prop));
+        self.print_archive_information();
+    }
+    fn print_archive_information(&self) {
         println!(
             "VDFS Archive, Size: {:x}, Time: {:x}, Offset: {:x}, Number Files: {}",
             self.header.data_size, self.header.timestamp, self.header.offset, self.header.num_files

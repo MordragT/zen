@@ -1,13 +1,14 @@
-pub use object::ObjectMesh;
-pub use scene::SceneMesh;
+pub use mrm::MrmMesh;
+pub use msh::MshMesh;
 use vek::Vec3;
+pub use zen::ZenMesh;
 use zen_material::Material;
 
 pub mod error;
 pub mod gltf;
-pub mod object;
-pub mod scene;
-pub mod world;
+pub mod mrm;
+pub mod msh;
+pub mod zen;
 
 pub struct Mesh {
     pub positions: Vec<f32>,
@@ -50,8 +51,8 @@ pub struct GeneralMesh {
     pub sub_meshes: Vec<SubMesh>,
 }
 
-impl From<ObjectMesh> for GeneralMesh {
-    fn from(object_mesh: ObjectMesh) -> Self {
+impl From<MrmMesh> for GeneralMesh {
+    fn from(object_mesh: MrmMesh) -> Self {
         let (object_sub_meshes, object_vertices) = (object_mesh.sub_meshes, object_mesh.vertices);
         let sub_meshes = object_sub_meshes
             .into_iter()
@@ -81,7 +82,7 @@ impl From<ObjectMesh> for GeneralMesh {
 
                 mesh.indices = indices;
 
-                let material = sub_mesh.material.into();
+                let material = (&sub_mesh.material).into();
 
                 SubMesh { material, mesh }
             })
@@ -93,8 +94,57 @@ impl From<ObjectMesh> for GeneralMesh {
     }
 }
 
-impl From<SceneMesh> for GeneralMesh {
-    fn from(scene_mesh: SceneMesh) -> Self {
+impl From<MshMesh> for GeneralMesh {
+    fn from(mesh: MshMesh) -> Self {
+        let MshMesh {
+            name,
+            materials,
+            vertices,
+            features,
+            polygons,
+        } = mesh;
+        let sub_meshes = polygons
+            .into_iter()
+            .map(|polygon| -> SubMesh {
+                let verts = polygon
+                    .indices
+                    .iter()
+                    .map(|index| vertices[index.vertex as usize])
+                    .flatten()
+                    .collect::<Vec<f32>>();
+                let norms = polygon
+                    .indices
+                    .iter()
+                    .map(|index| features[index.feature as usize].vert_normal)
+                    .flatten()
+                    .collect::<Vec<f32>>();
+                let tex_coords = polygon
+                    .indices
+                    .iter()
+                    .map(|index| features[index.feature as usize].tex_coord)
+                    .flatten()
+                    .collect::<Vec<f32>>();
+                let indices = (0..verts.len() / 3)
+                    .into_iter()
+                    .map(|i| i as u32)
+                    .collect::<Vec<u32>>();
+                SubMesh {
+                    material: (&materials[polygon.material_index as usize]).into(),
+                    mesh: Mesh {
+                        positions: verts,
+                        normals: norms,
+                        indices,
+                        tex_coords,
+                    },
+                }
+            })
+            .collect::<Vec<SubMesh>>();
+        GeneralMesh { name, sub_meshes }
+    }
+}
+
+impl From<ZenMesh> for GeneralMesh {
+    fn from(world_mesh: ZenMesh) -> Self {
         todo!()
     }
 }

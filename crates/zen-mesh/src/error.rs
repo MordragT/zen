@@ -59,6 +59,7 @@ impl From<zen_parser::Error> for Error {
         match e {
             zen_parser::Error::Ascii(e) => Self::Ascii(e),
             zen_parser::Error::Binary(e) => Self::Binary(e),
+            zen_parser::Error::Message(s) => Self::Message(s),
         }
     }
 }

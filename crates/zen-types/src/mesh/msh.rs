@@ -124,15 +124,15 @@ pub struct IndexPacked<T: Into<u32>> {
 
 #[derive(Debug)]
 pub struct Index {
-    vertex_index: u32,
-    feat_index: u32,
+    pub vertex: u32,
+    pub feature: u32,
 }
 
 impl<T: Into<u32>> From<IndexPacked<T>> for Index {
     fn from(i: IndexPacked<T>) -> Self {
         Self {
-            vertex_index: i.vertex_index.into(),
-            feat_index: i.feat_index,
+            vertex: i.vertex_index.into(),
+            feature: i.feat_index,
         }
     }
 }
@@ -140,19 +140,19 @@ impl<T: Into<u32>> From<IndexPacked<T>> for Index {
 #[derive(Deserialize)]
 #[repr(C, packed(4))]
 pub struct FeatureChunk {
-    uv: Vec2<f32>,
-    light_stat: u32,
-    vert_normal: Vec3<f32>,
+    pub tex_coord: Vec2<f32>,
+    pub light_stat: u32,
+    pub vert_normal: Vec3<f32>,
 }
 
 // Data in memory is packed therefor unable to utilize serde Deserialization
 pub struct Polygon {
-    material_index: i16,
-    light_map_index: i16,
-    plane: Plane,
-    flags: PolyFlags,
-    num_indices: u8,
-    indices: Vec<Index>,
+    pub material_index: i16,
+    pub light_map_index: i16,
+    pub plane: Plane,
+    pub flags: PolyFlags,
+    pub num_indices: u8,
+    pub indices: Vec<Index>,
 }
 
 impl Polygon {

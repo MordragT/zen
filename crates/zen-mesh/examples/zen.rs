@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Cursor;
 use zen_archive::Vdfs;
-use zen_mesh::{gltf, scene::SceneMesh, GeneralMesh};
+use zen_mesh::{gltf, scene::SceneMesh, zen::ZenMesh, GeneralMesh};
 use zen_parser::prelude::*;
 use zen_types::path::INSTANCE;
 
@@ -12,7 +12,7 @@ fn main() {
     let mesh_entry = vdf.get_by_name("NEWWORLD.ZEN").unwrap();
     println!("Data length: {}", mesh_entry.data.len());
     let cursor = Cursor::new(mesh_entry.data);
-    let scene_mesh = SceneMesh::new(cursor, "Newworld").unwrap();
-    let mesh = GeneralMesh::from(scene_mesh);
+    let mesh = ZenMesh::new(cursor, "Newworld").unwrap();
+    let mesh = GeneralMesh::from(mesh);
     let gltf = gltf::to_gltf(mesh, gltf::Output::Binary);
 }
