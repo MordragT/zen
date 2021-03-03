@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Cursor;
 use zen_archive::Vdfs;
-use zen_mesh::{gltf, scene::SceneMesh, zen::ZenMesh, GeneralMesh};
+use zen_mesh::{gltf, msh::SceneMesh, zen::ZenMesh, GeneralMesh};
 use zen_parser::prelude::*;
 use zen_types::path::INSTANCE;
 

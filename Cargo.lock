@@ -544,10 +544,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "zen-daedalus"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "zen-parser",
+]
+
+[[package]]
 name = "zen-loader"
 version = "0.1.0"
 dependencies = [
  "zen-archive",
+ "zen-daedalus",
  "zen-material",
  "zen-mesh",
  "zen-parser",

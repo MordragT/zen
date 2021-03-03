@@ -13,4 +13,6 @@ zen-parser = { path = "crates/zen-parser" }
 zen-texture = { path = "crates/zen-texture" }
 zen-material = { path = "crates/zen-material" }
 zen-types = { path = "crates/zen-types" }
+zen-daedalus = { path = "crates/zen-daedalus" }
+
 
