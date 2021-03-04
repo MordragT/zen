@@ -1,5 +1,5 @@
 use std::fs::File;
-use zen_daedalus::code::Code;
+use zen_daedalus::{code::Code, machine::Machine};
 
 pub fn main() {
     let file =
@@ -7,4 +7,6 @@ pub fn main() {
             .unwrap();
 
     let code = Code::open(file).unwrap();
+    let mut machine = Machine::new(code);
+    machine.run();
 }

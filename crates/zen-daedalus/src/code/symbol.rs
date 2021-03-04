@@ -1,9 +1,58 @@
+use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 
 #[derive(Debug)]
-pub struct Label {
+pub struct Symbol {
     pub name: String,
     pub parent: i32,
+    pub kind: SymbolKind,
+}
+
+#[derive(Debug)]
+pub enum SymbolKind {
+    Void,
+    Float(Vec<i32>),
+    Int(Vec<i32>),
+    String(Vec<String>),
+    Class(i32),
+    Func(i32),
+    Prototype(i32),
+    Instance(i32),
+}
+
+pub struct SymbolTable(pub HashMap<u32, Symbol>);
+
+impl SymbolTable {
+    pub fn get(&self, idx: &u32, arr_idx: &u32) -> Option<&i32> {
+        match self.0.get(idx) {
+            Some(symbol) => match &symbol.kind {
+                SymbolKind::Void => None,
+                SymbolKind::Float(f) => f.get(*arr_idx as usize),
+                SymbolKind::Int(i) => i.get(*arr_idx as usize),
+                SymbolKind::String(s) => todo!(),
+                SymbolKind::Class(c) => todo!(),
+                SymbolKind::Func(f) => todo!(),
+                SymbolKind::Prototype(p) => todo!(),
+                SymbolKind::Instance(i) => todo!(),
+            },
+            None => None,
+        }
+    }
+    pub fn insert(&mut self, idx: &u32, arr_idx: &u32, value: i32) {
+        match self.0.get_mut(idx) {
+            Some(symbol) => match &mut symbol.kind {
+                SymbolKind::Void => panic!(),
+                SymbolKind::Float(f) => f.insert(*arr_idx as usize, value),
+                SymbolKind::Int(i) => i.insert(*arr_idx as usize, value),
+                SymbolKind::String(s) => todo!(),
+                SymbolKind::Class(c) => todo!(),
+                SymbolKind::Func(f) => todo!(),
+                SymbolKind::Prototype(p) => todo!(),
+                SymbolKind::Instance(i) => todo!(),
+            },
+            None => panic!(),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -116,7 +165,7 @@ pub enum Kind {
     Void = 0,
     Float = 1,
     Int = 2,
-    CharString = 3,
+    String = 3,
     Class = 4,
     Func = 5,
     Prototype = 6,
@@ -137,7 +186,7 @@ impl TryFrom<u8> for Kind {
             x if x == Kind::Void as u8 => Ok(Kind::Void),
             x if x == Kind::Float as u8 => Ok(Kind::Float),
             x if x == Kind::Int as u8 => Ok(Kind::Int),
-            x if x == Kind::CharString as u8 => Ok(Kind::CharString),
+            x if x == Kind::String as u8 => Ok(Kind::String),
             x if x == Kind::Class as u8 => Ok(Kind::Class),
             x if x == Kind::Func as u8 => Ok(Kind::Func),
             x if x == Kind::Prototype as u8 => Ok(Kind::Prototype),
