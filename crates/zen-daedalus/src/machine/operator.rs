@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 #[repr(u8)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Operator {
     Add = 0,             // a + b
     Subract = 1,         // a - b
@@ -67,6 +67,54 @@ pub enum Operator {
     //	String          = 98,
     //	Array           = 180,  // Var + 128
     PushArrayVar = 245, // PushVar + Array
+}
+
+impl std::fmt::Display for Operator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Add => f.write_str("Add"),
+            Self::Subract => f.write_str("Subtract"),
+            Self::Multiply => f.write_str("Multiply"),
+            Self::Divide => f.write_str("Divide"),
+            Self::Mod => f.write_str("Mod"),
+            Self::BinOr => f.write_str("BinOr"),
+            Self::BinAnd => f.write_str("BinAnd"),
+            Self::Less => f.write_str("Less"),
+            Self::Greater => f.write_str("Greater"),
+            Self::Assign => f.write_str("Assign"),
+            Self::LogOr => f.write_str("LogOr"),
+            Self::LogAnd => f.write_str("LogAnd"),
+            Self::ShiftLeft => f.write_str("ShiftLeft"),
+            Self::ShiftRight => f.write_str("ShiftRight"),
+            Self::LessOrEqual => f.write_str("LessOrEqual"),
+            Self::Equal => f.write_str("Equal"),
+            Self::NotEqual => f.write_str("NotEqual"),
+            Self::GreaterOrEqual => f.write_str("GreaterOrEqual"),
+            Self::AssignAdd => f.write_str("AssignAdd"),
+            Self::AssignSubtract => f.write_str("AssignSubtract"),
+            Self::AssignMultiply => f.write_str("AssignMultiply"),
+            Self::AssignDivide => f.write_str("AssignDivide"),
+            Self::Plus => f.write_str("Plus"),
+            Self::Minus => f.write_str("Minus"),
+            Self::Not => f.write_str("Not"),
+            Self::Negate => f.write_str("Negate"),
+            Self::Ret => f.write_str("Ret"),
+            Self::Call => f.write_str("Call"),
+            Self::CallExternal => f.write_str("CallExternal"),
+            Self::PushInt => f.write_str("PushInt"),
+            Self::PushVar => f.write_str("PushVar"),
+            Self::PushInstance => f.write_str("PushInstance"),
+            Self::AssignString => f.write_str("AssignString"),
+            Self::AssignStringRef => f.write_str("AssignStringRef"),
+            Self::AssignFunc => f.write_str("AssignFunc"),
+            Self::AssignFloat => f.write_str("AssignFloat"),
+            Self::AssignInstance => f.write_str("AssignInstance"),
+            Self::Jump => f.write_str("Jump"),
+            Self::JumpIf => f.write_str("JumpIf"),
+            Self::SetInstance => f.write_str("SetInstance"),
+            Self::PushArrayVar => f.write_str("PushArrayVec"),
+        }
+    }
 }
 
 impl TryFrom<u8> for Operator {

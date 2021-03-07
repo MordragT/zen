@@ -1,5 +1,6 @@
-use crate::code::symbol::SymbolTable;
-
+use crate::code::Code;
+use std::fmt;
+use zen_parser::binary::BinaryRead;
 #[derive(Debug)]
 pub struct Stack<T: Default>(Vec<T>);
 
@@ -20,16 +21,29 @@ impl<T: Default> Stack<T> {
         self.0.pop().unwrap_or_default()
     }
 }
+
+impl<T: Default + fmt::Display> fmt::Display for Stack<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&format!(
+            "[{}]",
+            self.0.iter().fold(String::new(), |mut string, val| {
+                string.push_str(&format!("{}, ", val.to_string()));
+                string
+            })
+        ))
+    }
+}
+
 #[derive(Debug)]
 pub enum Value {
-    Address(u32, u32),
-    Data(i64),
+    Address(usize),
+    Data(i32),
 }
 
 impl Value {
-    pub fn get(&self, table: &SymbolTable) -> i64 {
+    pub fn get(&self, code: &Code) -> i32 {
         match self {
-            Self::Address(idx, arr_idx) => *table.get(idx, arr_idx).unwrap() as i64,
+            Self::Address(offset) => *code.get(*offset).unwrap(),
             Self::Data(d) => *d,
         }
     }
@@ -38,6 +52,15 @@ impl Value {
 impl Default for Value {
     fn default() -> Self {
         Self::Data(0)
+    }
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Address(a) => f.write_str(&format!("address({})", a)),
+            Self::Data(d) => f.write_str(&format!("data({})", d)),
+        }
     }
 }
 

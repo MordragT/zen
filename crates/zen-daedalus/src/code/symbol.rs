@@ -1,5 +1,10 @@
+use super::error::*;
+use super::Code;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
+use std::io::{Seek, SeekFrom};
+use zen_parser::binary::{BinaryDeserializer, BinaryRead};
 
 #[derive(Debug)]
 pub struct Symbol {
@@ -8,51 +13,142 @@ pub struct Symbol {
     pub kind: SymbolKind,
 }
 
+// impl Symbol {
+//     pub fn load<R: BinaryRead>(
+//         &self,
+//         deserializer: *mut BinaryDeserializer<R>,
+//         symbol_table: *mut SymbolTable,
+//         index: u32,
+//     ) -> Result<()> {
+//         let mut deserializer = unsafe { &mut *deserializer };
+//         let mut symbol_table = unsafe { &mut *symbol_table };
+
+//         let bak = deserializer.seek(SeekFrom::Current(0))?;
+
+//         match self.kind {
+//             SymbolKind::Void => return Ok(()),
+//             SymbolKind::Float(_) => panic!(),
+//             SymbolKind::Int(_) => panic!(),
+//             SymbolKind::String(_) => panic!(),
+//             SymbolKind::Class(c) => todo!(),
+//             SymbolKind::Func(f) => todo!(),
+//             SymbolKind::Prototype(p) => todo!(),
+//             SymbolKind::Instance(i) => {
+//                 let offset = i + index as usize;
+//                 deserializer.seek(SeekFrom::Start(offset as u64))?;
+//                 symbol_table.insert_data(offset, i32::deserialize(deserializer)?);
+//             }
+//         }
+
+//         deserializer.seek(SeekFrom::Start(bak))?;
+//         Ok(())
+//     }
+// }
+
 #[derive(Debug)]
 pub enum SymbolKind {
     Void,
     Float(Vec<i32>),
     Int(Vec<i32>),
     String(Vec<String>),
-    Class(i32),
-    Func(i32),
-    Prototype(i32),
-    Instance(i32),
+    Class(usize),
+    Func(usize),
+    Prototype(usize),
+    Instance(usize),
 }
 
-pub struct SymbolTable(pub HashMap<u32, Symbol>);
+impl SymbolKind {
+    pub fn get_offset(&self) -> Option<usize> {
+        match self {
+            Self::Void | Self::Float(_) | Self::Int(_) | Self::String(_) => None,
+            Self::Class(c) => Some(*c),
+            Self::Func(f) => Some(*f),
+            Self::Prototype(p) => Some(*p),
+            Self::Instance(i) => Some(*i),
+        }
+    }
+    pub fn get_static(&self, offset: usize) -> Option<&i32> {
+        match self {
+            Self::Class(_)
+            | Self::Func(_)
+            | Self::Prototype(_)
+            | Self::Instance(_)
+            | Self::Void => None,
+            Self::Float(vec) => vec.get(offset),
+            Self::Int(vec) => vec.get(offset),
+            Self::String(_) => todo!(),
+        }
+    }
+    pub fn get_mut_static(&mut self, offset: usize) -> Option<&mut i32> {
+        match self {
+            Self::Class(_)
+            | Self::Func(_)
+            | Self::Prototype(_)
+            | Self::Instance(_)
+            | Self::Void => None,
+            Self::Float(vec) => vec.get_mut(offset),
+            Self::Int(vec) => vec.get_mut(offset),
+            Self::String(_) => todo!(),
+        }
+    }
+}
+
+pub struct SymbolTable {
+    table: HashMap<usize, Symbol>,
+    // data: HashMap<usize, i32>,
+    // str_data: HashMap<usize, String>,
+}
 
 impl SymbolTable {
-    pub fn get(&self, idx: &u32, arr_idx: &u32) -> Option<&i32> {
-        match self.0.get(idx) {
-            Some(symbol) => match &symbol.kind {
-                SymbolKind::Void => None,
-                SymbolKind::Float(f) => f.get(*arr_idx as usize),
-                SymbolKind::Int(i) => i.get(*arr_idx as usize),
-                SymbolKind::String(s) => todo!(),
-                SymbolKind::Class(c) => todo!(),
-                SymbolKind::Func(f) => todo!(),
-                SymbolKind::Prototype(p) => todo!(),
-                SymbolKind::Instance(i) => todo!(),
-            },
-            None => None,
+    pub fn new(table: HashMap<usize, Symbol>) -> Self {
+        Self {
+            table,
+            // data: HashMap::new(),
+            // str_data: HashMap::new(),
         }
     }
-    pub fn insert(&mut self, idx: &u32, arr_idx: &u32, value: i32) {
-        match self.0.get_mut(idx) {
-            Some(symbol) => match &mut symbol.kind {
-                SymbolKind::Void => panic!(),
-                SymbolKind::Float(f) => f.insert(*arr_idx as usize, value),
-                SymbolKind::Int(i) => i.insert(*arr_idx as usize, value),
-                SymbolKind::String(s) => todo!(),
-                SymbolKind::Class(c) => todo!(),
-                SymbolKind::Func(f) => todo!(),
-                SymbolKind::Prototype(p) => todo!(),
-                SymbolKind::Instance(i) => todo!(),
-            },
-            None => panic!(),
-        }
+    pub fn insert(&mut self, address: usize, symbol: Symbol) {
+        self.table.insert(address, symbol);
     }
+    pub fn get(&self, offset: &usize) -> Option<&Symbol> {
+        self.table.get(offset)
+    }
+    pub fn get_mut(&mut self, offset: &usize) -> Option<&mut Symbol> {
+        self.table.get_mut(offset)
+    }
+    pub fn contains(&self, address: &usize) -> bool {
+        self.table.contains_key(address)
+    }
+    // pub fn insert_data(&mut self, index: usize, element: i32) -> Option<i32> {
+    //     self.data.insert(index, element)
+    // }
+    // pub fn insert_str(&mut self, index: usize, element: String) -> Option<String> {
+    //     self.str_data.insert(index, element)
+    // }
+    // pub fn get_mut_data(&mut self, index: &usize) -> Option<&mut i32> {
+    //     self.data.get_mut(index)
+    // }
+    // pub fn get_data(&self, index: &usize) -> Option<&i32> {
+    //     self.data.get(index)
+    // }
+    // pub fn append_data(&mut self, other: Vec<i32>) -> usize {
+    //     let len = self.data.len();
+    //     self.data
+    //         .extend(other.into_iter().enumerate().map(|(i, v)| (i + len, v)));
+    //     len
+    // }
+    // pub fn append_str(&mut self, other: Vec<String>) -> usize {
+    //     let len = self.str_data.len();
+    //     self.str_data
+    //         .extend(other.into_iter().enumerate().map(|(i, v)| (i + len, v)));
+    //     len
+    // }
+    // pub unsafe fn borrow_mut(&self) -> &mut HashMap<u32, Symbol> {
+    //     unsafe { self.table.get().as_mut().unwrap() }
+    // }
+    // pub fn borrow(&self) -> &HashMap<u32, Symbol> {
+    //     unsafe { self.table.get().as_ref().unwrap() }
+    // }
 }
 
 #[derive(Default)]
@@ -181,7 +277,7 @@ impl Default for Kind {
 impl TryFrom<u8> for Kind {
     type Error = ();
 
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
+    fn try_from(value: u8) -> std::result::Result<Self, Self::Error> {
         match value {
             x if x == Kind::Void as u8 => Ok(Kind::Void),
             x if x == Kind::Float as u8 => Ok(Kind::Float),
