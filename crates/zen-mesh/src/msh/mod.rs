@@ -1,7 +1,7 @@
 use crate::error::*;
 use serde::Deserialize;
 use std::convert::TryFrom;
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Seek, SeekFrom};
 use vek::Vec3;
 use zen_parser::prelude::*;
 //use zen_types::mesh::{self, msh};
@@ -73,8 +73,8 @@ fn deserialize_version<R: BinaryRead + AsciiRead>(reader: &mut R, chunk_end: u64
     #[derive(Deserialize)]
     struct Info {
         version: u32,
-        date: structures::Date,
-        name: String,
+        _date: structures::Date,
+        _name: String,
     }
 
     let info = Info::deserialize(&mut deserializer)?;
@@ -231,7 +231,7 @@ fn read_chunk<R: BinaryRead + AsciiRead>(
             read_chunk(reader, builder)
         }
         BBOX3D => {
-            let bbox3d = deserialize_bbox3d::<R>(&mut reader, chunk_end)?;
+            let _bbox3d = deserialize_bbox3d::<R>(&mut reader, chunk_end)?;
             read_chunk(reader, builder)
         }
         MAT_LIST => {

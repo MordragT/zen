@@ -2,7 +2,7 @@ use ddsfile::{AlphaMode, D3D10ResourceDimension, Dds};
 use serde::Deserialize;
 use std::cmp;
 use std::convert::TryInto;
-use std::io::{Seek, SeekFrom};
+use std::io::SeekFrom;
 use zen_parser::prelude::{BinaryDeserializer, BinaryRead};
 
 pub mod ztex;

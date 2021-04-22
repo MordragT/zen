@@ -145,7 +145,7 @@ impl From<MshMesh> for GeneralMesh {
 }
 
 impl From<ZenMesh> for GeneralMesh {
-    fn from(world_mesh: ZenMesh) -> Self {
+    fn from(_world_mesh: ZenMesh) -> Self {
         todo!()
     }
 }

@@ -5,8 +5,6 @@ use crate::{
     stack::{Stack, Value},
 };
 pub use operator::Operator;
-use serde::Deserialize;
-use zen_parser::prelude::*;
 
 mod operator;
 
@@ -195,7 +193,8 @@ impl Machine {
                 Operator::Negate => todo!(), // ~a
                 Operator::Ret => (),
                 Operator::Call => {
-                    let addr = *self.code.next::<u32>().unwrap();
+                    let _addr = *self.code.next::<u32>().unwrap();
+                    todo!()
                 }
                 Operator::CallExternal => todo!(),
                 Operator::PushInt => {

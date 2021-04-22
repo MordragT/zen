@@ -1,11 +1,9 @@
 use error::*;
 pub use memory::Memory;
 use serde::Deserialize;
-use std::cell::{Ref, RefMut};
 use std::collections::HashMap;
 use std::{cell::RefCell, io::Read};
 use std::{
-    fs::File,
     io::{Seek, SeekFrom},
 };
 
@@ -35,7 +33,7 @@ impl Code {
     pub fn new<R: BinaryRead>(reader: R) -> Result<Self> {
         let mut deserializer = BinaryDeserializer::from(reader);
 
-        let version = u8::deserialize(&mut deserializer)?;
+        let _version = u8::deserialize(&mut deserializer)?;
         let symbol_count = u32::deserialize(&mut deserializer)?;
 
         let addresses = (0..symbol_count)

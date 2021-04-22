@@ -2,14 +2,14 @@
 pub struct Memory {
     ptr: *mut u8,
     len: usize,
-    cap: usize,
+    _cap: usize,
 }
 
 impl Memory {
     /// Creates a new memory object from a vector containing bytes
     pub fn new(memory: Vec<u8>) -> Self {
-        let (ptr, len, cap) = memory.into_raw_parts();
-        Self { ptr, len, cap }
+        let (ptr, len, _cap) = memory.into_raw_parts();
+        Self { ptr, len, _cap }
     }
     /// Returns an immutable reference to the specified value type at the given offset
     pub fn get<T>(&self, offset: usize) -> Option<&T> {

@@ -1,9 +1,6 @@
 use super::error::*;
 use super::read::BinaryRead;
-use crate::{
-    ascii::{AsciiDeserializer, AsciiRead},
-    binsafe::BinSafeHeader,
-};
+use crate::ascii::{AsciiDeserializer, AsciiRead};
 use serde::de::{Deserializer, Visitor};
 use std::io::{Read, Seek, SeekFrom};
 

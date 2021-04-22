@@ -1,10 +1,5 @@
-use super::error::*;
-use super::Code;
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
-use std::io::{Seek, SeekFrom};
-use zen_parser::binary::{BinaryDeserializer, BinaryRead};
 
 /// Holds the information about a single Symbol
 #[derive(Debug)]
