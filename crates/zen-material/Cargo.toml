@@ -12,3 +12,5 @@ zen-types = { path = "../zen-types" }
 zen-archive = { path = "../zen-archive" }
 zen-texture = { path = "../zen-texture" }
 image = "0.23.8"
+serde = { version = "1.0.115", features = ["derive"] }
+serde_repr = "0.1"

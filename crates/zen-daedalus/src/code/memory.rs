@@ -1,3 +1,4 @@
+/// Holds the Memory for the [Code](crate::code::Code)
 pub struct Memory {
     ptr: *mut u8,
     len: usize,
@@ -5,10 +6,12 @@ pub struct Memory {
 }
 
 impl Memory {
+    /// Creates a new memory object from a vector containing bytes
     pub fn new(memory: Vec<u8>) -> Self {
         let (ptr, len, cap) = memory.into_raw_parts();
         Self { ptr, len, cap }
     }
+    /// Returns an immutable reference to the specified value type at the given offset
     pub fn get<T>(&self, offset: usize) -> Option<&T> {
         if offset > self.len {
             return None;
@@ -16,6 +19,7 @@ impl Memory {
         let ptr = unsafe { self.ptr.offset(offset as isize) };
         unsafe { std::mem::transmute::<*mut u8, *const T>(ptr).as_ref() }
     }
+    /// Returns a mutable reference to the specified value type at the given offset
     pub fn get_mut<T>(&mut self, offset: usize) -> Option<&mut T> {
         if offset > self.len {
             return None;

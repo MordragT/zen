@@ -1,3 +1,17 @@
+//! Crate to open Vdfs Files and access the different entries.
+//!
+//! The given example loads a wave audio file out of an archive.
+//! ```rust
+//! use zen_archive::Vdfs;
+//!
+//! let file = File::open("/home/user/../Gothic II/Data/Sounds.vdf").unwrap();
+//! let vdf = Vdfs::new(file).unwrap();
+//! let entry = vdf.get_by_name_slice("CHAPTER_01.WAV").unwrap();
+//! let mut audio_file =
+//!     File::create("/home/user/../audio/chapter_01.wav").unwrap();
+//! audio_file.write(&entry.data).unwrap();
+//! ```
+
 use error::*;
 use serde::Deserialize;
 use std::{cell::UnsafeCell, collections::HashMap, io::prelude::*, io::SeekFrom};
@@ -49,7 +63,7 @@ struct Header {
     offset: u32,
     version: u32,
 }
-/// Vdfs reader
+/// Vdfs archive reader
 pub struct Vdfs<R: BinaryRead> {
     deserializer: UnsafeCell<BinaryDeserializer<R>>,
     header: Header,
@@ -155,6 +169,7 @@ impl<R: BinaryRead> Vdfs<R> {
             .for_each(|(name, prop)| print_entry(name, prop));
         self.print_archive_information();
     }
+    /// Lists all vdfs entries which contain the given input
     pub fn filter_list(&self, input: &str) {
         self.entries
             .iter()

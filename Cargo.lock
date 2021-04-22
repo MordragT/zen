@@ -569,6 +569,8 @@ name = "zen-material"
 version = "0.1.0"
 dependencies = [
  "image",
+ "serde",
+ "serde_repr",
  "vek",
  "zen-archive",
  "zen-texture",

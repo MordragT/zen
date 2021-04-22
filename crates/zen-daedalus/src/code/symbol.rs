@@ -6,6 +6,7 @@ use std::convert::{TryFrom, TryInto};
 use std::io::{Seek, SeekFrom};
 use zen_parser::binary::{BinaryDeserializer, BinaryRead};
 
+/// Holds the information about a single Symbol
 #[derive(Debug)]
 pub struct Symbol {
     pub name: String,
@@ -45,6 +46,7 @@ pub struct Symbol {
 //     }
 // }
 
+/// Defines the type of Symbol and holds informations required to get the symbol data
 #[derive(Debug)]
 pub enum SymbolKind {
     Void,
@@ -58,6 +60,7 @@ pub enum SymbolKind {
 }
 
 impl SymbolKind {
+    /// Gets the offset if the symbol doesnt store the data internally
     pub fn get_offset(&self) -> Option<usize> {
         match self {
             Self::Void | Self::Float(_) | Self::Int(_) | Self::String(_) => None,
@@ -67,6 +70,7 @@ impl SymbolKind {
             Self::Instance(i) => Some(*i),
         }
     }
+    /// Gets an immutable reference to the data of a symbol if the data is stored internally
     pub fn get_static(&self, offset: usize) -> Option<&i32> {
         match self {
             Self::Class(_)
@@ -79,6 +83,7 @@ impl SymbolKind {
             Self::String(_) => todo!(),
         }
     }
+    /// Gets an mutable reference to the data of a symbol if the data is stored internally
     pub fn get_mut_static(&mut self, offset: usize) -> Option<&mut i32> {
         match self {
             Self::Class(_)
@@ -93,6 +98,7 @@ impl SymbolKind {
     }
 }
 
+/// Holds all the Symbols in the bytecode
 pub struct SymbolTable {
     table: HashMap<usize, Symbol>,
     // data: HashMap<usize, i32>,
@@ -100,6 +106,7 @@ pub struct SymbolTable {
 }
 
 impl SymbolTable {
+    /// Creats a new Symbol table from a hashmap containing the symbol offset and the symbol itself.
     pub fn new(table: HashMap<usize, Symbol>) -> Self {
         Self {
             table,
@@ -107,15 +114,19 @@ impl SymbolTable {
             // str_data: HashMap::new(),
         }
     }
+    /// Inserts a new symbol at the given address
     pub fn insert(&mut self, address: usize, symbol: Symbol) {
         self.table.insert(address, symbol);
     }
+    /// Gets an immutable reference to a symbol at the given offset
     pub fn get(&self, offset: &usize) -> Option<&Symbol> {
         self.table.get(offset)
     }
+    /// Gets a mutable reference to a symbol at the given offset
     pub fn get_mut(&mut self, offset: &usize) -> Option<&mut Symbol> {
         self.table.get_mut(offset)
     }
+    /// Checks if the symbol table contains a symbol at the given address
     pub fn contains(&self, address: &usize) -> bool {
         self.table.contains_key(address)
     }

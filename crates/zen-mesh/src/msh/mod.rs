@@ -1,14 +1,12 @@
 use crate::error::*;
-use material::GeneralMaterial;
 use serde::Deserialize;
 use std::convert::TryFrom;
 use std::io::{Read, Seek, SeekFrom};
 use vek::Vec3;
 use zen_parser::prelude::*;
-use zen_types::{
-    material,
-    mesh::{self, msh},
-};
+//use zen_types::mesh::{self, msh};
+
+mod structures;
 
 const MESH: u16 = 0xB000;
 const BBOX3D: u16 = 0xB010;
@@ -22,10 +20,10 @@ const MESH_END: u16 = 0xB060;
 
 pub struct MshMesh {
     pub name: String,
-    pub materials: Vec<GeneralMaterial>,
+    pub materials: Vec<zen_material::GeneralMaterial>,
     pub vertices: Vec<Vec3<f32>>,
-    pub features: Vec<msh::FeatureChunk>,
-    pub polygons: Vec<msh::Polygon>,
+    pub features: Vec<structures::FeatureChunk>,
+    pub polygons: Vec<structures::Polygon>,
 }
 
 impl TryFrom<Box<MshMeshBuilder>> for MshMesh {
@@ -63,11 +61,11 @@ pub struct MshMeshBuilder {
     pub version: Option<u32>,
     //pub mesh: Option<()>,
     //pub bbox3d: Option<()>,
-    pub materials: Option<Vec<GeneralMaterial>>,
+    pub materials: Option<Vec<zen_material::GeneralMaterial>>,
     pub light_maps: Option<()>,
     pub vertices: Option<Vec<Vec3<f32>>>,
-    pub features: Option<Vec<msh::FeatureChunk>>,
-    pub polygons: Option<Vec<msh::Polygon>>,
+    pub features: Option<Vec<structures::FeatureChunk>>,
+    pub polygons: Option<Vec<structures::Polygon>>,
 }
 
 fn deserialize_version<R: BinaryRead + AsciiRead>(reader: &mut R, chunk_end: u64) -> Result<u32> {
@@ -75,7 +73,7 @@ fn deserialize_version<R: BinaryRead + AsciiRead>(reader: &mut R, chunk_end: u64
     #[derive(Deserialize)]
     struct Info {
         version: u32,
-        date: msh::Date,
+        date: structures::Date,
         name: String,
     }
 
@@ -96,7 +94,7 @@ fn deserialize_bbox3d<R: BinaryRead + AsciiRead>(reader: &mut R, chunk_end: u64)
 fn deserialize_materials<R: BinaryRead + AsciiRead>(
     reader: &mut R,
     chunk_end: u64,
-) -> Result<Vec<material::GeneralMaterial>> {
+) -> Result<Vec<zen_material::GeneralMaterial>> {
     let mut deserializer = BinaryDeserializer::from(reader);
     let _header = Reader::from(&mut deserializer.parser).read_header()?;
 
@@ -106,7 +104,7 @@ fn deserialize_materials<R: BinaryRead + AsciiRead>(
         .map(|_| {
             let _name = String::deserialize(&mut deserializer)?;
             // Skip name and chunk headers
-            let material_header = material::ChunkHeader::deserialize(&mut deserializer)?;
+            let material_header = zen_material::ChunkHeader::deserialize(&mut deserializer)?;
 
             // Skip chunk header
             let _name = String::deserialize(&mut deserializer)?;
@@ -114,13 +112,13 @@ fn deserialize_materials<R: BinaryRead + AsciiRead>(
 
             // Save into Vec
             match material_header.version {
-                material::GOTHIC2 => {
-                    Ok(material::BasicMaterial::deserialize(&mut deserializer)?.into())
+                zen_material::GOTHIC2 => {
+                    Ok(zen_material::BasicMaterial::deserialize(&mut deserializer)?.into())
                 }
-                _ => Ok(material::AdvancedMaterial::deserialize(&mut deserializer)?.into()),
+                _ => Ok(zen_material::AdvancedMaterial::deserialize(&mut deserializer)?.into()),
             }
         })
-        .collect::<Result<Vec<material::GeneralMaterial>>>()?;
+        .collect::<Result<Vec<zen_material::GeneralMaterial>>>()?;
     deserializer.seek(SeekFrom::Start(chunk_end))?;
     Ok(materials)
 }
@@ -147,11 +145,11 @@ fn deserialize_vertices<R: BinaryRead + AsciiRead>(
 fn deserialize_features<R: BinaryRead + AsciiRead>(
     reader: &mut R,
     chunk_end: u64,
-) -> Result<Vec<msh::FeatureChunk>> {
+) -> Result<Vec<structures::FeatureChunk>> {
     let mut deserializer = BinaryDeserializer::from(reader);
     let num_feats = u32::deserialize(&mut deserializer)?;
     deserializer.len_queue.push(num_feats as usize);
-    let features = <Vec<msh::FeatureChunk>>::deserialize(&mut deserializer)?;
+    let features = <Vec<structures::FeatureChunk>>::deserialize(&mut deserializer)?;
     deserializer.seek(SeekFrom::Start(chunk_end))?;
     Ok(features)
 }
@@ -160,7 +158,7 @@ fn deserialize_poly_list<R: BinaryRead + AsciiRead>(
     reader: &mut R,
     chunk_end: u64,
     version: u32,
-) -> Result<Vec<msh::Polygon>> {
+) -> Result<Vec<structures::Polygon>> {
     let mut deserializer = BinaryDeserializer::from(reader);
     let num_polys = u32::deserialize(&mut deserializer)?;
     let polygons = (0..num_polys)
@@ -176,12 +174,14 @@ fn deserialize_poly_list<R: BinaryRead + AsciiRead>(
             struct PolygonData {
                 pub material_index: i16,
                 pub light_map_index: i16,
-                pub plane: msh::PlanePacked,
+                pub plane: structures::PlanePacked,
             }
             let polygon_data = PolygonData::deserialize(&mut deserializer)?;
 
-            let flags: msh::PolyFlags = match version {
-                GOTHIC2_6 => <msh::PolyGothicTwoFlags>::deserialize(&mut deserializer)?.into(),
+            let flags: structures::PolyFlags = match version {
+                GOTHIC2_6 => {
+                    <structures::PolyGothicTwoFlags>::deserialize(&mut deserializer)?.into()
+                }
                 GOTHIC1_08K => todo!(),
                 _ => return Err(Error::UnknownGameVersion),
             };
@@ -190,20 +190,20 @@ fn deserialize_poly_list<R: BinaryRead + AsciiRead>(
 
             let indices = (0..num_indices)
                 .map(|_| {
-                    let index: msh::Index = match version {
+                    let index: structures::Index = match version {
                         GOTHIC2_6 => {
-                            <msh::IndexPacked<u32>>::deserialize(&mut deserializer)?.into()
+                            <structures::IndexPacked<u32>>::deserialize(&mut deserializer)?.into()
                         }
                         GOTHIC1_08K => {
-                            <msh::IndexPacked<u16>>::deserialize(&mut deserializer)?.into()
+                            <structures::IndexPacked<u16>>::deserialize(&mut deserializer)?.into()
                         }
                         _ => return Err(Error::UnknownGameVersion),
                     };
                     return Ok(index);
                 })
-                .collect::<Result<Vec<msh::Index>>>()?;
+                .collect::<Result<Vec<structures::Index>>>()?;
 
-            Ok(msh::Polygon::new(
+            Ok(structures::Polygon::new(
                 polygon_data.material_index,
                 polygon_data.light_map_index,
                 polygon_data.plane.into(),
@@ -212,7 +212,7 @@ fn deserialize_poly_list<R: BinaryRead + AsciiRead>(
                 indices,
             ))
         })
-        .collect::<Result<Vec<msh::Polygon>>>()?;
+        .collect::<Result<Vec<structures::Polygon>>>()?;
     deserializer.seek(SeekFrom::Start(chunk_end))?;
     Ok(polygons)
 }
@@ -222,7 +222,7 @@ fn read_chunk<R: BinaryRead + AsciiRead>(
     mut builder: Box<MshMeshBuilder>,
 ) -> Result<MshMesh> {
     let mut deserializer = BinaryDeserializer::from(&mut reader);
-    let chunk = <mesh::Chunk>::deserialize(&mut deserializer)?;
+    let chunk = <crate::structures::Chunk>::deserialize(&mut deserializer)?;
     let chunk_end = deserializer.seek(SeekFrom::Current(0))? + chunk.length as u64;
 
     match chunk.id {

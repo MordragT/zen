@@ -1,5 +1,5 @@
 use error::*;
-use memory::Memory;
+pub use memory::Memory;
 use serde::Deserialize;
 use std::cell::{Ref, RefMut};
 use std::collections::HashMap;
@@ -9,14 +9,17 @@ use std::{
     io::{Seek, SeekFrom},
 };
 
-use symbol::{Flag, Kind, Properties, Symbol, SymbolKind, SymbolTable};
+use symbol::{Flag, Kind, Properties};
+pub use symbol::{Symbol, SymbolKind, SymbolTable};
 
 use zen_parser::prelude::*;
 
 pub mod error;
-pub mod memory;
-pub mod symbol;
+mod memory;
+mod symbol;
 
+/// Contains the [Memory](memory::Memory) where the bytecode is loaded in.
+/// It also keeps track of the current memory position
 pub struct Code {
     //pub deserializer: BinaryDeserializer<R>,
     memory: Memory,
@@ -28,7 +31,8 @@ pub struct Code {
 }
 
 impl Code {
-    pub fn open<R: BinaryRead>(reader: R) -> Result<Self> {
+    /// Creates a new Code object from usually an opened file
+    pub fn new<R: BinaryRead>(reader: R) -> Result<Self> {
         let mut deserializer = BinaryDeserializer::from(reader);
 
         let version = u8::deserialize(&mut deserializer)?;
@@ -130,6 +134,7 @@ impl Code {
             memory_position: 0,
         })
     }
+    /// Returns the number of instructions
     pub fn len(&self) -> usize {
         self.len
     }
@@ -140,6 +145,7 @@ impl Code {
             panic!()
         }
     }
+    /// Gets a immutable reference to data at the given offset
     pub fn get(&self, offset: usize) -> Option<&i32> {
         let symbol = match self.symbol_table.get(&self.current_instance) {
             Some(s) => s,
@@ -151,6 +157,7 @@ impl Code {
         let offset = symbol.kind.get_offset().unwrap();
         self.memory.get(offset - self.offset)
     }
+    /// Gets a mutable reference to data at the given offset
     pub fn get_mut(&mut self, offset: usize) -> Option<&mut i32> {
         let symbol = match self.symbol_table.get_mut(&self.current_instance) {
             Some(s) => s,
@@ -162,11 +169,13 @@ impl Code {
             symbol.kind.get_mut_static(offset)
         }
     }
+    /// Gets the next immutable reference to data in memory
     pub fn next<T>(&mut self) -> Option<&T> {
         let res = self.memory.get(self.memory_position);
         self.memory_position += std::mem::size_of::<T>();
         res
     }
+    /// Gets the next mutable reference to data in memory
     pub fn next_mut<T>(&mut self) -> Option<&mut T> {
         let res = self.memory.get_mut(self.memory_position);
         self.memory_position += std::mem::size_of::<T>();

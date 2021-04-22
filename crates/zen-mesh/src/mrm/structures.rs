@@ -1,7 +1,7 @@
-use super::Plane;
-use crate::material::GeneralMaterial;
+use crate::structures::*;
 use serde::Deserialize;
 use vek::{Vec2, Vec3};
+use zen_material::GeneralMaterial;
 
 #[derive(Deserialize, Debug)]
 pub struct DataEntry {

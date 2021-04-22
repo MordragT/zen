@@ -1,5 +1,6 @@
 use std::convert::TryFrom;
 
+/// The different Operators that can occur in the [machine](crate::machine)
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
 pub enum Operator {

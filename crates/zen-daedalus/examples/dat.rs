@@ -6,7 +6,7 @@ pub fn main() {
         File::open("/home/tom/Steam/common/Gothic II/_work/Data/Scripts/_compiled/CAMERA.DAT")
             .unwrap();
 
-    let code = Code::open(file).unwrap();
+    let code = Code::new(file).unwrap();
     let mut machine = Machine::new(code);
     machine.run();
 }

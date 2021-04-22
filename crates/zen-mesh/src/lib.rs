@@ -8,6 +8,7 @@ pub mod error;
 pub mod gltf;
 pub mod mrm;
 pub mod msh;
+pub mod structures;
 pub mod zen;
 
 pub struct Mesh {

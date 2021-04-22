@@ -4,12 +4,13 @@ use crate::{
     code::Code,
     stack::{Stack, Value},
 };
-use operator::Operator;
+pub use operator::Operator;
 use serde::Deserialize;
 use zen_parser::prelude::*;
 
-pub mod operator;
+mod operator;
 
+/// The virtual machine that runs the [Code](crate::code::Code)
 pub struct Machine {
     stack: Stack<Value>,
     code: Code,
@@ -17,6 +18,7 @@ pub struct Machine {
 }
 
 impl Machine {
+    /// Creates a new virtual machine from the code
     pub fn new(code: Code) -> Machine {
         Self {
             stack: Stack::new(),
@@ -24,6 +26,7 @@ impl Machine {
             instruction_pointer: 0,
         }
     }
+    /// Runs the virtual machine
     pub fn run(&mut self) {
         while self.instruction_pointer < self.code.len() {
             let operator = self.next_operator();
@@ -190,8 +193,10 @@ impl Machine {
                     self.stack.push(Value::Data(!a));
                 } // !a
                 Operator::Negate => todo!(), // ~a
-                Operator::Ret => todo!(),
-                Operator::Call => todo!(),
+                Operator::Ret => (),
+                Operator::Call => {
+                    let addr = *self.code.next::<u32>().unwrap();
+                }
                 Operator::CallExternal => todo!(),
                 Operator::PushInt => {
                     let val = *self.code.next::<i32>().unwrap();

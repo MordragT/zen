@@ -1,5 +1,6 @@
 use std::{fmt, io};
 
+/// The Error object for the [code](crate::code)
 #[derive(Debug)]
 pub enum Error {
     Binary(zen_parser::binary::Error),

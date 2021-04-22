@@ -1,22 +1,24 @@
 use crate::code::Code;
 use std::fmt;
-use zen_parser::binary::BinaryRead;
+
+/// This is the stack which is used by the [machine](crate::machine)
 #[derive(Debug)]
 pub struct Stack<T: Default>(Vec<T>);
 
 impl<T: Default> Stack<T> {
+    /// Creates a new stack
     pub fn new() -> Stack<T> {
         Stack(vec![])
     }
-
+    /// Checks if the stack is empty
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
-
+    /// Pushes a value on the stack
     pub fn push(&mut self, value: T) {
         self.0.push(value);
     }
-
+    /// Pops a value from the stack and pops the default value if the stack is empty
     pub fn pop(&mut self) -> T {
         self.0.pop().unwrap_or_default()
     }
@@ -34,6 +36,7 @@ impl<T: Default + fmt::Display> fmt::Display for Stack<T> {
     }
 }
 
+/// The Values that are used on the stack for the [machine](crate::machine)
 #[derive(Debug)]
 pub enum Value {
     Address(usize),
@@ -41,6 +44,7 @@ pub enum Value {
 }
 
 impl Value {
+    /// Gets the inner data or uses the code to retrieve the data
     pub fn get(&self, code: &Code) -> i32 {
         match self {
             Self::Address(offset) => *code.get(*offset).unwrap(),
@@ -63,55 +67,3 @@ impl fmt::Display for Value {
         }
     }
 }
-
-// #[derive(Clone, Copy)]
-// pub enum Constant {
-//     Integer(i32),
-//     Unsigned(u32),
-//     Float(f32),
-// }
-
-// impl Constant {
-//     pub fn add(&self, other: Constant) -> Constant {
-//         match self {
-//             Self::Integer(s) => match other {
-//                 Self::Integer(o) => Self::Integer(s + o),
-//                 Self::Unsigned(o) => Self::Integer(s + o as i32),
-//                 Self::Float(o) => Self::Float(*s as f32 + o),
-//             },
-//             Self::Unsigned(s) => match other {
-//                 Self::Integer(o) => Self::Integer(*s as i32 + o),
-//                 Self::Unsigned(o) => Self::Unsigned(s + o),
-//                 Self::Float(o) => Self::Float(*s as f32 + o),
-//             },
-//             Self::Float(s) => match other {
-//                 Self::Integer(o) => Self::Float(s + o as f32),
-//                 Self::Unsigned(o) => Self::Float(s + o as f32),
-//                 Self::Float(o) => Self::Float(s + o as f32),
-//             },
-//         }
-//     }
-// }
-
-// #[derive(Copy, Clone)]
-// pub enum Value {
-//     Address(u32),
-//     Constant(Constant),
-// }
-
-// type VTable = HashMap<u32, Constant>;
-
-// impl Value {
-//     pub fn get(&self, table: &VTable) -> Constant {
-//         match self {
-//             Self::Address(a) => *table.get(a).unwrap(),
-//             Self::Constant(c) => *c,
-//         }
-//     }
-// }
-
-// impl Default for Value {
-//     fn default() -> Self {
-//         Self::Constant(Constant::Integer(0))
-//     }
-// }

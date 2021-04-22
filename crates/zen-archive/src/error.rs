@@ -2,6 +2,7 @@ use serde::de;
 use std::{fmt, io};
 use zen_parser::binary;
 
+/// Error Object for Vdfs Archives
 #[derive(Debug)]
 pub enum Error {
     Message(String),

@@ -1,4 +1,4 @@
-use super::Plane;
+use crate::structures::Plane;
 use serde::Deserialize;
 use vek::{Vec2, Vec3};
 
