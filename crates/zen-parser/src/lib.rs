@@ -1,4 +1,4 @@
-use ascii::{error::ErrorCode, AsciiDeserializer, AsciiRead};
+use ascii::{AsciiDeserializer, AsciiRead, ErrorCode};
 use binary::{BinaryDeserializer, BinaryRead};
 pub use error::Error;
 use error::Result;
@@ -7,7 +7,7 @@ use serde::Deserialize;
 pub mod ascii;
 pub mod binary;
 pub mod binsafe;
-pub mod error;
+mod error;
 pub mod prelude;
 
 /// Possible filetypes this zen-file can have
@@ -49,6 +49,7 @@ impl Header {
     }
 }
 
+/// Reader that can read binary aswell as ascii archives
 pub struct Reader<R: BinaryRead + AsciiRead> {
     reader: R,
 }

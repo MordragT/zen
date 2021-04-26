@@ -5,7 +5,7 @@
 //! The corresponding [textures](zen_texture) will also be exported (similiar to dds textures),
 //! or you can export those textures one by one aswell.
 //!
-//! I am working on the export of [Zengin World Scenes](zen_mesh::zen) (.zen) to gltf
+//! I am working on the export of Zengin World Meshes (.zen) to gltf
 //! and a [Daedalus](zen_daedalus) (scripting language) virtual machine to execute the bytecode.
 
 pub use zen_archive;

@@ -1,15 +1,16 @@
-use error::*;
+pub use error::Error;
+use error::Result;
 pub use memory::Memory;
 use serde::Deserialize;
-use std::collections::HashMap;
-use std::io::{Read, Seek, SeekFrom};
-
+use std::{
+    collections::HashMap,
+    io::{Read, Seek, SeekFrom},
+};
 use symbol::{Flag, Kind, Properties};
 pub use symbol::{Symbol, SymbolKind, SymbolTable};
-
 use zen_parser::prelude::*;
 
-pub mod error;
+mod error;
 mod memory;
 mod symbol;
 

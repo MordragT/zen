@@ -8,8 +8,9 @@ use zen_parser::prelude::{BinaryDeserializer, BinaryRead};
 
 pub use ddsfile;
 
-pub mod ztex;
+mod ztex;
 
+/// Error Type
 #[derive(Debug)]
 pub enum Error {
     WrongSignature,

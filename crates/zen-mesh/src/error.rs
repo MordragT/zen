@@ -12,7 +12,7 @@ pub enum Error {
     UnknownGameVersion(u32),
     ExpectedIdentifier(String),
     ExpectedValue(String),
-    Material(zen_material::error::Error),
+    Material(zen_material::Error),
 }
 
 impl fmt::Display for Error {
@@ -68,8 +68,8 @@ impl From<zen_parser::Error> for Error {
     }
 }
 
-impl From<zen_material::error::Error> for Error {
-    fn from(e: zen_material::error::Error) -> Self {
+impl From<zen_material::Error> for Error {
+    fn from(e: zen_material::Error) -> Self {
         Self::Material(e)
     }
 }

@@ -4,14 +4,14 @@
 - Provides a library to open zengine specific data formats
 - And export data to modern data formats
 
-- At the moment you can open [VDFS-Archives](zen_archive), and export [Multiresolution-Meshes](zen_mesh::mrm) (.mrm) aswell as normal [Zengin-Meshes](zen_mesh::msh) (.msh) from the archives to gltf files.
-- The corresponding [textures](zen_texture) will also be exported (similiar to dds textures), or you can export those textures one by one aswell.
-- I am working on the export of [Zengin World Scenes](zen_mesh::zen) (.zen) to gltf and a [Daedalus](zen_daedalus) (scripting language) virtual machine to execute the bytecode.
+- At the moment you can open [VDFS-Archives](https://docs.rs/zen_loader/0.0.1/zen_loader/zen_archive), and export [Multiresolution-Meshes](https://docs.rs/zen_loader/0.0.1/zen_loader/zen_mesh/MrmMesh) (.mrm) aswell as normal [Zengin-Meshes](https://docs.rs/zen_loader/0.0.1/zen_loader/MshMesh) (.msh) from the archives to gltf files.
+- The corresponding [textures](https://docs.rs/zen_loader/0.0.1/zen_loader/zen_texture) will also be exported (similiar to dds textures), or you can export those textures one by one aswell.
+- I am working on the export of Zengin World Scenes (.zen) to gltf and a [Daedalus](https://docs.rs/zen_loader/0.0.1/zen_loader/zen_daedalus) (scripting language) virtual machine to execute the bytecode.
 
 #### Links
 
-- [crate](https://crates.io/crates/zen-loader)
-- [documentation](https://docs.rs/zen-loader/0.1.0/zen-loader)
+- [crate](https://crates.io/crates/zen_loader)
+- [documentation](https://docs.rs/zen_loader/0.0.1/zen_loader)
 
 ## Examples
 
@@ -45,6 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let code = Code::new(file)?;
     let mut machine = Machine::new(code);
     machine.run();
+    Ok(())
 }
 ```
 

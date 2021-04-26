@@ -8,7 +8,7 @@ pub enum Error {
     Io(io::Error),
     ZTex(zen_texture::Error),
     ExpectedValidTextureName(String),
-    ZenArchive(zen_archive::error::Error),
+    ZenArchive(zen_archive::Error),
     WrongTextureNameFormat,
     DDSFile(zen_texture::ddsfile::Error),
     Image(image::ImageError),
@@ -49,8 +49,8 @@ impl From<io::Error> for Error {
     }
 }
 
-impl From<zen_archive::error::Error> for Error {
-    fn from(e: zen_archive::error::Error) -> Self {
+impl From<zen_archive::Error> for Error {
+    fn from(e: zen_archive::Error) -> Self {
         Self::ZenArchive(e)
     }
 }

@@ -1,14 +1,20 @@
-use error::*;
+//! This crate enables you to convert different materials,
+//! that are used in gothic 1 or 2 to a general basic material.
+
+//! You first have to deserialize [BasicMaterial] or [AdvancedMaterial],
+//! to use the [TryFrom] implementation.
+
+pub use error::Error;
+use error::Result;
 use image::{dds::DdsDecoder, jpeg::JpegEncoder, ImageDecoder};
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 use std::{cmp, convert::TryFrom, fs::File, io::Cursor, path::PathBuf};
-use vek::Vec2;
-use vek::Vec3;
+use vek::{Vec2, Vec3};
 use zen_archive::Vdfs;
 use zen_types::path::{FILES_INSTANCE, INSTANCE};
 
-pub mod error;
+mod error;
 
 pub const GOTHIC2: u16 = 39939;
 

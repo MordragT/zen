@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-pub mod de;
+mod de;
 /// Header for BinSafe files
 #[derive(Debug, Deserialize)]
 pub struct BinSafeHeader {

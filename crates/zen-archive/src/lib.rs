@@ -6,23 +6,25 @@
 //! use zen_archive::Vdfs;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     let vdf_file = File::open("/home/tom/Steam/common/Gothic II/Data/Sounds.vdf")?;
-//!     let vdf = Vdfs::new(vdf_file)?;
-//!     let entry = vdf
-//!         .get_by_name_slice("CHAPTER_01.WAV")
-//!         .expect("Should be there!");
-//!     let mut audio_file = File::create("/home/tom/Git/zen-loader/files/audio/chapter_01.wav")?;
-//!     audio_file.write(&entry.data)?;
-//! #    Ok(())
+//! let vdf_file = File::open("/home/tom/Steam/common/Gothic II/Data/Sounds.vdf")?;
+//! let vdf = Vdfs::new(vdf_file)?;
+//! let entry = vdf
+//!     .get_by_name_slice("CHAPTER_01.WAV")
+//!     .expect("Should be there!");
+//! let mut audio_file = File::create("/home/tom/Git/zen-loader/files/audio/chapter_01.wav")?;
+//! audio_file.write(&entry.data)?;
+//! # Ok(())
 //! # }
 //! ```
 
-use error::*;
+use error::Result;
 use serde::Deserialize;
 use std::{cell::UnsafeCell, collections::HashMap, fmt, io::prelude::*, io::SeekFrom};
 use zen_parser::prelude::*;
 
-pub mod error;
+pub use error::Error;
+
+mod error;
 
 const SIGNATURE_G1: [u8; SIGNATURE_LENGTH] = *b"PSVDSC_V2.00\r\n\r\n";
 const SIGNATURE_G2: [u8; SIGNATURE_LENGTH] = *b"PSVDSC_V2.00\n\r\n\r";

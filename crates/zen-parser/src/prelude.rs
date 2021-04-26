@@ -1,5 +1,5 @@
-pub use crate::ascii::de::AsciiDeserializer;
-pub use crate::ascii::read::AsciiRead;
-pub use crate::binary::de::BinaryDeserializer;
-pub use crate::binary::read::BinaryRead;
+pub use crate::ascii::AsciiDeserializer;
+pub use crate::ascii::AsciiRead;
+pub use crate::binary::BinaryDeserializer;
+pub use crate::binary::BinaryRead;
 pub use crate::Reader;

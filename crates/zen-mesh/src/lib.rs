@@ -1,19 +1,43 @@
-use error::Error;
-use error::Result;
+//! This crate can deserialize [.mrm](MrmMesh) or [.msh](MshMesh) meshes,
+//! and convert them into [gltf] files.
+//!
+//! ```rust
+//! use std::{convert::TryFrom, fs::File, io::Cursor};
+//! use zen_archive::Vdfs;
+//! use zen_mesh::{gltf, mrm::MrmMesh, GeneralMesh};
+//! use zen_types::path::INSTANCE;
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let vdf_file = File::open(INSTANCE.meshes())?;
+//! let vdf = Vdfs::new(vdf_file)?;
+//! let mesh_entry = vdf
+//!     .get_by_name("ORC_MASTERTHRONE.MRM")
+//!     .expect("Should be there!");
+//! let cursor = Cursor::new(mesh_entry.data);
+//! let mesh = MrmMesh::new(cursor, "ORC_MASTERTHRONE")?;
+//! let mesh = GeneralMesh::try_from(mesh)?;
+//! let _gltf = gltf::to_gltf(mesh, gltf::Output::Binary);
+//! #    Ok(())
+//! # }
+//! ```
+
 pub use mrm::MrmMesh;
 pub use msh::MshMesh;
 use vek::Vec3;
 //pub use zen::ZenMesh;
+pub use error::Error;
+use error::Result;
 use std::convert::{TryFrom, TryInto};
 use zen_material::Material;
 
-pub mod error;
+mod error;
 pub mod gltf;
 pub mod mrm;
 pub mod msh;
 pub mod structures;
 //pub mod zen;
 
+/// Basic Mesh Informations
 pub struct Mesh {
     pub positions: Vec<f32>,
     pub indices: Vec<u32>,
@@ -45,11 +69,13 @@ impl Mesh {
     }
 }
 
+/// Mesh that is a component in another mesh, already holds its material
 pub struct SubMesh {
     pub mesh: Mesh,
     pub material: Material,
 }
 
+/// General Mesh consisting out of one or more sub meshes
 pub struct GeneralMesh {
     pub name: String,
     pub sub_meshes: Vec<SubMesh>,

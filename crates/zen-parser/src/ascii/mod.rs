@@ -1,11 +1,11 @@
 pub use de::AsciiDeserializer;
-pub use error::Error;
+pub use error::{Error, ErrorCode};
 pub use read::AsciiRead;
 use std::fmt;
 
-pub mod de;
-pub mod error;
-pub mod read;
+mod de;
+mod error;
+mod read;
 
 /// Position of the Error
 #[derive(Debug)]

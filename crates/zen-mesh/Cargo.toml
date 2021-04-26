@@ -7,13 +7,13 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0.115", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
 gltf-json = "0.15"
 gltf = "0.15"
 zen-parser = { path = "../zen-parser" }
 zen-types = { path = "../zen-types" }
 zen-material = { path = "../zen-material" }
-vek = { version = "0.14.0", features = ["serde"] }
+vek = { version = "0.15", features = ["serde"] }
 
 [dev-dependencies]
 zen-archive = { path = "../zen-archive" }
