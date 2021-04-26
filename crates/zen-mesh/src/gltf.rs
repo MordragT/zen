@@ -469,7 +469,6 @@ pub fn to_gltf(input: GeneralMesh, output: Output) -> PathBuf {
             path
         }
         Output::Binary => {
-            let _ = fs::create_dir("mesh");
             let path = PathBuf::from(FILES_INSTANCE.meshes.join(format!("{}.glb", input.name)));
             let json_string = json::serialize::to_string(&root).expect("Serialization error");
             let mut json_offset = json_string.len() as u32;
