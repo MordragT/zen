@@ -553,7 +553,7 @@ dependencies = [
 
 [[package]]
 name = "zen-loader"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "zen-archive",
  "zen-daedalus",

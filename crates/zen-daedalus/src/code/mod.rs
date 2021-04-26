@@ -2,10 +2,7 @@ use error::*;
 pub use memory::Memory;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::{cell::RefCell, io::Read};
-use std::{
-    io::{Seek, SeekFrom},
-};
+use std::io::{Read, Seek, SeekFrom};
 
 use symbol::{Flag, Kind, Properties};
 pub use symbol::{Symbol, SymbolKind, SymbolTable};

@@ -317,7 +317,6 @@ pub fn to_gltf(input: GeneralMesh, output: Output) -> PathBuf {
 
         let mut inner_buffers = match output {
             Output::Standard => {
-                let _ = fs::create_dir("mesh");
                 let positions_buffer = json::Buffer {
                     byte_length: positions_buffer_length,
                     extensions: Default::default(),

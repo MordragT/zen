@@ -3,7 +3,7 @@ use super::read::BinaryRead;
 use crate::ascii::{AsciiDeserializer, AsciiRead};
 use serde::de::{Deserializer, Visitor};
 use std::io::{Read, Seek, SeekFrom};
-
+/// Deserialize Zengin Binary Archives
 pub struct BinaryDeserializer<R: BinaryRead> {
     pub parser: R,
     pub len_queue: Vec<usize>,

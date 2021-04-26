@@ -1,7 +1,10 @@
+use error::Error;
+use error::Result;
 pub use mrm::MrmMesh;
 pub use msh::MshMesh;
 use vek::Vec3;
-pub use zen::ZenMesh;
+//pub use zen::ZenMesh;
+use std::convert::{TryFrom, TryInto};
 use zen_material::Material;
 
 pub mod error;
@@ -9,7 +12,7 @@ pub mod gltf;
 pub mod mrm;
 pub mod msh;
 pub mod structures;
-pub mod zen;
+//pub mod zen;
 
 pub struct Mesh {
     pub positions: Vec<f32>,
@@ -52,8 +55,9 @@ pub struct GeneralMesh {
     pub sub_meshes: Vec<SubMesh>,
 }
 
-impl From<MrmMesh> for GeneralMesh {
-    fn from(object_mesh: MrmMesh) -> Self {
+impl TryFrom<MrmMesh> for GeneralMesh {
+    type Error = Error;
+    fn try_from(object_mesh: MrmMesh) -> Result<Self> {
         let (object_sub_meshes, object_vertices) = (object_mesh.sub_meshes, object_mesh.vertices);
         let sub_meshes = object_sub_meshes
             .into_iter()
@@ -83,20 +87,21 @@ impl From<MrmMesh> for GeneralMesh {
 
                 mesh.indices = indices;
 
-                let material = (&sub_mesh.material).into();
+                let material = (&sub_mesh.material).try_into()?;
 
-                SubMesh { material, mesh }
+                Ok(SubMesh { material, mesh })
             })
-            .collect::<Vec<SubMesh>>();
-        Self {
+            .collect::<Result<Vec<SubMesh>>>()?;
+        Ok(Self {
             name: object_mesh.name,
             sub_meshes,
-        }
+        })
     }
 }
 
-impl From<MshMesh> for GeneralMesh {
-    fn from(mesh: MshMesh) -> Self {
+impl TryFrom<MshMesh> for GeneralMesh {
+    type Error = Error;
+    fn try_from(mesh: MshMesh) -> Result<Self> {
         let MshMesh {
             name,
             materials,
@@ -106,7 +111,7 @@ impl From<MshMesh> for GeneralMesh {
         } = mesh;
         let sub_meshes = polygons
             .into_iter()
-            .map(|polygon| -> SubMesh {
+            .map(|polygon| -> Result<SubMesh> {
                 let verts = polygon
                     .indices
                     .iter()
@@ -129,23 +134,23 @@ impl From<MshMesh> for GeneralMesh {
                     .into_iter()
                     .map(|i| i as u32)
                     .collect::<Vec<u32>>();
-                SubMesh {
-                    material: (&materials[polygon.material_index as usize]).into(),
+                Ok(SubMesh {
+                    material: (&materials[polygon.material_index as usize]).try_into()?,
                     mesh: Mesh {
                         positions: verts,
                         normals: norms,
                         indices,
                         tex_coords,
                     },
-                }
+                })
             })
-            .collect::<Vec<SubMesh>>();
-        GeneralMesh { name, sub_meshes }
+            .collect::<Result<Vec<SubMesh>>>()?;
+        Ok(GeneralMesh { name, sub_meshes })
     }
 }
 
-impl From<ZenMesh> for GeneralMesh {
-    fn from(_world_mesh: ZenMesh) -> Self {
-        todo!()
-    }
-}
+// impl From<ZenMesh> for GeneralMesh {
+//     fn from(_world_mesh: ZenMesh) -> Self {
+//         todo!()
+//     }
+// }

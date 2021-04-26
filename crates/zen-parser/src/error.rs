@@ -3,6 +3,7 @@ use std::fmt;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Error Type for all Deserializers
 #[derive(Debug)]
 pub enum Error {
     Binary(binary::Error),

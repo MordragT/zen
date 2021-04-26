@@ -1,54 +1,62 @@
+use error::*;
 use image::{dds::DdsDecoder, jpeg::JpegEncoder, ImageDecoder};
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
-use std::{cmp, fs::File, io::Cursor, path::PathBuf};
+use std::{cmp, convert::TryFrom, fs::File, io::Cursor, path::PathBuf};
 use vek::Vec2;
 use vek::Vec3;
 use zen_archive::Vdfs;
 use zen_types::path::{FILES_INSTANCE, INSTANCE};
 
+pub mod error;
+
 pub const GOTHIC2: u16 = 39939;
 
+/// Simple Material with texture and color
 pub struct Material {
     pub texture: PathBuf,
     pub color: Vec3<f32>,
 }
 
-impl From<&GeneralMaterial> for Material {
+impl TryFrom<&GeneralMaterial> for Material {
+    type Error = Error;
     /// Creates a simple Material from Materials used in Gothic 1 and 2
-    fn from(mat: &GeneralMaterial) -> Material {
-        let vdfs_file = File::open(INSTANCE.textures()).unwrap();
-        let vdfs = Vdfs::new(vdfs_file).unwrap();
-        //println!("Texture: {}", mat.get_texture());
-        let texture_name = mat.get_texture().split('.').next().unwrap();
-        //vdfs.list();
-        let texture_entry = vdfs.get_by_name_slice(texture_name).unwrap();
+    fn try_from(mat: &GeneralMaterial) -> Result<Material> {
+        let vdfs_file = File::open(INSTANCE.textures())?;
+        let vdfs = Vdfs::new(vdfs_file)?;
+        let texture_name = match mat.get_texture().split('.').next() {
+            Some(name) => name,
+            None => return Err(Error::WrongTextureNameFormat),
+        };
+        let texture_entry = match vdfs.get_by_name_slice(texture_name) {
+            Some(entry) => entry,
+            None => return Err(Error::ExpectedValidTextureName(texture_name.to_owned())),
+        };
         let texture_data = Cursor::new(texture_entry.data);
-        let dds = zen_texture::convert_ztex_to_dds(texture_data).unwrap();
+        let dds = zen_texture::convert_ztex_to_dds(texture_data)?;
         let mut dds_file_buf = vec![];
-        dds.write(&mut dds_file_buf).unwrap();
+        dds.write(&mut dds_file_buf)?;
         let dds_file = Cursor::new(dds_file_buf);
-        let decoder = DdsDecoder::new(dds_file).unwrap();
+        let decoder = DdsDecoder::new(dds_file)?;
         let (width, height) = decoder.dimensions();
         let color_type = decoder.color_type();
         let mut dds_bytes = vec![0_u8; decoder.total_bytes() as usize];
-        decoder.read_image(&mut dds_bytes).unwrap();
+        decoder.read_image(&mut dds_bytes)?;
 
-        let mut texture_name = texture_entry.name.split('.').next().unwrap().to_string();
+        let mut texture_name = match texture_entry.name.split('.').next() {
+            Some(name) => name.to_string(),
+            None => return Err(Error::ExpectedValidTextureName(texture_entry.name)),
+        };
         texture_name.push_str(".jpeg");
         let texture_path = FILES_INSTANCE.textures.join(texture_name);
-        let mut output_jpeg = File::create(&texture_path).unwrap();
+        let mut output_jpeg = File::create(&texture_path)?;
         let mut encoder = JpegEncoder::new(&mut output_jpeg);
-        encoder
-            .encode(dds_bytes.as_slice(), width, height, color_type)
-            .unwrap();
-        //vdf.list();
+        encoder.encode(dds_bytes.as_slice(), width, height, color_type)?;
         let color = to_rgb(mat.get_color());
-        //dbg!(mat.get_texture_scale());
-        Self {
+        Ok(Self {
             texture: texture_path,
             color,
-        }
+        })
     }
 }
 

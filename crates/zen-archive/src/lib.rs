@@ -2,19 +2,24 @@
 //!
 //! The given example loads a wave audio file out of an archive.
 //! ```rust
+//! use std::{fs::File, io::Write};
 //! use zen_archive::Vdfs;
 //!
-//! let file = File::open("/home/user/../Gothic II/Data/Sounds.vdf").unwrap();
-//! let vdf = Vdfs::new(file).unwrap();
-//! let entry = vdf.get_by_name_slice("CHAPTER_01.WAV").unwrap();
-//! let mut audio_file =
-//!     File::create("/home/user/../audio/chapter_01.wav").unwrap();
-//! audio_file.write(&entry.data).unwrap();
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let vdf_file = File::open("/home/tom/Steam/common/Gothic II/Data/Sounds.vdf")?;
+//!     let vdf = Vdfs::new(vdf_file)?;
+//!     let entry = vdf
+//!         .get_by_name_slice("CHAPTER_01.WAV")
+//!         .expect("Should be there!");
+//!     let mut audio_file = File::create("/home/tom/Git/zen-loader/files/audio/chapter_01.wav")?;
+//!     audio_file.write(&entry.data)?;
+//! #    Ok(())
+//! # }
 //! ```
 
 use error::*;
 use serde::Deserialize;
-use std::{cell::UnsafeCell, collections::HashMap, io::prelude::*, io::SeekFrom};
+use std::{cell::UnsafeCell, collections::HashMap, fmt, io::prelude::*, io::SeekFrom};
 use zen_parser::prelude::*;
 
 pub mod error;
@@ -52,6 +57,20 @@ impl<'a> Entry<'a> {
         }
     }
 }
+
+impl<'a> fmt::Display for Entry<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&format!(
+            "Name: {}, Offset: {:x}, Size: {:x}, Kind: {:x}, Attr: {:x}",
+            self.name,
+            self.properties.offset,
+            self.properties.size,
+            self.properties.kind,
+            self.properties.attr
+        ))
+    }
+}
+
 #[derive(Deserialize, Debug)]
 /// Vdfs Header attributes
 struct Header {

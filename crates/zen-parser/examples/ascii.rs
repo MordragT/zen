@@ -19,11 +19,11 @@ struct Texture {
     pos_scale: f32,
 }
 
-fn main() {
-    let file =
-        File::open("/home/tom/Git/Rust/zen-loader/crates/zen-parser/examples/example.zen").unwrap();
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let file = File::open("/home/tom/Git/Rust/zen-loader/crates/zen-parser/examples/example.zen")?;
     let mut de = AsciiDeserializer::from(file);
-    de.read_header().unwrap();
-    let lens_flare = LensFlareFX::deserialize(&mut de).unwrap();
+    de.read_header()?;
+    let lens_flare = LensFlareFX::deserialize(&mut de)?;
     println!("{:?}", lens_flare);
+    Ok(())
 }

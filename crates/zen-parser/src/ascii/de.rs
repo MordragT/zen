@@ -5,6 +5,7 @@ use serde::de::{self, Deserializer, Visitor};
 use std::convert::TryFrom;
 use std::io::{Read, Seek, SeekFrom};
 
+/// Deserialize Zengin Ascii Archives
 pub struct AsciiDeserializer<R> {
     pub parser: R,
 }

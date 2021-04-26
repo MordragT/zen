@@ -18,6 +18,9 @@ const FEAT_LIST: u16 = 0xB040;
 const POLY_LIST: u16 = 0xB050;
 const MESH_END: u16 = 0xB060;
 
+const GOTHIC2_6: u32 = 265;
+const GOTHIC1_08K: u32 = 9;
+
 pub struct MshMesh {
     pub name: String,
     pub materials: Vec<zen_material::GeneralMaterial>,
@@ -183,7 +186,7 @@ fn deserialize_poly_list<R: BinaryRead + AsciiRead>(
                     <structures::PolyGothicTwoFlags>::deserialize(&mut deserializer)?.into()
                 }
                 GOTHIC1_08K => todo!(),
-                _ => return Err(Error::UnknownGameVersion),
+                _ => return Err(Error::UnknownGameVersion(version)),
             };
 
             let num_indices = u8::deserialize(&mut deserializer)?;
@@ -197,7 +200,7 @@ fn deserialize_poly_list<R: BinaryRead + AsciiRead>(
                         GOTHIC1_08K => {
                             <structures::IndexPacked<u16>>::deserialize(&mut deserializer)?.into()
                         }
-                        _ => return Err(Error::UnknownGameVersion),
+                        _ => return Err(Error::UnknownGameVersion(version)),
                     };
                     return Ok(index);
                 })
@@ -242,6 +245,8 @@ fn read_chunk<R: BinaryRead + AsciiRead>(
             builder.light_maps = Some(deserialize_light_maps::<R>(&mut reader, chunk_end)?);
             read_chunk(reader, builder)
         }
+        //skip
+        LIGHT_MAP_LIST_SHARED => read_chunk(reader, builder),
         VERT_LIST => {
             builder.vertices = Some(deserialize_vertices::<R>(&mut reader, chunk_end)?);
             read_chunk(reader, builder)

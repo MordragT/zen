@@ -76,6 +76,7 @@ impl<R: BinaryRead + AsciiRead> From<R> for Reader<R> {
 }
 
 impl<R: BinaryRead + AsciiRead> Reader<R> {
+    /// Reads the header and returns it
     pub fn read_header<'a>(&mut self) -> Result<Header> {
         let mut ascii = AsciiDeserializer::from(&mut self.reader);
 

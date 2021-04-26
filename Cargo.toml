@@ -1,8 +1,13 @@
 [package]
 name = "zen-loader"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["MordragT <scrat_games@gmx.de>"]
 edition = "2018"
+license = "MIT"
+repository = "https://github.com/mordragt/zen-loader.git"
+description = "Open zengine formats and export the data to modern formats"
+readme = "README.md"
+keywords = ["gothic", "zen", "game-engine", "data-formats", "loader"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

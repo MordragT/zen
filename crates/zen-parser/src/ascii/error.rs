@@ -6,6 +6,7 @@ use std::num::{ParseFloatError, ParseIntError, TryFromIntError};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// [crate::AsciiDeserializer] Error
 #[derive(Debug)]
 pub struct Error {
     pub code: ErrorCode,

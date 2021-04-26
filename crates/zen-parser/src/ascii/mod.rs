@@ -7,6 +7,7 @@ pub mod de;
 pub mod error;
 pub mod read;
 
+/// Position of the Error
 #[derive(Debug)]
 pub struct Position {
     pub line: usize,

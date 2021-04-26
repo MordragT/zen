@@ -160,6 +160,7 @@ impl SymbolTable {
 #[derive(Default)]
 struct Element(u32);
 
+#[allow(dead_code)]
 impl Element {
     pub fn new(val: u32) -> Element {
         Element(val)
@@ -184,6 +185,7 @@ impl Element {
 #[derive(Default)]
 struct Structure(u32);
 
+#[allow(dead_code)]
 impl Structure {
     pub fn new(val: u32) -> Structure {
         Structure(val)
@@ -198,6 +200,7 @@ impl Structure {
 #[derive(Default)]
 struct CharStructure(u32);
 
+#[allow(dead_code)]
 impl CharStructure {
     pub fn new(val: u32) -> CharStructure {
         CharStructure(val)
@@ -210,6 +213,7 @@ impl CharStructure {
     }
 }
 #[derive(Default)]
+#[allow(dead_code)]
 pub struct Properties {
     off_cls_ret: i32,
     element: Element,
@@ -253,6 +257,7 @@ impl Properties {
 
 #[repr(u8)]
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub enum Flag {
     Const = 0b00001,
     Return = 0b00010,

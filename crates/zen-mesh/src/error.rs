@@ -9,9 +9,10 @@ pub enum Error {
     Io(io::Error),
     Binary(binary::Error),
     Ascii(ascii::Error),
-    UnknownGameVersion,
+    UnknownGameVersion(u32),
     ExpectedIdentifier(String),
     ExpectedValue(String),
+    Material(zen_material::error::Error),
 }
 
 impl fmt::Display for Error {
@@ -21,9 +22,12 @@ impl fmt::Display for Error {
             Self::Io(e) => f.write_str(&e.to_string()),
             Self::Binary(e) => f.write_str(&e.to_string()),
             Self::Ascii(e) => f.write_str(&e.to_string()),
-            Self::UnknownGameVersion => f.write_str("Unknown game version, please patch"),
+            Self::UnknownGameVersion(version) => {
+                f.write_str(&format!("Unknown game version {}, please patch", version))
+            }
             Self::ExpectedIdentifier(s) => f.write_str(&s),
             Self::ExpectedValue(s) => f.write_str(&s),
+            Self::Material(e) => f.write_str(&e.to_string()),
         }
     }
 }
@@ -61,6 +65,12 @@ impl From<zen_parser::Error> for Error {
             zen_parser::Error::Binary(e) => Self::Binary(e),
             zen_parser::Error::Message(s) => Self::Message(s),
         }
+    }
+}
+
+impl From<zen_material::error::Error> for Error {
+    fn from(e: zen_material::error::Error) -> Self {
+        Self::Material(e)
     }
 }
 

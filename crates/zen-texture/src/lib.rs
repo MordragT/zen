@@ -2,18 +2,38 @@ use ddsfile::{AlphaMode, D3D10ResourceDimension, Dds};
 use serde::Deserialize;
 use std::cmp;
 use std::convert::TryInto;
+use std::fmt;
 use std::io::SeekFrom;
 use zen_parser::prelude::{BinaryDeserializer, BinaryRead};
 
+pub use ddsfile;
+
 pub mod ztex;
 
+#[derive(Debug)]
+pub enum Error {
+    WrongSignature,
+    ConversionError,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::WrongSignature => f.write_str("Wrong ZTEX Signature or Version"),
+            Self::ConversionError => f.write_str("Couldnt convert ZTEX format to DDS format."),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
 /// Convert ZTEX to DDS image format
-pub fn convert_ztex_to_dds<'a, R: BinaryRead>(reader: R) -> Result<Dds, &'a str> {
+pub fn convert_ztex_to_dds<'a, R: BinaryRead>(reader: R) -> Result<Dds, Error> {
     let mut deserializer = BinaryDeserializer::from(reader);
     let header = ztex::Header::deserialize(&mut deserializer).unwrap();
     if header.get_signature() != ztex::FILE_SIGNATURE || header.get_version() != ztex::FILE_VERSION
     {
-        return Err("Wrong ZTEX Signature or Version");
+        return Err(Error::WrongSignature);
     }
     let mut dds = match header.get_format().try_into() {
         Ok(format) => Dds::new_d3d(
@@ -37,7 +57,7 @@ pub fn convert_ztex_to_dds<'a, R: BinaryRead>(reader: R) -> Result<Dds, &'a str>
                 D3D10ResourceDimension::Unknown,
                 AlphaMode::Unknown,
             ),
-            Err(_) => return Err("Couldnt convert ZTEX format to DDS format."),
+            Err(_) => return Err(Error::ConversionError),
         },
     }
     .unwrap();

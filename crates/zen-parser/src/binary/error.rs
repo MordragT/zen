@@ -1,6 +1,7 @@
 use serde::de;
 use std::{fmt, io};
 
+/// [crate::BinaryDeserializer] Error
 #[derive(Debug)]
 pub enum Error {
     Message(String),

@@ -8,10 +8,8 @@ use zen_parser::prelude::*;
 mod structures;
 
 const PROG_MESH: u16 = 45312;
-const PROG_MESH_END: u16 = 45567;
+//const PROG_MESH_END: u16 = 45567;
 
-const GOTHIC2_6: u32 = 265;
-const GOTHIC1_08K: u32 = 9;
 /// Holds data of an .mrm file
 /// Mrm == Mutli Resolution Mesh
 pub struct MrmMesh {
@@ -53,7 +51,7 @@ impl MrmMesh {
         // let mut ascii_de = AsciiDeserializer::from(deserializer);
         // ascii_de.read_header()?;
         // deserializer = ascii_de.into();
-        let header = Reader::from(&mut deserializer.parser).read_header()?;
+        let _header = Reader::from(&mut deserializer.parser).read_header()?;
 
         let mut materials = (0..num_sub_meshes)
             .map(|_| {
