@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Error",""]],"mod":[["gltf",""],["mrm",""],["msh",""],["structures",""]],"struct":[["GeneralMesh","General Mesh consisting out of one or more sub meshes"],["Mesh","Basic Mesh Informations"],["SubMesh","Mesh that is a component in another mesh, already holds its material"]]});

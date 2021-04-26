@@ -1,6 +1,6 @@
 [package]
 name = "zen-texture"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["MordragT <scrat_games@gmx.de>"]
 edition = "2018"
 
@@ -10,9 +10,9 @@ edition = "2018"
 serde = { version = "1.0", features = ["derive"] }
 ddsfile = { git = "https://github.com/MordragT/ddsfile", branch = "master" }
 #ddsfile = "0.4"
-zen-parser = { path = "../zen-parser" }
+zen-parser = {  path = "../zen-parser" }
 serde_repr = "0.1"
 
 [dev-dependencies]
-zen-archive = { path = "../zen-archive" }
+zen-archive = {  path = "../zen-archive" }
 image = "0.23"

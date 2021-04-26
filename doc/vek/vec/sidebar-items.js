@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["repr_c","Vector types which are marked `#[repr(C)]`."],["repr_simd","Vector types which are marked `#[repr(simd)]`."]],"struct":[["ShuffleMask4","Opaque type wrapping a hardware-preferred shuffle mask format for 4D vectors."]]});

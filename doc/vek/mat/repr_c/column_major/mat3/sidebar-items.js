@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Mat3","3x3 matrix."]]});

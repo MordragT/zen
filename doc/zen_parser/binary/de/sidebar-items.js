@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["BinaryDeserializer","Deserialize Zengin Binary Archives"]]});

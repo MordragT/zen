@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["repr_c","`Quaternion`s which are marked `#[repr(C)]`."],["repr_simd","`Quaternion`s which are marked `#[repr(simd)]`."]]});

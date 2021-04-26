@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["repr_c","Matrix types which use `#[repr(C)]` vectors exclusively."],["repr_simd","Matrix types which use a `#[repr(C)]` vector of `#[repr(simd)]` vectors."]]});

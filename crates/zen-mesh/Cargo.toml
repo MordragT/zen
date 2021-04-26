@@ -1,6 +1,6 @@
 [package]
 name = "zen-mesh"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["MordragT <scrat_games@gmx.de>"]
 edition = "2018"
 
@@ -10,10 +10,10 @@ edition = "2018"
 serde = { version = "1.0", features = ["derive"] }
 gltf-json = "0.15"
 gltf = "0.15"
-zen-parser = { path = "../zen-parser" }
-zen-types = { path = "../zen-types" }
-zen-material = { path = "../zen-material" }
+zen-parser = {  path = "../zen-parser" }
+zen-types = {  path = "../zen-types" }
+zen-material = {  path = "../zen-material" }
 vek = { version = "0.15", features = ["serde"] }
 
 [dev-dependencies]
-zen-archive = { path = "../zen-archive" }
+zen-archive = {  path = "../zen-archive" }

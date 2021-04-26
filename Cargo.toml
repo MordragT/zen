@@ -12,12 +12,12 @@ keywords = ["gothic", "zen", "game-engine", "data-formats", "loader"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-zen-archive = { path = "crates/zen-archive" }
-zen-mesh = { path = "crates/zen-mesh" }
-zen-parser = { path = "crates/zen-parser" }
-zen-texture = { path = "crates/zen-texture" }
-zen-material = { path = "crates/zen-material" }
-zen-types = { path = "crates/zen-types" }
-zen-daedalus = { path = "crates/zen-daedalus" }
+zen-archive = {  path = "crates/zen-archive" }
+zen-mesh = {  path = "crates/zen-mesh" }
+zen-parser = {  path = "crates/zen-parser" }
+zen-texture = {  path = "crates/zen-texture" }
+zen-material = {  path = "crates/zen-material" }
+zen-types = {  path = "crates/zen-types" }
+zen-daedalus = {  path = "crates/zen-daedalus" }
 
 

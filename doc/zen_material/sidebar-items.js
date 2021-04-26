@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["GOTHIC2",""]],"enum":[["Error","Error Object for Vdfs Archives"],["GeneralMaterial","Holds Materials from Gothic 1 and 2"],["Group",""]],"struct":[["AdvancedMaterial","Materials used in Gothic 2"],["BasicMaterial","Materials that are used in Gothic 1"],["ChunkHeader",""],["Material","Simple Material with texture and color"]]});

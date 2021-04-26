@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Operator","The different Operators that can occur in the machine"]],"struct":[["Machine","The virtual machine that runs the Code"]]});

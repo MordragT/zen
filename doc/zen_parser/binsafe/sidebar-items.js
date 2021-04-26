@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["BinSafeHeader","Header for BinSafe files"]]});

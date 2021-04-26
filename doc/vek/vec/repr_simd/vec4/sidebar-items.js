@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["IntoIter","Consuming iterator over this module’s vector type."],["Vec4","Vector type suited for homogeneous 3D spatial coordinates."]]});

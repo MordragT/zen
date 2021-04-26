@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["CubicBezier2","A 2D Bézier curve with two control points."],["CubicBezier3","A 3D Bézier curve with two control points."],["QuadraticBezier2","A 2D Bézier curve with one control point."],["QuadraticBezier3","A 3D Bézier curve with one control point."]]});

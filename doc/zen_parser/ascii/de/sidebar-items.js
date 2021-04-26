@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["AsciiDeserializer","Deserialize Zengin Ascii Archives"]]});

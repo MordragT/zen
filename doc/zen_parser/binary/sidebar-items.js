@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Error","[crate::BinaryDeserializer] Error"]],"struct":[["BinaryDeserializer","Deserialize Zengin Binary Archives"]],"trait":[["BinaryRead","Provides methods to read a binary archive"]]});

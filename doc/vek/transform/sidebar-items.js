@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["repr_c","`Transform` struct that uses `#[repr(C)]` vectors and quaternions."],["repr_simd","`Transform` struct that uses `#[repr(simd)]` vectors and quaternions."]]});

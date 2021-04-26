@@ -545,7 +545,7 @@ checksum = "d8b77fdfd5a253be4ab714e4ffa3c49caf146b4de743e97510c0656cf90f1e8e"
 
 [[package]]
 name = "zen-archive"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "serde",
  "zen-parser",
@@ -553,7 +553,7 @@ dependencies = [
 
 [[package]]
 name = "zen-daedalus"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "serde",
  "zen-parser",
@@ -574,7 +574,7 @@ dependencies = [
 
 [[package]]
 name = "zen-material"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "image",
  "serde",
@@ -587,7 +587,7 @@ dependencies = [
 
 [[package]]
 name = "zen-mesh"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "gltf",
  "gltf-json",
@@ -600,7 +600,7 @@ dependencies = [
 
 [[package]]
 name = "zen-parser"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "serde",
  "zen-types",
@@ -608,7 +608,7 @@ dependencies = [
 
 [[package]]
 name = "zen-texture"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "ddsfile",
  "serde",
@@ -618,7 +618,7 @@ dependencies = [
 
 [[package]]
 name = "zen-types"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "lazy_static",
  "serde",
