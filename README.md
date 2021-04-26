@@ -4,15 +4,14 @@
 - Provides a library to open zengine specific data formats
 - And export data to modern data formats
 
-- At the moment you can open [VDFS-Archives](https://docs.rs/zen_loader/0.0.1/zen_loader/zen_archive), and export [Multiresolution-Meshes](https://docs.rs/zen_loader/0.0.1/zen_loader/zen_mesh/MrmMesh) (.mrm) aswell as normal [Zengin-Meshes](https://docs.rs/zen_loader/0.0.1/zen_loader/MshMesh) (.msh) from the archives to gltf files.
-- The corresponding [textures](https://docs.rs/zen_loader/0.0.1/zen_loader/zen_texture) will also be exported (similiar to dds textures), or you can export those textures one by one aswell.
-- I am working on the export of Zengin World Scenes (.zen) to gltf and a [Daedalus](https://docs.rs/zen_loader/0.0.1/zen_loader/zen_daedalus) (scripting language) virtual machine to execute the bytecode.
+- At the moment you can open [VDFS-Archives](https://mordragt.github.io/zen-loader/zen_archive/index.html), and export [Multiresolution-Meshes](https://mordragt.github.io/zen-loader/zen_mesh/mrm/struct.MrmMesh.html) (.mrm) aswell as normal [Zengin-Meshes](https://mordragt.github.io/zen-loader/zen_mesh/msh/struct.MshMesh.html) (.msh) from the archives to gltf files.
+- The corresponding [textures](https://mordragt.github.io/zen-loader/zen_texture/index.html) will also be exported (similiar to dds textures), or you can export those textures one by one aswell.
+- I am working on the export of Zengin World Scenes (.zen) to gltf and a [Daedalus](https://mordragt.github.io/zen-loader/zen_daedalus/index.html) (scripting language) virtual machine to execute the bytecode.
 - Expect breaking changes
 
 #### Links
 
-- [crate](https://crates.io/crates/zen_loader)
-- [documentation](https://docs.rs/zen_loader/0.0.1/zen_loader)
+- [documentation](https://mordragt.github.io/zen-loader/zen_loader/)
 
 ## Examples
 
