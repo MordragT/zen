@@ -1,7 +1,17 @@
-#[repr(transparent)]
-pub struct Vec2<T: Copy>([T; 2]);
+#[cfg(feature = "serde")]
+use serde::Deserialize;
 
-impl<T: Copy> Vec2<T> {
+#[cfg(feature = "serde")]
+#[derive(Default, Deserialize, Debug, Clone, Copy)]
+#[repr(transparent)]
+pub struct Vec2<T: Copy + PartialOrd>([T; 2]);
+
+#[cfg(not(feature = "serde"))]
+#[derive(Default, Debug, Clone, Copy)]
+#[repr(transparent)]
+pub struct Vec2<T: Copy + PartialOrd>([T; 2]);
+
+impl<T: Copy + PartialOrd> Vec2<T> {
     pub fn new(x: T, y: T) -> Self {
         Self([x, y])
     }
@@ -14,6 +24,30 @@ impl<T: Copy> Vec2<T> {
         self.0[1]
     }
 
+    pub fn min_x(&mut self, x: T) {
+        if self.x() > x {
+            self.0[0] = x;
+        }
+    }
+
+    pub fn max_x(&mut self, x: T) {
+        if self.x() < x {
+            self.0[0] = x;
+        }
+    }
+
+    pub fn min_y(&mut self, y: T) {
+        if self.y() > y {
+            self.0[1] = y;
+        }
+    }
+
+    pub fn max_y(&mut self, y: T) {
+        if self.y() < y {
+            self.0[1] = y;
+        }
+    }
+
     pub fn yx(&self) -> Self {
         Self([self.y(), self.x()])
     }
@@ -21,18 +55,29 @@ impl<T: Copy> Vec2<T> {
     pub fn to_array(self) -> [T; 2] {
         self.0
     }
+
+    pub fn to_vec(self) -> Vec<T> {
+        self.to_array().to_vec()
+    }
 }
 
-impl<T: Copy> From<[T; 2]> for Vec2<T> {
+impl<T: Copy + PartialOrd> From<[T; 2]> for Vec2<T> {
     fn from(arr: [T; 2]) -> Self {
         Self(arr)
     }
 }
 
+#[cfg(feature = "serde")]
+#[derive(Default, Deserialize, Debug, Clone, Copy)]
 #[repr(transparent)]
-pub struct Vec3<T: Copy>([T; 3]);
+pub struct Vec3<T: Copy + PartialOrd>([T; 3]);
 
-impl<T: Copy> Vec3<T> {
+#[cfg(not(feature = "serde"))]
+#[derive(Default, Debug, Clone, Copy)]
+#[repr(transparent)]
+pub struct Vec3<T: Copy + PartialOrd>([T; 3]);
+
+impl<T: Copy + PartialOrd> Vec3<T> {
     pub fn new(x: T, y: T, z: T) -> Self {
         Self([x, y, z])
     }
@@ -47,6 +92,42 @@ impl<T: Copy> Vec3<T> {
 
     pub fn z(&self) -> T {
         self.0[2]
+    }
+
+    pub fn min_x(&mut self, x: T) {
+        if self.x() > x {
+            self.0[0] = x;
+        }
+    }
+
+    pub fn max_x(&mut self, x: T) {
+        if self.x() < x {
+            self.0[0] = x;
+        }
+    }
+
+    pub fn min_y(&mut self, y: T) {
+        if self.y() > y {
+            self.0[1] = y;
+        }
+    }
+
+    pub fn max_y(&mut self, y: T) {
+        if self.y() < y {
+            self.0[1] = y;
+        }
+    }
+
+    pub fn min_z(&mut self, z: T) {
+        if self.z() > z {
+            self.0[2] = z;
+        }
+    }
+
+    pub fn max_z(&mut self, z: T) {
+        if self.z() < z {
+            self.0[2] = z;
+        }
     }
 
     pub fn xy(&self) -> Vec2<T> {
@@ -76,18 +157,29 @@ impl<T: Copy> Vec3<T> {
     pub fn to_array(self) -> [T; 3] {
         self.0
     }
+
+    pub fn to_vec(self) -> Vec<T> {
+        self.to_array().to_vec()
+    }
 }
 
-impl<T: Copy> From<[T; 3]> for Vec3<T> {
+impl<T: Copy + PartialOrd> From<[T; 3]> for Vec3<T> {
     fn from(arr: [T; 3]) -> Self {
         Self(arr)
     }
 }
 
+#[cfg(feature = "serde")]
+#[derive(Default, Deserialize, Debug, Clone, Copy)]
 #[repr(transparent)]
-pub struct Vec4<T: Copy>([T; 4]);
+pub struct Vec4<T: Copy + PartialOrd>([T; 4]);
 
-impl<T: Copy> Vec4<T> {
+#[cfg(not(feature = "serde"))]
+#[derive(Default, Debug, Clone, Copy)]
+#[repr(transparent)]
+pub struct Vec4<T: Copy + PartialOrd>([T; 4]);
+
+impl<T: Copy + PartialOrd> Vec4<T> {
     pub fn new(x: T, y: T, z: T, w: T) -> Self {
         Self([x, y, z, w])
     }
@@ -106,6 +198,54 @@ impl<T: Copy> Vec4<T> {
 
     pub fn w(&self) -> T {
         self.0[3]
+    }
+
+    pub fn min_x(&mut self, x: T) {
+        if self.x() > x {
+            self.0[0] = x;
+        }
+    }
+
+    pub fn max_x(&mut self, x: T) {
+        if self.x() < x {
+            self.0[0] = x;
+        }
+    }
+
+    pub fn min_y(&mut self, y: T) {
+        if self.y() > y {
+            self.0[1] = y;
+        }
+    }
+
+    pub fn max_y(&mut self, y: T) {
+        if self.y() < y {
+            self.0[1] = y;
+        }
+    }
+
+    pub fn min_z(&mut self, z: T) {
+        if self.z() > z {
+            self.0[2] = z;
+        }
+    }
+
+    pub fn max_z(&mut self, z: T) {
+        if self.z() < z {
+            self.0[2] = z;
+        }
+    }
+
+    pub fn min_w(&mut self, w: T) {
+        if self.w() > w {
+            self.0[3] = w;
+        }
+    }
+
+    pub fn max_w(&mut self, w: T) {
+        if self.w() < w {
+            self.0[3] = w;
+        }
     }
 
     pub fn xy(&self) -> Vec2<T> {
@@ -175,9 +315,13 @@ impl<T: Copy> Vec4<T> {
     pub fn to_array(self) -> [T; 4] {
         self.0
     }
+
+    pub fn to_vec(self) -> Vec<T> {
+        self.to_array().to_vec()
+    }
 }
 
-impl<T: Copy> From<[T; 4]> for Vec4<T> {
+impl<T: Copy + PartialOrd> From<[T; 4]> for Vec4<T> {
     fn from(arr: [T; 4]) -> Self {
         Self(arr)
     }

@@ -23,7 +23,7 @@
 
 pub use mrm::MrmMesh;
 pub use msh::MshMesh;
-use vek::Vec3;
+use zen_math::Vec3;
 //pub use zen::ZenMesh;
 pub use error::Error;
 use error::Result;
@@ -54,14 +54,14 @@ impl Mesh {
             ),
             |(mut min, mut max), (count, pos)| {
                 if count % 3 == 0 {
-                    min.x = min.x.min(*pos);
-                    max.x = max.x.max(*pos);
+                    min.min_x(*pos);
+                    max.max_x(*pos);
                 } else if count % 3 == 1 {
-                    min.y = min.y.min(*pos);
-                    max.y = max.y.max(*pos);
+                    min.min_y(*pos);
+                    max.max_y(*pos);
                 } else if count % 3 == 2 {
-                    min.z = min.z.min(*pos);
-                    max.z = max.z.max(*pos);
+                    min.min_z(*pos);
+                    max.max_z(*pos);
                 }
                 (min, max)
             },
@@ -91,6 +91,7 @@ impl TryFrom<MrmMesh> for GeneralMesh {
                 let indices = sub_mesh
                     .triangles
                     .into_iter()
+                    .map(|v| v.to_array())
                     .flatten()
                     .map(|pos| pos as u32)
                     .collect::<Vec<u32>>();
@@ -141,19 +142,19 @@ impl TryFrom<MshMesh> for GeneralMesh {
                 let verts = polygon
                     .indices
                     .iter()
-                    .map(|index| vertices[index.vertex as usize])
+                    .map(|index| vertices[index.vertex as usize].to_array())
                     .flatten()
                     .collect::<Vec<f32>>();
                 let norms = polygon
                     .indices
                     .iter()
-                    .map(|index| features[index.feature as usize].vert_normal)
+                    .map(|index| features[index.feature as usize].vert_normal.to_array())
                     .flatten()
                     .collect::<Vec<f32>>();
                 let tex_coords = polygon
                     .indices
                     .iter()
-                    .map(|index| features[index.feature as usize].tex_coord)
+                    .map(|index| features[index.feature as usize].tex_coord.to_array())
                     .flatten()
                     .collect::<Vec<f32>>();
                 let indices = (0..verts.len() / 3)

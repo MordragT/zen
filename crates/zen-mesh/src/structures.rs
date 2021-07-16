@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use vek::Vec3;
+use zen_math::Vec3;
 
 #[derive(Deserialize)]
 #[repr(C, packed(4))]

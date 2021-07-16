@@ -10,8 +10,8 @@ use image::{dds::DdsDecoder, jpeg::JpegEncoder, ImageDecoder};
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 use std::{cmp, convert::TryFrom, fs::File, io::Cursor, path::PathBuf};
-use vek::{Vec2, Vec3};
 use zen_archive::Vdfs;
+use zen_math::{Vec2, Vec3};
 use zen_types::path::{FILES_INSTANCE, INSTANCE};
 
 mod error;
@@ -110,7 +110,7 @@ fn tex_scale_to_vec(scale_str: &str) -> Vec2<u32> {
     let first = u32::from_str_radix(first_str, 10).unwrap();
     let second_str = scale_str.split_whitespace().next().unwrap();
     let second = u32::from_str_radix(second_str, 10).unwrap();
-    Vec2::from((first, second))
+    Vec2::new(first, second)
 }
 
 /// Materials that are used in Gothic 1

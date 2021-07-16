@@ -1,7 +1,7 @@
 use crate::error::*;
 use serde::Deserialize;
 use std::io::{Seek, SeekFrom};
-use vek::{Vec2, Vec3, Vec4};
+use zen_math::{Vec2, Vec3, Vec4};
 use zen_parser::prelude::*;
 //use zen_types::mesh::{self, mrm};
 

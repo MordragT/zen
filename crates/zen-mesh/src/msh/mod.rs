@@ -2,7 +2,7 @@ use crate::error::*;
 use serde::Deserialize;
 use std::convert::TryFrom;
 use std::io::{Seek, SeekFrom};
-use vek::Vec3;
+use zen_math::Vec3;
 use zen_parser::prelude::*;
 //use zen_types::mesh::{self, msh};
 

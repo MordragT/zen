@@ -13,7 +13,7 @@ gltf = "0.15"
 zen-parser = {  path = "../zen-parser" }
 zen-types = {  path = "../zen-types" }
 zen-material = {  path = "../zen-material" }
-vek = { version = "0.15", features = ["serde"] }
+zen-math = { path = "../zen-math" }
 
 [dev-dependencies]
 zen-archive = {  path = "../zen-archive" }
