@@ -1,5 +1,5 @@
-use ddsfile::D3DFormat;
-use ddsfile::DxgiFormat;
+// use ddsfile::D3DFormat;
+// use ddsfile::DxgiFormat;
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 use std::convert::TryInto;
@@ -43,51 +43,51 @@ pub enum Format {
     DXT5,   // E, DXT5 compression texture format
 }
 
-impl TryInto<D3DFormat> for Format {
-    type Error = ();
-    fn try_into(self) -> Result<D3DFormat, Self::Error> {
-        match self {
-            Self::B8G8R8A8 => Err(()),
-            Self::R8G8B8A8 => Err(()),
-            Self::A8B8G8R8 => Ok(D3DFormat::A8B8G8R8),
-            Self::A8R8G8B8 => Ok(D3DFormat::A8R8G8B8),
-            Self::B8G8R8 => Err(()),
-            Self::R8G8B8 => Ok(D3DFormat::R8G8B8),
-            Self::A4R4G4B4 => Ok(D3DFormat::A4R4G4B4),
-            Self::A1R5G5B5 => Ok(D3DFormat::A1R5G5B5),
-            Self::R5G6B5 => Ok(D3DFormat::R5G6B5),
-            Self::P8 => Err(()),
-            Self::DXT1 => Ok(D3DFormat::DXT1),
-            Self::DXT2 => Ok(D3DFormat::DXT2),
-            Self::DXT3 => Ok(D3DFormat::DXT3),
-            Self::DXT4 => Ok(D3DFormat::DXT4),
-            Self::DXT5 => Ok(D3DFormat::DXT5),
-        }
-    }
-}
+// impl TryInto<D3DFormat> for Format {
+//     type Error = ();
+//     fn try_into(self) -> Result<D3DFormat, Self::Error> {
+//         match self {
+//             Self::B8G8R8A8 => Err(()),
+//             Self::R8G8B8A8 => Err(()),
+//             Self::A8B8G8R8 => Ok(D3DFormat::A8B8G8R8),
+//             Self::A8R8G8B8 => Ok(D3DFormat::A8R8G8B8),
+//             Self::B8G8R8 => Err(()),
+//             Self::R8G8B8 => Ok(D3DFormat::R8G8B8),
+//             Self::A4R4G4B4 => Ok(D3DFormat::A4R4G4B4),
+//             Self::A1R5G5B5 => Ok(D3DFormat::A1R5G5B5),
+//             Self::R5G6B5 => Ok(D3DFormat::R5G6B5),
+//             Self::P8 => Err(()),
+//             Self::DXT1 => Ok(D3DFormat::DXT1),
+//             Self::DXT2 => Ok(D3DFormat::DXT2),
+//             Self::DXT3 => Ok(D3DFormat::DXT3),
+//             Self::DXT4 => Ok(D3DFormat::DXT4),
+//             Self::DXT5 => Ok(D3DFormat::DXT5),
+//         }
+//     }
+// }
 
-impl TryInto<DxgiFormat> for Format {
-    type Error = ();
-    fn try_into(self) -> Result<DxgiFormat, Self::Error> {
-        match self {
-            Self::B8G8R8A8 => Ok(DxgiFormat::B8G8R8A8_Typeless),
-            Self::R8G8B8A8 => Ok(DxgiFormat::R8G8B8A8_Typeless),
-            Self::A8B8G8R8 => Err(()),
-            Self::A8R8G8B8 => Err(()),
-            Self::B8G8R8 => Ok(DxgiFormat::B8G8R8X8_Typeless),
-            Self::R8G8B8 => Err(()),
-            Self::A4R4G4B4 => Err(()),
-            Self::A1R5G5B5 => Err(()),
-            Self::R5G6B5 => Err(()),
-            Self::P8 => Ok(DxgiFormat::P8),
-            Self::DXT1 => Err(()),
-            Self::DXT2 => Err(()),
-            Self::DXT3 => Err(()),
-            Self::DXT4 => Err(()),
-            Self::DXT5 => Err(()),
-        }
-    }
-}
+// impl TryInto<DxgiFormat> for Format {
+//     type Error = ();
+//     fn try_into(self) -> Result<DxgiFormat, Self::Error> {
+//         match self {
+//             Self::B8G8R8A8 => Ok(DxgiFormat::B8G8R8A8_Typeless),
+//             Self::R8G8B8A8 => Ok(DxgiFormat::R8G8B8A8_Typeless),
+//             Self::A8B8G8R8 => Err(()),
+//             Self::A8R8G8B8 => Err(()),
+//             Self::B8G8R8 => Ok(DxgiFormat::B8G8R8X8_Typeless),
+//             Self::R8G8B8 => Err(()),
+//             Self::A4R4G4B4 => Err(()),
+//             Self::A1R5G5B5 => Err(()),
+//             Self::R5G6B5 => Err(()),
+//             Self::P8 => Ok(DxgiFormat::P8),
+//             Self::DXT1 => Err(()),
+//             Self::DXT2 => Err(()),
+//             Self::DXT3 => Err(()),
+//             Self::DXT4 => Err(()),
+//             Self::DXT5 => Err(()),
+//         }
+//     }
+// }
 
 /// Info Block
 #[derive(Deserialize, Debug)]
@@ -109,22 +109,25 @@ pub struct Header {
 }
 
 impl Header {
-    pub fn get_format(&self) -> Format {
+    pub fn format(&self) -> Format {
         self.info.format
     }
-    pub fn get_width(&self) -> u32 {
+    pub fn width(&self) -> u32 {
         self.info.width
     }
-    pub fn get_height(&self) -> u32 {
+    pub fn height(&self) -> u32 {
         self.info.height
     }
-    pub fn get_signature(&self) -> u32 {
+    pub fn dimensions(&self) -> (u32, u32) {
+        (self.info.width, self.info.height)
+    }
+    pub fn signature(&self) -> u32 {
         self.signature
     }
-    pub fn get_version(&self) -> u32 {
+    pub fn version(&self) -> u32 {
         self.version
     }
-    pub fn get_mipmap_level(&self) -> u32 {
+    pub fn mipmap_level(&self) -> u32 {
         self.info.mipmap_level
     }
 }
