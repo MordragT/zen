@@ -1,33 +1,18 @@
+pub use error::Error;
+use error::Result;
 use serde::Deserialize;
-use std::cmp;
-use std::fmt;
-use std::io::SeekFrom;
+use std::{
+    cmp,
+    io::{SeekFrom, Write},
+};
 use zen_parser::prelude::{BinaryDeserializer, BinaryRead};
 use ztex::Format;
 
-//pub use ddsfile;
-
+mod error;
 mod ztex;
 
-/// Error Type
-#[derive(Debug)]
-pub enum Error {
-    WrongSignature,
-    ConversionError,
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::WrongSignature => f.write_str("Wrong ZTEX Signature or Version"),
-            Self::ConversionError => f.write_str("Couldnt convert ZTEX format to DDS format."),
-        }
-    }
-}
-
-impl std::error::Error for Error {}
-
-pub enum TextureFormat {
+#[derive(Clone, Copy)]
+pub enum ColorType {
     RGBA8,
     BGRA8,
     RGBA16,
@@ -37,16 +22,16 @@ pub enum TextureFormat {
 pub struct Texture {
     width: u32,
     height: u32,
-    format: TextureFormat,
+    color_type: ColorType,
     pixels: Vec<u8>,
 }
 
 impl Texture {
-    pub fn new(width: u32, height: u32, format: TextureFormat, pixels: Vec<u8>) -> Self {
+    pub fn new(width: u32, height: u32, color_type: ColorType, pixels: Vec<u8>) -> Self {
         Self {
             width,
             height,
-            format,
+            color_type,
             pixels,
         }
     }
@@ -59,8 +44,8 @@ impl Texture {
         self.height
     }
 
-    pub fn format(&self) -> &TextureFormat {
-        &self.format
+    pub fn color_type(&self) -> ColorType {
+        self.color_type
     }
 
     pub fn dimensions(&self) -> (u32, u32) {
@@ -71,34 +56,28 @@ impl Texture {
         self.pixels.as_slice()
     }
 
+    #[cfg(feature = "image")]
+    pub fn to_png<W: Write>(&self, writer: W) -> Result<()> {
+        let encoder = image::codecs::png::PngEncoder::new(writer);
+        let color_type = match self.color_type {
+            ColorType::BGRA8 => image::ColorType::Bgra8,
+            ColorType::RGBA16 => image::ColorType::Rgba16,
+            ColorType::RGBA8 => image::ColorType::Rgba8,
+            ColorType::RGB8 => image::ColorType::Rgb8,
+        };
+        Ok(encoder.encode(self.as_bytes(), self.width, self.height, color_type)?)
+    }
+
     /// Convert ZTEX to Texture
-    pub fn from_ztex<'a, R: BinaryRead>(reader: R) -> Result<Self, Error> {
+    pub fn from_ztex<'a, R: BinaryRead>(reader: R) -> Result<Self> {
         let mut deserializer = BinaryDeserializer::from(reader);
-        let header = ztex::Header::deserialize(&mut deserializer).unwrap();
+        let header = ztex::Header::deserialize(&mut deserializer)?;
         if header.signature() != ztex::FILE_SIGNATURE || header.version() != ztex::FILE_VERSION {
             return Err(Error::WrongSignature);
         }
 
-        // let _palette = match header.get_format() == ztex::Format::P8 {
-        //     true => {
-        //         deserializer.len_queue.push(ztex::PALETTE_ENTRIES);
-        //         Some(ztex::Palette::deserialize(&mut deserializer).unwrap())
-        //         // let mut palette = ztex::Palette::new();
-        //         // for _ in 0..ztex::PALETTE_ENTRIES {
-        //         //     let entry =
-        //         //         bincode::deserialize_from::<&mut Cursor<&[u8]>, ztex::Entry>(&mut reader)
-        //         //             .unwrap();
-        //         //     palette.push(entry);
-        //         // }
-        //         // match palette.len() == ztex::PALETTE_ENTRIES {
-        //         //     true => Some(palette),
-        //         //     false => None,
-        //         // }
-        //     }
-        //     false => None,
-        // };
-
         let (width, height) = header.dimensions();
+        let size = width * height;
 
         let mipmap_count = cmp::max(1, header.mipmap_level());
         let mut size_of_all_mip_maps = 0;
@@ -109,160 +88,118 @@ impl Texture {
         let pos_of_biggest_mip_map = size_of_all_mip_maps - size_of_biggest_mip_map;
         deserializer
             .parser
-            .seek(SeekFrom::Current(pos_of_biggest_mip_map as i64))
-            .unwrap();
-
-        let size = width * height;
+            .seek(SeekFrom::Current(pos_of_biggest_mip_map as i64))?;
 
         let texture = match header.format() {
             Format::B8G8R8A8 => {
-                let pixels = (0..size)
-                    .map(|_| <[u8; 4]>::deserialize(&mut deserializer).unwrap())
-                    .flatten()
-                    .collect::<Vec<u8>>();
-                Texture::new(width, height, TextureFormat::BGRA8, pixels)
+                deserializer.len_queue.push(4 * size as usize);
+                let pixels = <Vec<u8>>::deserialize(&mut deserializer)?;
+                Texture::new(width, height, ColorType::BGRA8, pixels)
             }
             Format::R8G8B8A8 => {
-                let pixels = (0..size)
-                    .map(|_| <[u8; 4]>::deserialize(&mut deserializer).unwrap())
-                    .flatten()
-                    .collect::<Vec<u8>>();
-                Texture::new(width, height, TextureFormat::RGBA8, pixels)
+                deserializer.len_queue.push(4 * size as usize);
+                let pixels = <Vec<u8>>::deserialize(&mut deserializer)?;
+                Texture::new(width, height, ColorType::RGBA8, pixels)
             }
             Format::A8B8G8R8 => {
-                let pixels = (0..size)
-                    .map(|_| {
-                        let mut pixel = <[u8; 4]>::deserialize(&mut deserializer).unwrap();
-                        pixel.reverse();
-                        pixel
-                    })
-                    .flatten()
-                    .collect::<Vec<u8>>();
-                Texture::new(width, height, TextureFormat::RGBA8, pixels)
+                let mut pixels = vec![0_u8; 4 * size as usize];
+                for chunk in pixels.chunks_mut(4) {
+                    let mut pixel = <[u8; 4]>::deserialize(&mut deserializer)?;
+                    pixel.reverse();
+                    chunk.copy_from_slice(&pixel);
+                }
+                Texture::new(width, height, ColorType::RGBA8, pixels)
             }
             Format::A8R8G8B8 => {
-                let pixels = (0..size)
-                    .map(|_| {
-                        let mut pixel = <[u8; 4]>::deserialize(&mut deserializer).unwrap();
-                        pixel.reverse();
-                        pixel
-                    })
-                    .flatten()
-                    .collect::<Vec<u8>>();
-                Texture::new(width, height, TextureFormat::BGRA8, pixels)
+                let mut pixels = vec![0_u8; 4 * size as usize];
+                for chunk in pixels.chunks_mut(4) {
+                    let mut pixel = <[u8; 4]>::deserialize(&mut deserializer)?;
+                    pixel.reverse();
+                    chunk.copy_from_slice(&pixel);
+                }
+                Texture::new(width, height, ColorType::BGRA8, pixels)
             }
             Format::B8G8R8 => {
-                let pixels = (0..size)
-                    .map(|_| {
-                        let pixel = <[u8; 3]>::deserialize(&mut deserializer).unwrap();
-                        [pixel[0], pixel[1], pixel[2], 0xff]
-                    })
-                    .flatten()
-                    .collect::<Vec<u8>>();
-                Texture::new(width, height, TextureFormat::BGRA8, pixels)
+                let mut pixels = vec![0_u8; 4 * size as usize];
+                for chunk in pixels.chunks_mut(4) {
+                    let pixel = <[u8; 3]>::deserialize(&mut deserializer)?;
+                    chunk.copy_from_slice(&[pixel[0], pixel[1], pixel[2], 0xff]);
+                }
+                Texture::new(width, height, ColorType::BGRA8, pixels)
             }
             Format::R8G8B8 => {
-                let pixels = (0..size)
-                    .map(|_| {
-                        let pixel = <[u8; 3]>::deserialize(&mut deserializer).unwrap();
-                        [pixel[0], pixel[1], pixel[2], 0xff]
-                    })
-                    .flatten()
-                    .collect::<Vec<u8>>();
-                Texture::new(width, height, TextureFormat::RGBA8, pixels)
+                let mut pixels = vec![0_u8; 4 * size as usize];
+                for chunk in pixels.chunks_mut(4) {
+                    let pixel = <[u8; 3]>::deserialize(&mut deserializer)?;
+                    chunk.copy_from_slice(&[pixel[0], pixel[1], pixel[2], 0xff]);
+                }
+                Texture::new(width, height, ColorType::RGBA8, pixels)
             }
             Format::A4R4G4B4 => {
-                let pixels = (0..size)
-                    .map(|_| {
-                        let pixel = <u16>::deserialize(&mut deserializer).unwrap();
-                        [
-                            ((pixel >> 8) & 0b1111) as u8,  // r
-                            ((pixel >> 4) & 0b1111) as u8,  // g
-                            (pixel & 0b1111) as u8,         // b
-                            ((pixel >> 12) & 0b1111) as u8, // a
-                        ]
-                    })
-                    .flatten()
-                    .collect::<Vec<u8>>();
-                Texture::new(width, height, TextureFormat::RGBA8, pixels)
+                let mut pixels = vec![0_u8; 4 * size as usize];
+                for chunk in pixels.chunks_mut(4) {
+                    let pixel = <u16>::deserialize(&mut deserializer)?;
+                    chunk.copy_from_slice(&[
+                        ((pixel >> 8) & 0b1111) as u8,  // r
+                        ((pixel >> 4) & 0b1111) as u8,  // g
+                        (pixel & 0b1111) as u8,         // b
+                        ((pixel >> 12) & 0b1111) as u8, // a
+                    ]);
+                }
+                Texture::new(width, height, ColorType::RGBA8, pixels)
             }
             Format::A1R5G5B5 => {
-                let pixels = (0..size)
-                    .map(|_| {
-                        let pixel = <u16>::deserialize(&mut deserializer).unwrap();
-                        [
-                            ((pixel >> 10) & 0b1111_1) as u8, // r
-                            ((pixel >> 6) & 0b1111_1) as u8,  // g
-                            (pixel & 0b1111_1) as u8,         // b
-                            ((pixel >> 15) & 0b1) as u8,      // a
-                        ]
-                    })
-                    .flatten()
-                    .collect::<Vec<u8>>();
-                Texture::new(width, height, TextureFormat::RGBA8, pixels)
+                let mut pixels = vec![0_u8; 4 * size as usize];
+                for chunk in pixels.chunks_mut(4) {
+                    let pixel = <u16>::deserialize(&mut deserializer)?;
+                    chunk.copy_from_slice(&[
+                        ((pixel >> 10) & 0b1111_1) as u8, // r
+                        ((pixel >> 6) & 0b1111_1) as u8,  // g
+                        (pixel & 0b1111_1) as u8,         // b
+                        ((pixel >> 15) & 0b1) as u8,      // a
+                    ]);
+                }
+                Texture::new(width, height, ColorType::RGBA8, pixels)
             }
             Format::R5G6B5 => {
-                let pixels = (0..size)
-                    .map(|_| {
-                        let pixel = <u16>::deserialize(&mut deserializer).unwrap();
-                        [
-                            ((pixel >> 11) & 0b1111_1) as u8, // r
-                            ((pixel >> 5) & 0b1111_11) as u8, // g
-                            (pixel & 0b1111_1) as u8,         // b
-                            0xff,                             // a
-                        ]
-                    })
-                    .flatten()
-                    .collect::<Vec<u8>>();
-                Texture::new(width, height, TextureFormat::RGBA8, pixels)
+                let mut pixels = vec![0_u8; 4 * size as usize];
+                for chunk in pixels.chunks_mut(4) {
+                    let pixel = <u16>::deserialize(&mut deserializer)?;
+                    chunk.copy_from_slice(&[
+                        ((pixel >> 11) & 0b1111_1) as u8, // r
+                        ((pixel >> 5) & 0b1111_11) as u8, // g
+                        (pixel & 0b1111_1) as u8,         // b
+                        0xff,                             // a
+                    ]);
+                }
+                Texture::new(width, height, ColorType::RGBA8, pixels)
             }
             Format::P8 => unimplemented!(),
             Format::DXT1 => {
                 let mut decoded = vec![0_u8; size as usize * 3];
-                decoded
-                    .chunks_mut((width / 4 * 48) as usize)
-                    .for_each(|chunk| {
-                        deserializer.len_queue.push((width / 4 * 8) as usize);
-                        decode_dxt1_row(
-                            <Vec<u8>>::deserialize(&mut deserializer)
-                                .unwrap()
-                                .as_slice(),
-                            chunk,
-                        );
-                    });
-                Texture::new(width, height, TextureFormat::RGB8, decoded)
+                for chunk in decoded.chunks_mut((width / 4 * 48) as usize) {
+                    deserializer.len_queue.push((width / 4 * 8) as usize);
+                    decode_dxt1_row(<Vec<u8>>::deserialize(&mut deserializer)?.as_slice(), chunk);
+                }
+                Texture::new(width, height, ColorType::RGB8, decoded)
             }
             Format::DXT2 => unimplemented!(),
             Format::DXT3 => {
                 let mut decoded = vec![0_u8; size as usize * 4];
-                decoded
-                    .chunks_mut((width / 4 * 64) as usize)
-                    .for_each(|chunk| {
-                        deserializer.len_queue.push((width / 4 * 16) as usize);
-                        decode_dxt3_row(
-                            <Vec<u8>>::deserialize(&mut deserializer)
-                                .unwrap()
-                                .as_slice(),
-                            chunk,
-                        );
-                    });
-                Texture::new(width, height, TextureFormat::RGBA8, decoded)
+                for chunk in decoded.chunks_mut((width / 4 * 64) as usize) {
+                    deserializer.len_queue.push((width / 4 * 16) as usize);
+                    decode_dxt3_row(<Vec<u8>>::deserialize(&mut deserializer)?.as_slice(), chunk);
+                }
+                Texture::new(width, height, ColorType::RGBA8, decoded)
             }
             Format::DXT4 => unimplemented!(),
             Format::DXT5 => {
                 let mut decoded = vec![0_u8; size as usize * 4];
-                decoded
-                    .chunks_mut((width / 4 * 64) as usize)
-                    .for_each(|chunk| {
-                        deserializer.len_queue.push((width / 4 * 16) as usize);
-                        decode_dxt5_row(
-                            <Vec<u8>>::deserialize(&mut deserializer)
-                                .unwrap()
-                                .as_slice(),
-                            chunk,
-                        );
-                    });
-                Texture::new(width, height, TextureFormat::RGBA8, decoded)
+                for chunk in decoded.chunks_mut((width / 4 * 64) as usize) {
+                    deserializer.len_queue.push((width / 4 * 16) as usize);
+                    decode_dxt5_row(<Vec<u8>>::deserialize(&mut deserializer)?.as_slice(), chunk);
+                }
+                Texture::new(width, height, ColorType::RGBA8, decoded)
             }
         };
         Ok(texture)

@@ -10,8 +10,6 @@ pub enum Error {
     ExpectedValidTextureName(String),
     ZenArchive(zen_archive::Error),
     WrongTextureNameFormat,
-    //DDSFile(zen_texture::ddsfile::Error),
-    Image(image::ImageError),
 }
 
 impl fmt::Display for Error {
@@ -23,8 +21,6 @@ impl fmt::Display for Error {
             Self::ZTex(e) => f.write_str(&e.to_string()),
             Self::ZenArchive(e) => f.write_str(&e.to_string()),
             Self::WrongTextureNameFormat => f.write_str("Wrong texture name format!"),
-            //Self::DDSFile(e) => f.write_str(&e.to_string()),
-            Self::Image(e) => f.write_str(&e.to_string()),
         }
     }
 }
@@ -52,18 +48,6 @@ impl From<io::Error> for Error {
 impl From<zen_archive::Error> for Error {
     fn from(e: zen_archive::Error) -> Self {
         Self::ZenArchive(e)
-    }
-}
-
-// impl From<zen_texture::ddsfile::Error> for Error {
-//     fn from(e: zen_texture::ddsfile::Error) -> Self {
-//         Self::DDSFile(e)
-//     }
-// }
-
-impl From<image::ImageError> for Error {
-    fn from(e: image::ImageError) -> Self {
-        Self::Image(e)
     }
 }
 

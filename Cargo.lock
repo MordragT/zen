@@ -496,7 +496,6 @@ dependencies = [
 name = "zen-material"
 version = "0.0.1"
 dependencies = [
- "image",
  "serde",
  "serde_repr",
  "zen-archive",

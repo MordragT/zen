@@ -6,13 +6,12 @@
 
 pub use error::Error;
 use error::Result;
-use image::{dds::DdsDecoder, jpeg::JpegEncoder, ColorType, ImageDecoder};
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 use std::{cmp, convert::TryFrom, fs::File, io::Cursor, path::PathBuf};
 use zen_archive::Vdfs;
 use zen_math::{Vec2, Vec3};
-use zen_texture::{Texture, TextureFormat};
+use zen_texture::{ColorType, Texture};
 use zen_types::path::{FILES_INSTANCE, INSTANCE};
 
 mod error;
@@ -41,23 +40,6 @@ impl TryFrom<&GeneralMaterial> for Material {
         };
         let texture_data = Cursor::new(texture_entry.data);
         let texture = Texture::from_ztex(texture_data)?;
-        let (width, height) = texture.dimensions();
-
-        // let mut dds_file_buf = vec![];
-        // dds.write(&mut dds_file_buf)?;
-        // let dds_file = Cursor::new(dds_file_buf);
-        // let decoder = DdsDecoder::new(dds_file)?;
-        // let (width, height) = decoder.dimensions();
-        // let color_type = decoder.color_type();
-        // let mut dds_bytes = vec![0_u8; decoder.total_bytes() as usize];
-        // decoder.read_image(&mut dds_bytes)?;
-
-        let color_type = match texture.format() {
-            TextureFormat::BGRA8 => ColorType::Bgra8,
-            TextureFormat::RGBA16 => ColorType::Rgba16,
-            TextureFormat::RGBA8 => ColorType::Rgba8,
-            TextureFormat::RGB8 => ColorType::Rgb8,
-        };
 
         let mut texture_name = match texture_entry.name.split('.').next() {
             Some(name) => name.to_string(),
@@ -65,9 +47,9 @@ impl TryFrom<&GeneralMaterial> for Material {
         };
         texture_name.push_str(".jpeg");
         let texture_path = FILES_INSTANCE.textures.join(texture_name);
-        let mut output_jpeg = File::create(&texture_path)?;
-        let mut encoder = JpegEncoder::new(&mut output_jpeg);
-        encoder.encode(texture.as_bytes(), width, height, color_type)?;
+        let output_jpeg = File::create(&texture_path)?;
+        texture.to_png(output_jpeg)?;
+
         let color = to_rgb(mat.get_color());
         Ok(Self {
             texture: texture_path,
