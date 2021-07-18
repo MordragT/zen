@@ -241,19 +241,27 @@ pub fn to_gltf(input: GeneralMesh, output: Output) -> PathBuf {
         };
         accessors.push(tex_coords);
 
+        let mut image_name = sub_mesh
+            .material
+            .texture
+            .name
+            .split('.')
+            .next()
+            .expect("Name should have been validated before in zen-material!")
+            .to_owned();
+        image_name.push_str(".png");
+        let image_path = FILES_INSTANCE.textures.join(&image_name);
+        // TODO: remove unwrap
+        let image_output = fs::File::create(&image_path).unwrap();
+        sub_mesh.material.texture.to_png(image_output).unwrap();
+
         let image = json::Image {
             name: None,
             buffer_view: None, //Some(json::Index::new(i as u32 * NUM + 4)),
-            mime_type: Some(json::image::MimeType("image/jpeg".to_string())),
+            mime_type: Some(json::image::MimeType("image/png".to_string())),
             uri: Some(
                 Path::new("../")
-                    .join(
-                        sub_mesh
-                            .material
-                            .texture
-                            .strip_prefix(&FILES_INSTANCE.base_path)
-                            .unwrap(),
-                    )
+                    .join(image_path.strip_prefix(&FILES_INSTANCE.base_path).unwrap())
                     .to_str()
                     .unwrap()
                     .to_string(),
@@ -273,7 +281,7 @@ pub fn to_gltf(input: GeneralMesh, output: Output) -> PathBuf {
         textures.push(texture);
 
         let material = json::Material {
-            alpha_cutoff: json::material::AlphaCutoff(0.0),
+            alpha_cutoff: Some(json::material::AlphaCutoff(0.0)),
             alpha_mode: Valid(json::material::AlphaMode::Mask),
             pbr_metallic_roughness: json::material::PbrMetallicRoughness {
                 base_color_texture: Some(json::texture::Info {

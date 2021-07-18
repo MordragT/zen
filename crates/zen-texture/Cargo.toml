@@ -17,4 +17,4 @@ zen-archive = {  path = "../zen-archive" }
 image = "0.23"
 
 [features]
-default = ["image"]
+default = []

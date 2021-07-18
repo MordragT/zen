@@ -6,7 +6,6 @@ use std::{
     io::{SeekFrom, Write},
 };
 use zen_parser::prelude::{BinaryDeserializer, BinaryRead};
-use ztex::Format;
 
 mod error;
 mod ztex;
@@ -24,15 +23,23 @@ pub struct Texture {
     height: u32,
     color_type: ColorType,
     pixels: Vec<u8>,
+    pub name: String,
 }
 
 impl Texture {
-    pub fn new(width: u32, height: u32, color_type: ColorType, pixels: Vec<u8>) -> Self {
+    pub fn new(
+        width: u32,
+        height: u32,
+        color_type: ColorType,
+        pixels: Vec<u8>,
+        name: String,
+    ) -> Self {
         Self {
             width,
             height,
             color_type,
             pixels,
+            name,
         }
     }
 
@@ -69,7 +76,7 @@ impl Texture {
     }
 
     /// Convert ZTEX to Texture
-    pub fn from_ztex<'a, R: BinaryRead>(reader: R) -> Result<Self> {
+    pub fn from_ztex<'a, R: BinaryRead>(reader: R, name: &str) -> Result<Self> {
         let mut deserializer = BinaryDeserializer::from(reader);
         let header = ztex::Header::deserialize(&mut deserializer)?;
         if header.signature() != ztex::FILE_SIGNATURE || header.version() != ztex::FILE_VERSION {
@@ -82,60 +89,60 @@ impl Texture {
         let mipmap_count = cmp::max(1, header.mipmap_level());
         let mut size_of_all_mip_maps = 0;
         for layer in 0..mipmap_count {
-            size_of_all_mip_maps += get_mip_map_size(&header.format(), width, height, layer);
+            size_of_all_mip_maps += get_mip_map_size(header.color_type(), width, height, layer);
         }
-        let size_of_biggest_mip_map = get_mip_map_size(&header.format(), width, height, 0);
+        let size_of_biggest_mip_map = get_mip_map_size(header.color_type(), width, height, 0);
         let pos_of_biggest_mip_map = size_of_all_mip_maps - size_of_biggest_mip_map;
         deserializer
             .parser
             .seek(SeekFrom::Current(pos_of_biggest_mip_map as i64))?;
 
-        let texture = match header.format() {
-            Format::B8G8R8A8 => {
+        let texture = match header.color_type() {
+            ztex::ColorType::B8G8R8A8 => {
                 deserializer.len_queue.push(4 * size as usize);
                 let pixels = <Vec<u8>>::deserialize(&mut deserializer)?;
-                Texture::new(width, height, ColorType::BGRA8, pixels)
+                Texture::new(width, height, ColorType::BGRA8, pixels, name.to_owned())
             }
-            Format::R8G8B8A8 => {
+            ztex::ColorType::R8G8B8A8 => {
                 deserializer.len_queue.push(4 * size as usize);
                 let pixels = <Vec<u8>>::deserialize(&mut deserializer)?;
-                Texture::new(width, height, ColorType::RGBA8, pixels)
+                Texture::new(width, height, ColorType::RGBA8, pixels, name.to_owned())
             }
-            Format::A8B8G8R8 => {
+            ztex::ColorType::A8B8G8R8 => {
                 let mut pixels = vec![0_u8; 4 * size as usize];
                 for chunk in pixels.chunks_mut(4) {
                     let mut pixel = <[u8; 4]>::deserialize(&mut deserializer)?;
                     pixel.reverse();
                     chunk.copy_from_slice(&pixel);
                 }
-                Texture::new(width, height, ColorType::RGBA8, pixels)
+                Texture::new(width, height, ColorType::RGBA8, pixels, name.to_owned())
             }
-            Format::A8R8G8B8 => {
+            ztex::ColorType::A8R8G8B8 => {
                 let mut pixels = vec![0_u8; 4 * size as usize];
                 for chunk in pixels.chunks_mut(4) {
                     let mut pixel = <[u8; 4]>::deserialize(&mut deserializer)?;
                     pixel.reverse();
                     chunk.copy_from_slice(&pixel);
                 }
-                Texture::new(width, height, ColorType::BGRA8, pixels)
+                Texture::new(width, height, ColorType::BGRA8, pixels, name.to_owned())
             }
-            Format::B8G8R8 => {
+            ztex::ColorType::B8G8R8 => {
                 let mut pixels = vec![0_u8; 4 * size as usize];
                 for chunk in pixels.chunks_mut(4) {
                     let pixel = <[u8; 3]>::deserialize(&mut deserializer)?;
                     chunk.copy_from_slice(&[pixel[0], pixel[1], pixel[2], 0xff]);
                 }
-                Texture::new(width, height, ColorType::BGRA8, pixels)
+                Texture::new(width, height, ColorType::BGRA8, pixels, name.to_owned())
             }
-            Format::R8G8B8 => {
+            ztex::ColorType::R8G8B8 => {
                 let mut pixels = vec![0_u8; 4 * size as usize];
                 for chunk in pixels.chunks_mut(4) {
                     let pixel = <[u8; 3]>::deserialize(&mut deserializer)?;
                     chunk.copy_from_slice(&[pixel[0], pixel[1], pixel[2], 0xff]);
                 }
-                Texture::new(width, height, ColorType::RGBA8, pixels)
+                Texture::new(width, height, ColorType::RGBA8, pixels, name.to_owned())
             }
-            Format::A4R4G4B4 => {
+            ztex::ColorType::A4R4G4B4 => {
                 let mut pixels = vec![0_u8; 4 * size as usize];
                 for chunk in pixels.chunks_mut(4) {
                     let pixel = <u16>::deserialize(&mut deserializer)?;
@@ -146,9 +153,9 @@ impl Texture {
                         ((pixel >> 12) & 0b1111) as u8, // a
                     ]);
                 }
-                Texture::new(width, height, ColorType::RGBA8, pixels)
+                Texture::new(width, height, ColorType::RGBA8, pixels, name.to_owned())
             }
-            Format::A1R5G5B5 => {
+            ztex::ColorType::A1R5G5B5 => {
                 let mut pixels = vec![0_u8; 4 * size as usize];
                 for chunk in pixels.chunks_mut(4) {
                     let pixel = <u16>::deserialize(&mut deserializer)?;
@@ -159,9 +166,9 @@ impl Texture {
                         ((pixel >> 15) & 0b1) as u8,      // a
                     ]);
                 }
-                Texture::new(width, height, ColorType::RGBA8, pixels)
+                Texture::new(width, height, ColorType::RGBA8, pixels, name.to_owned())
             }
-            Format::R5G6B5 => {
+            ztex::ColorType::R5G6B5 => {
                 let mut pixels = vec![0_u8; 4 * size as usize];
                 for chunk in pixels.chunks_mut(4) {
                     let pixel = <u16>::deserialize(&mut deserializer)?;
@@ -172,41 +179,41 @@ impl Texture {
                         0xff,                             // a
                     ]);
                 }
-                Texture::new(width, height, ColorType::RGBA8, pixels)
+                Texture::new(width, height, ColorType::RGBA8, pixels, name.to_owned())
             }
-            Format::P8 => unimplemented!(),
-            Format::DXT1 => {
+            ztex::ColorType::P8 => unimplemented!(),
+            ztex::ColorType::DXT1 => {
                 let mut decoded = vec![0_u8; size as usize * 3];
                 for chunk in decoded.chunks_mut((width / 4 * 48) as usize) {
                     deserializer.len_queue.push((width / 4 * 8) as usize);
                     decode_dxt1_row(<Vec<u8>>::deserialize(&mut deserializer)?.as_slice(), chunk);
                 }
-                Texture::new(width, height, ColorType::RGB8, decoded)
+                Texture::new(width, height, ColorType::RGB8, decoded, name.to_owned())
             }
-            Format::DXT2 => unimplemented!(),
-            Format::DXT3 => {
+            ztex::ColorType::DXT2 => unimplemented!(),
+            ztex::ColorType::DXT3 => {
                 let mut decoded = vec![0_u8; size as usize * 4];
                 for chunk in decoded.chunks_mut((width / 4 * 64) as usize) {
                     deserializer.len_queue.push((width / 4 * 16) as usize);
                     decode_dxt3_row(<Vec<u8>>::deserialize(&mut deserializer)?.as_slice(), chunk);
                 }
-                Texture::new(width, height, ColorType::RGBA8, decoded)
+                Texture::new(width, height, ColorType::RGBA8, decoded, name.to_owned())
             }
-            Format::DXT4 => unimplemented!(),
-            Format::DXT5 => {
+            ztex::ColorType::DXT4 => unimplemented!(),
+            ztex::ColorType::DXT5 => {
                 let mut decoded = vec![0_u8; size as usize * 4];
                 for chunk in decoded.chunks_mut((width / 4 * 64) as usize) {
                     deserializer.len_queue.push((width / 4 * 16) as usize);
                     decode_dxt5_row(<Vec<u8>>::deserialize(&mut deserializer)?.as_slice(), chunk);
                 }
-                Texture::new(width, height, ColorType::RGBA8, decoded)
+                Texture::new(width, height, ColorType::RGBA8, decoded, name.to_owned())
             }
         };
         Ok(texture)
     }
 }
 /// level 0 = highest, ztex is built other way round, 0 = lowest
-fn get_mip_map_size(format: &ztex::Format, width: u32, height: u32, level: u32) -> u32 {
+fn get_mip_map_size(color_type: ztex::ColorType, width: u32, height: u32, level: u32) -> u32 {
     let mut x = cmp::max(1, width);
     let mut y = cmp::max(1, height);
     for _ in 0..level {
@@ -217,18 +224,21 @@ fn get_mip_map_size(format: &ztex::Format, width: u32, height: u32, level: u32) 
             y >>= 1;
         }
     }
-    match format {
-        ztex::Format::B8G8R8A8
-        | ztex::Format::R8G8B8A8
-        | ztex::Format::A8B8G8R8
-        | ztex::Format::A8R8G8B8 => x * y * 4,
-        ztex::Format::B8G8R8 | ztex::Format::R8G8B8 => x * y * 3,
-        ztex::Format::A4R4G4B4 | ztex::Format::A1R5G5B5 | ztex::Format::R5G6B5 => x * y * 2,
-        ztex::Format::P8 => x * y,
-        ztex::Format::DXT1 => cmp::max(1, x / 4) * cmp::max(1, y / 4) * 8,
-        ztex::Format::DXT2 | ztex::Format::DXT3 | ztex::Format::DXT4 | ztex::Format::DXT5 => {
-            cmp::max(1, x / 4) * cmp::max(1, y / 4) * 16
+    match color_type {
+        ztex::ColorType::B8G8R8A8
+        | ztex::ColorType::R8G8B8A8
+        | ztex::ColorType::A8B8G8R8
+        | ztex::ColorType::A8R8G8B8 => x * y * 4,
+        ztex::ColorType::B8G8R8 | ztex::ColorType::R8G8B8 => x * y * 3,
+        ztex::ColorType::A4R4G4B4 | ztex::ColorType::A1R5G5B5 | ztex::ColorType::R5G6B5 => {
+            x * y * 2
         }
+        ztex::ColorType::P8 => x * y,
+        ztex::ColorType::DXT1 => cmp::max(1, x / 4) * cmp::max(1, y / 4) * 8,
+        ztex::ColorType::DXT2
+        | ztex::ColorType::DXT3
+        | ztex::ColorType::DXT4
+        | ztex::ColorType::DXT5 => cmp::max(1, x / 4) * cmp::max(1, y / 4) * 16,
     }
 }
 

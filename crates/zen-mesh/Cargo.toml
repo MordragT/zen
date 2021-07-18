@@ -8,12 +8,17 @@ edition = "2018"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
-gltf-json = "0.15"
-gltf = "0.15"
+gltf-json = { version = "0.16", optional = true }
+gltf = { version = "0.16", optional = true }
 zen-parser = {  path = "../zen-parser" }
 zen-types = {  path = "../zen-types" }
 zen-material = {  path = "../zen-material" }
 zen-math = { path = "../zen-math" }
+zen-texture = { path = "../zen-texture", optional = true, features = ["image"] }
 
 [dev-dependencies]
 zen-archive = {  path = "../zen-archive" }
+
+[features]
+default = ["to-gltf"]
+to-gltf = ["gltf", "gltf-json", "zen-texture"]

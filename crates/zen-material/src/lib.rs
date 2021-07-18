@@ -8,11 +8,11 @@ pub use error::Error;
 use error::Result;
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
-use std::{cmp, convert::TryFrom, fs::File, io::Cursor, path::PathBuf};
+use std::{cmp, convert::TryFrom, fs::File, io::Cursor};
 use zen_archive::Vdfs;
 use zen_math::{Vec2, Vec3};
-use zen_texture::{ColorType, Texture};
-use zen_types::path::{FILES_INSTANCE, INSTANCE};
+use zen_texture::Texture;
+use zen_types::path::INSTANCE;
 
 mod error;
 
@@ -20,7 +20,7 @@ pub const GOTHIC2: u16 = 39939;
 
 /// Simple Material with texture and color
 pub struct Material {
-    pub texture: PathBuf,
+    pub texture: Texture,
     pub color: Vec3<f32>,
 }
 
@@ -39,22 +39,10 @@ impl TryFrom<&GeneralMaterial> for Material {
             None => return Err(Error::ExpectedValidTextureName(texture_name.to_owned())),
         };
         let texture_data = Cursor::new(texture_entry.data);
-        let texture = Texture::from_ztex(texture_data)?;
-
-        let mut texture_name = match texture_entry.name.split('.').next() {
-            Some(name) => name.to_string(),
-            None => return Err(Error::ExpectedValidTextureName(texture_entry.name)),
-        };
-        texture_name.push_str(".jpeg");
-        let texture_path = FILES_INSTANCE.textures.join(texture_name);
-        let output_jpeg = File::create(&texture_path)?;
-        texture.to_png(output_jpeg)?;
-
+        let texture = Texture::from_ztex(texture_data, &texture_entry.name)?;
         let color = to_rgb(mat.get_color());
-        Ok(Self {
-            texture: texture_path,
-            color,
-        })
+
+        Ok(Self { texture, color })
     }
 }
 

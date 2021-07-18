@@ -31,6 +31,8 @@ use std::convert::{TryFrom, TryInto};
 use zen_material::Material;
 
 mod error;
+#[cfg(feature = "gltf")]
+#[cfg(feature = "gltf-json")]
 pub mod gltf;
 pub mod mrm;
 pub mod msh;

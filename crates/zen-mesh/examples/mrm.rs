@@ -1,6 +1,7 @@
 use std::{convert::TryFrom, fs::File, io::Cursor};
 use zen_archive::Vdfs;
-use zen_mesh::{gltf, mrm::MrmMesh, GeneralMesh};
+use zen_mesh::gltf;
+use zen_mesh::{mrm::MrmMesh, GeneralMesh};
 use zen_types::path::INSTANCE;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

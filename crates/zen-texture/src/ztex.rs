@@ -24,74 +24,28 @@ pub const PALETTE_ENTRIES: usize = 0x100;
 
 #[derive(Deserialize_repr, Eq, PartialEq, Debug, Copy, Clone)]
 #[repr(u32)]
-pub enum Format {
-    B8G8R8A8, // 0, 32-bit ARGB pixel format with alpha, using 8 bits per channel
-    R8G8B8A8, // 1, 32-bit ARGB pixel format with alpha, using 8 bits per channel
-    A8B8G8R8, // 2, 32-bit ARGB pixel format with alpha, using 8 bits per channel
-    A8R8G8B8, // 3, 32-bit ARGB pixel format with alpha, using 8 bits per channel
-    B8G8R8,   // 4, 24-bit RGB pixel format with 8 bits per channel
-    R8G8B8,   // 5, 24-bit RGB pixel format with 8 bits per channel
-    A4R4G4B4, // 6, 16-bit ARGB pixel format with 4 bits for each channel
-    A1R5G5B5, // 7, 16-bit pixel format where 5 bits are reserved for each color and 1 bit is reserved for alpha
-    R5G6B5, // 8, 16-bit RGB pixel format with 5 bits for red, 6 bits for green, and 5 bits for blue
+pub enum ColorType {
+    B8G8R8A8, // 0, 32-bit ARGB pixel ColorType with alpha, using 8 bits per channel
+    R8G8B8A8, // 1, 32-bit ARGB pixel ColorType with alpha, using 8 bits per channel
+    A8B8G8R8, // 2, 32-bit ARGB pixel ColorType with alpha, using 8 bits per channel
+    A8R8G8B8, // 3, 32-bit ARGB pixel ColorType with alpha, using 8 bits per channel
+    B8G8R8,   // 4, 24-bit RGB pixel ColorType with 8 bits per channel
+    R8G8B8,   // 5, 24-bit RGB pixel ColorType with 8 bits per channel
+    A4R4G4B4, // 6, 16-bit ARGB pixel ColorType with 4 bits for each channel
+    A1R5G5B5, // 7, 16-bit pixel ColorType where 5 bits are reserved for each color and 1 bit is reserved for alpha
+    R5G6B5, // 8, 16-bit RGB pixel ColorType with 5 bits for red, 6 bits for green, and 5 bits for blue
     P8,     // 9, 8-bit color indexed
-    DXT1,   // A, DXT1 compression texture format
-    DXT2,   // B, DXT2 compression texture format
-    DXT3,   // C, DXT3 compression texture format
-    DXT4,   // D, DXT4 compression texture format
-    DXT5,   // E, DXT5 compression texture format
+    DXT1,   // A, DXT1 compression texture ColorType
+    DXT2,   // B, DXT2 compression texture ColorType
+    DXT3,   // C, DXT3 compression texture ColorType
+    DXT4,   // D, DXT4 compression texture ColorType
+    DXT5,   // E, DXT5 compression texture ColorType
 }
-
-// impl TryInto<D3DFormat> for Format {
-//     type Error = ();
-//     fn try_into(self) -> Result<D3DFormat, Self::Error> {
-//         match self {
-//             Self::B8G8R8A8 => Err(()),
-//             Self::R8G8B8A8 => Err(()),
-//             Self::A8B8G8R8 => Ok(D3DFormat::A8B8G8R8),
-//             Self::A8R8G8B8 => Ok(D3DFormat::A8R8G8B8),
-//             Self::B8G8R8 => Err(()),
-//             Self::R8G8B8 => Ok(D3DFormat::R8G8B8),
-//             Self::A4R4G4B4 => Ok(D3DFormat::A4R4G4B4),
-//             Self::A1R5G5B5 => Ok(D3DFormat::A1R5G5B5),
-//             Self::R5G6B5 => Ok(D3DFormat::R5G6B5),
-//             Self::P8 => Err(()),
-//             Self::DXT1 => Ok(D3DFormat::DXT1),
-//             Self::DXT2 => Ok(D3DFormat::DXT2),
-//             Self::DXT3 => Ok(D3DFormat::DXT3),
-//             Self::DXT4 => Ok(D3DFormat::DXT4),
-//             Self::DXT5 => Ok(D3DFormat::DXT5),
-//         }
-//     }
-// }
-
-// impl TryInto<DxgiFormat> for Format {
-//     type Error = ();
-//     fn try_into(self) -> Result<DxgiFormat, Self::Error> {
-//         match self {
-//             Self::B8G8R8A8 => Ok(DxgiFormat::B8G8R8A8_Typeless),
-//             Self::R8G8B8A8 => Ok(DxgiFormat::R8G8B8A8_Typeless),
-//             Self::A8B8G8R8 => Err(()),
-//             Self::A8R8G8B8 => Err(()),
-//             Self::B8G8R8 => Ok(DxgiFormat::B8G8R8X8_Typeless),
-//             Self::R8G8B8 => Err(()),
-//             Self::A4R4G4B4 => Err(()),
-//             Self::A1R5G5B5 => Err(()),
-//             Self::R5G6B5 => Err(()),
-//             Self::P8 => Ok(DxgiFormat::P8),
-//             Self::DXT1 => Err(()),
-//             Self::DXT2 => Err(()),
-//             Self::DXT3 => Err(()),
-//             Self::DXT4 => Err(()),
-//             Self::DXT5 => Err(()),
-//         }
-//     }
-// }
 
 /// Info Block
 #[derive(Deserialize, Debug)]
 pub struct Info {
-    format: Format,
+    color_type: ColorType,
     width: u32,        // mipmap 0
     height: u32,       // mipmap 0
     mipmap_level: u32, // 1 = none
@@ -108,8 +62,8 @@ pub struct Header {
 }
 
 impl Header {
-    pub fn format(&self) -> Format {
-        self.info.format
+    pub fn color_type(&self) -> ColorType {
+        self.info.color_type
     }
     pub fn width(&self) -> u32 {
         self.info.width
