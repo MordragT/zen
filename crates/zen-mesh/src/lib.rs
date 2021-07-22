@@ -4,7 +4,7 @@
 //! ```rust
 //! use std::{convert::TryFrom, fs::File, io::Cursor};
 //! use zen_archive::Vdfs;
-//! use zen_mesh::{gltf, mrm::MrmMesh, GeneralMesh};
+//! use zen_mesh::{gltf, mrm::MrmMesh, Model};
 //! use zen_types::path::INSTANCE;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -15,7 +15,7 @@
 //!     .expect("Should be there!");
 //! let cursor = Cursor::new(mesh_entry.data);
 //! let mesh = MrmMesh::new(cursor, "ORC_MASTERTHRONE")?;
-//! let mesh = GeneralMesh::try_from(mesh)?;
+//! let mesh = Model::try_from(mesh)?;
 //! let _gltf = gltf::to_gltf(mesh, gltf::Output::Binary);
 //! #    Ok(())
 //! # }
@@ -27,7 +27,10 @@ use zen_math::Vec3;
 //pub use zen::ZenMesh;
 pub use error::Error;
 use error::Result;
-use std::convert::{TryFrom, TryInto};
+use std::{
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+};
 use zen_material::Material;
 
 mod error;
@@ -39,12 +42,17 @@ pub mod msh;
 pub mod structures;
 //pub mod zen;
 
+pub type Scene = Vec<Model>;
+
+#[derive(Clone)]
 /// Basic Mesh Informations
 pub struct Mesh {
     pub positions: Vec<f32>,
     pub indices: Vec<u32>,
     pub normals: Vec<f32>,
     pub tex_coords: Vec<f32>,
+    pub material: usize,
+    pub num_elements: u32,
 }
 
 impl Mesh {
@@ -69,27 +77,85 @@ impl Mesh {
             },
         )
     }
+
+    // TODO not working
+    pub fn pack(self) -> Self {
+        let Mesh {
+            indices,
+            positions,
+            normals,
+            tex_coords,
+            material,
+            num_elements,
+        } = self;
+        let (mesh, _) = indices.iter().fold(
+            (
+                Mesh {
+                    positions: Vec::new(),
+                    indices: Vec::new(),
+                    normals: Vec::new(),
+                    tex_coords: Vec::new(),
+                    material,
+                    num_elements,
+                },
+                HashMap::new(),
+            ),
+            |(mut mesh, mut map), i| {
+                let index = if map.contains_key(i) {
+                    *map.get(i).unwrap()
+                } else {
+                    let idx = *i as usize;
+
+                    let vertex = &positions[idx..idx + 3];
+                    assert!(vertex.len() == 3);
+                    mesh.positions.extend_from_slice(vertex);
+
+                    let normal = &normals[idx..idx + 3];
+                    assert!(normal.len() == 3);
+                    mesh.normals.extend_from_slice(normal);
+
+                    let tex_coord = &tex_coords[idx..idx + 2];
+                    assert!(tex_coord.len() == 2);
+                    mesh.tex_coords.extend_from_slice(tex_coord);
+
+                    let len = map.len() as u32;
+                    map.insert(*i, len);
+                    len as u32
+                };
+                mesh.indices.push(index);
+                (mesh, map)
+            },
+        );
+
+        mesh
+    }
 }
 
-/// Mesh that is a component in another mesh, already holds its material
-pub struct SubMesh {
-    pub mesh: Mesh,
-    pub material: Material,
-}
+// #[derive(Clone)]
+// /// Mesh that is a component in another mesh, already holds its material
+// pub struct SubMesh {
+//     pub mesh: Mesh,
+//     pub material: Material,
+// }
 
+#[derive(Clone)]
 /// General Mesh consisting out of one or more sub meshes
-pub struct GeneralMesh {
+pub struct Model {
     pub name: String,
-    pub sub_meshes: Vec<SubMesh>,
+    pub meshes: Vec<Mesh>,
+    pub materials: Vec<Material>,
 }
 
-impl TryFrom<MrmMesh> for GeneralMesh {
+impl TryFrom<MrmMesh> for Model {
     type Error = Error;
     fn try_from(object_mesh: MrmMesh) -> Result<Self> {
         let (object_sub_meshes, object_vertices) = (object_mesh.sub_meshes, object_mesh.vertices);
-        let sub_meshes = object_sub_meshes
+
+        let mut materials = Vec::new();
+        let meshes = object_sub_meshes
             .into_iter()
-            .map(|sub_mesh| {
+            .enumerate()
+            .map(|(n, sub_mesh)| {
                 let indices = sub_mesh
                     .triangles
                     .into_iter()
@@ -98,37 +164,41 @@ impl TryFrom<MrmMesh> for GeneralMesh {
                     .map(|pos| pos as u32)
                     .collect::<Vec<u32>>();
 
-                let mut mesh = sub_mesh.wedges.into_iter().fold(
+                let mesh = sub_mesh.wedges.into_iter().fold(
                     Mesh {
                         positions: vec![],
-                        indices: vec![],
+                        indices,
                         normals: vec![],
                         tex_coords: vec![],
+                        material: n,
+                        num_elements: 0,
                     },
                     |mut mesh, wedge| {
                         mesh.positions
                             .append(&mut object_vertices[wedge.vertex_index as usize].to_vec());
+                        mesh.num_elements += 1;
                         mesh.normals.append(&mut wedge.normal.to_vec());
                         mesh.tex_coords.append(&mut wedge.tex_coord.to_vec());
                         mesh
                     },
                 );
 
-                mesh.indices = indices;
+                //let mesh = mesh.pack();
+                let material = Material::try_from(&sub_mesh.material)?;
+                materials.push(material);
 
-                let material = (&sub_mesh.material).try_into()?;
-
-                Ok(SubMesh { material, mesh })
+                Ok(mesh)
             })
-            .collect::<Result<Vec<SubMesh>>>()?;
+            .collect::<Result<Vec<Mesh>>>()?;
         Ok(Self {
             name: object_mesh.name,
-            sub_meshes,
+            meshes,
+            materials,
         })
     }
 }
 
-impl TryFrom<MshMesh> for GeneralMesh {
+impl TryFrom<MshMesh> for Model {
     type Error = Error;
     fn try_from(mesh: MshMesh) -> Result<Self> {
         let MshMesh {
@@ -138,9 +208,11 @@ impl TryFrom<MshMesh> for GeneralMesh {
             features,
             polygons,
         } = mesh;
-        let sub_meshes = polygons
+        let mut new_materials = Vec::new();
+        let meshes = polygons
             .into_iter()
-            .map(|polygon| -> Result<SubMesh> {
+            .enumerate()
+            .map(|(n, polygon)| -> Result<Mesh> {
                 let verts = polygon
                     .indices
                     .iter()
@@ -163,22 +235,30 @@ impl TryFrom<MshMesh> for GeneralMesh {
                     .into_iter()
                     .map(|i| i as u32)
                     .collect::<Vec<u32>>();
-                Ok(SubMesh {
-                    material: (&materials[polygon.material_index as usize]).try_into()?,
-                    mesh: Mesh {
-                        positions: verts,
-                        normals: norms,
-                        indices,
-                        tex_coords,
-                    },
+
+                let material = (&materials[polygon.material_index as usize]).try_into()?;
+                new_materials.push(material);
+
+                let num_elements = (verts.len() / 3) as u32;
+                Ok(Mesh {
+                    positions: verts,
+                    normals: norms,
+                    indices,
+                    tex_coords,
+                    material: n,
+                    num_elements,
                 })
             })
-            .collect::<Result<Vec<SubMesh>>>()?;
-        Ok(GeneralMesh { name, sub_meshes })
+            .collect::<Result<Vec<Mesh>>>()?;
+        Ok(Model {
+            name,
+            meshes,
+            materials: new_materials,
+        })
     }
 }
 
-// impl From<ZenMesh> for GeneralMesh {
+// impl From<ZenMesh> for Model {
 //     fn from(_world_mesh: ZenMesh) -> Self {
 //         todo!()
 //     }

@@ -19,6 +19,7 @@ mod error;
 pub const GOTHIC2: u16 = 39939;
 
 /// Simple Material with texture and color
+#[derive(Clone)]
 pub struct Material {
     pub texture: Texture,
     pub color: Vec3<f32>,

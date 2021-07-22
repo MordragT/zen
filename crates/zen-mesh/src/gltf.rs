@@ -1,4 +1,4 @@
-use super::GeneralMesh;
+use super::Model;
 use gltf_json as json;
 use json::validation::Checked::Valid;
 use std::borrow::Cow;
@@ -37,7 +37,7 @@ fn to_padded_byte_vector<T>(vec: Vec<T>) -> Vec<u8> {
 
 const NUM: u32 = 4;
 
-pub fn to_gltf(input: GeneralMesh, output: Output) -> PathBuf {
+pub fn to_gltf(input: Model, output: Output) -> PathBuf {
     let mut accessors = vec![]; //positions, indices, normals],
     let mut buffers = vec![];
     let mut buffer_views = vec![]; //positions_view, indices_view, normals_view],
@@ -51,11 +51,11 @@ pub fn to_gltf(input: GeneralMesh, output: Output) -> PathBuf {
 
     let length = if output == Output::Binary {
         let mut byte_length = 0;
-        for sub_mesh in input.sub_meshes.iter() {
-            byte_length += (sub_mesh.mesh.positions.len() * mem::size_of::<f32>()) as u32;
-            byte_length += (sub_mesh.mesh.indices.len() * mem::size_of::<u32>()) as u32;
-            byte_length += (sub_mesh.mesh.normals.len() * mem::size_of::<f32>()) as u32;
-            byte_length += (sub_mesh.mesh.tex_coords.len() * mem::size_of::<f32>()) as u32;
+        for mesh in input.meshes.iter() {
+            byte_length += (mesh.positions.len() * mem::size_of::<f32>()) as u32;
+            byte_length += (mesh.indices.len() * mem::size_of::<u32>()) as u32;
+            byte_length += (mesh.normals.len() * mem::size_of::<f32>()) as u32;
+            byte_length += (mesh.tex_coords.len() * mem::size_of::<f32>()) as u32;
             // byte_length +=
             //     (dbg!(sub_mesh.material.texture.get_ref().len()) * mem::size_of::<u8>()) as u32;
         }
@@ -72,12 +72,12 @@ pub fn to_gltf(input: GeneralMesh, output: Output) -> PathBuf {
         0
     };
 
-    for (i, sub_mesh) in input.sub_meshes.into_iter().enumerate() {
-        let bound = sub_mesh.mesh.extreme_coordinates();
-        let positions_vec = sub_mesh.mesh.positions;
-        let indices_vec = sub_mesh.mesh.indices;
-        let normals_vec = sub_mesh.mesh.normals;
-        let tex_coords_vec = sub_mesh.mesh.tex_coords;
+    for (i, mesh) in input.meshes.into_iter().enumerate() {
+        let bound = mesh.extreme_coordinates();
+        let positions_vec = mesh.positions;
+        let indices_vec = mesh.indices;
+        let normals_vec = mesh.normals;
+        let tex_coords_vec = mesh.tex_coords;
 
         let positions_buffer_length = (positions_vec.len() * mem::size_of::<f32>()) as u32;
         let indices_buffer_length = (indices_vec.len() * mem::size_of::<u32>()) as u32;
@@ -241,8 +241,7 @@ pub fn to_gltf(input: GeneralMesh, output: Output) -> PathBuf {
         };
         accessors.push(tex_coords);
 
-        let mut image_name = sub_mesh
-            .material
+        let mut image_name = input.materials[mesh.material]
             .texture
             .name
             .split('.')
@@ -253,7 +252,10 @@ pub fn to_gltf(input: GeneralMesh, output: Output) -> PathBuf {
         let image_path = FILES_INSTANCE.textures.join(&image_name);
         // TODO: remove unwrap
         let image_output = fs::File::create(&image_path).unwrap();
-        sub_mesh.material.texture.to_png(image_output).unwrap();
+        input.materials[mesh.material]
+            .texture
+            .to_png(image_output)
+            .unwrap();
 
         let image = json::Image {
             name: None,

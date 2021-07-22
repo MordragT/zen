@@ -18,12 +18,43 @@ pub enum ColorType {
     RGB8,
 }
 
+#[derive(Clone)]
 pub struct Texture {
     width: u32,
     height: u32,
     color_type: ColorType,
     pixels: Vec<u8>,
     pub name: String,
+}
+
+#[cfg(feature = "wgpu")]
+impl Texture {
+    pub fn desc(&self) -> wgpu::TextureDescriptor {
+        let size = wgpu::Extent3d {
+            width: self.width,
+            height: self.height,
+            depth_or_array_layers: 1,
+        };
+
+        let format = match self.color_type {
+            ColorType::RGBA8 => wgpu::TextureFormat::Rgba8Uint,
+            ColorType::RGBA16 => wgpu::TextureFormat::Rgba16Uint,
+            ColorType::RGB8 => unimplemented!(),
+            ColorType::BGRA8 => wgpu::TextureFormat::Bgra8Unorm,
+        };
+
+        wgpu::TextureDescriptor {
+            size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            // SAMPLED tells wgpu that we want to use this texture in shaders
+            // COPY_DST means that we want to copy data to this texture
+            usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
+            label: Some(&self.name),
+        }
+    }
 }
 
 impl Texture {

@@ -3,3 +3,4 @@ crates/*/target
 /files
 .metals/
 .vscode/
+/docs

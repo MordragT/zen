@@ -12,16 +12,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("Should be there!");
     let cursor = Cursor::new(mesh_entry.data);
     let mesh = MrmMesh::new(cursor, "ORC_MASTERTHRONE")?;
-    let model = Model::try_from(mesh)?;
-    for mesh in model.clone().meshes {
-        let positions = mesh.positions;
-        println!("Positions: {:?}", positions);
-        println!("Indices: {:?}", mesh.indices);
-        println!(
-            "Positions.len == Normals.len: {:?}",
-            positions.len() == mesh.normals.len()
-        )
-    }
-    let _gltf = gltf::to_gltf(model, gltf::Output::Binary);
+    let mesh = Model::try_from(mesh)?;
+    let _gltf = gltf::to_gltf(mesh.clone(), gltf::Output::Binary);
+    zen_render::run(vec![mesh]);
     Ok(())
 }
