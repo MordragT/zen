@@ -22,6 +22,7 @@ pub const GOTHIC2: u16 = 39939;
 #[derive(Clone)]
 pub struct Material {
     pub texture: Texture,
+    // TODO add support for normal map
     pub color: Vec3<f32>,
 }
 

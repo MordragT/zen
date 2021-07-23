@@ -9,8 +9,10 @@ edition = "2018"
 winit = "0.25.0"
 wgpu = "0.9"
 pollster = "0.2"
-bytemuck = "1.7.0"
+bytemuck = { version = "1.7.0", features = ["derive"] }
 zen-mesh = {  path = "../zen-mesh" }
+env_logger = "0.8.4"
+cgmath = "0.18.0"
 
 [dev-dependencies]
 zen-types = {  path = "../zen-types" }

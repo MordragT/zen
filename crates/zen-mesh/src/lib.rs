@@ -23,7 +23,7 @@
 
 pub use mrm::MrmMesh;
 pub use msh::MshMesh;
-use zen_math::Vec3;
+use zen_math::{Vec2, Vec3};
 //pub use zen::ZenMesh;
 pub use error::Error;
 use error::Result;
@@ -44,13 +44,17 @@ pub mod structures;
 
 pub type Scene = Vec<Model>;
 
+pub struct Vertex {
+    position: Vec3<f32>,
+    tex_coords: Vec2<f32>,
+    normal: Vec3<f32>,
+}
+
 #[derive(Clone)]
 /// Basic Mesh Informations
 pub struct Mesh {
-    pub positions: Vec<f32>,
+    pub vertices: Vec<Vertex>,
     pub indices: Vec<u32>,
-    pub normals: Vec<f32>,
-    pub tex_coords: Vec<f32>,
     pub material: usize,
     pub num_elements: u32,
 }
@@ -76,6 +80,13 @@ impl Mesh {
                 (min, max)
             },
         )
+    }
+
+    pub fn scale(&mut self, factor: f32) {
+        //let origin = self.positions[0];
+        for pos in self.positions.iter_mut() {
+            *pos *= factor;
+        }
     }
 
     // TODO not working
@@ -164,7 +175,7 @@ impl TryFrom<MrmMesh> for Model {
                     .map(|pos| pos as u32)
                     .collect::<Vec<u32>>();
 
-                let mesh = sub_mesh.wedges.into_iter().fold(
+                let mut mesh = sub_mesh.wedges.into_iter().fold(
                     Mesh {
                         positions: vec![],
                         indices,
@@ -182,6 +193,8 @@ impl TryFrom<MrmMesh> for Model {
                         mesh
                     },
                 );
+
+                mesh.scale(0.02);
 
                 //let mesh = mesh.pack();
                 let material = Material::try_from(&sub_mesh.material)?;
