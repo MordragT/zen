@@ -2163,6 +2163,7 @@ dependencies = [
 name = "zen-mesh"
 version = "0.0.1"
 dependencies = [
+ "bytemuck",
  "gltf",
  "gltf-json",
  "serde",

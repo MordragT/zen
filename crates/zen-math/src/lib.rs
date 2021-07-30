@@ -1,3 +1,5 @@
+use std::ops::Mul;
+
 #[cfg(feature = "serde")]
 use serde::Deserialize;
 
@@ -67,6 +69,13 @@ impl<T: Copy + PartialOrd> From<[T; 2]> for Vec2<T> {
     }
 }
 
+impl<T: Copy + PartialOrd + Mul<Output = T>> Mul<T> for Vec2<T> {
+    type Output = Self;
+    fn mul(self, rhs: T) -> Self::Output {
+        Self([self.x() * rhs, self.y() * rhs])
+    }
+}
+
 #[cfg(feature = "serde")]
 #[derive(Default, Deserialize, Debug, Clone, Copy)]
 #[repr(transparent)]
@@ -92,6 +101,20 @@ impl<T: Copy + PartialOrd> Vec3<T> {
 
     pub fn z(&self) -> T {
         self.0[2]
+    }
+
+    /// Changes the vector to the minimum numbers of both vectors
+    pub fn min(&mut self, other: &Vec3<T>) {
+        self.min_x(other.x());
+        self.min_y(other.y());
+        self.min_z(other.z());
+    }
+
+    /// Changes the vector to the maximum numbers of both vectors
+    pub fn max(&mut self, other: &Vec3<T>) {
+        self.max_x(other.x());
+        self.max_y(other.y());
+        self.max_z(other.z());
     }
 
     pub fn min_x(&mut self, x: T) {
@@ -166,6 +189,13 @@ impl<T: Copy + PartialOrd> Vec3<T> {
 impl<T: Copy + PartialOrd> From<[T; 3]> for Vec3<T> {
     fn from(arr: [T; 3]) -> Self {
         Self(arr)
+    }
+}
+
+impl<T: Copy + PartialOrd + Mul<Output = T>> Mul<T> for Vec3<T> {
+    type Output = Self;
+    fn mul(self, rhs: T) -> Self::Output {
+        Self([self.x() * rhs, self.y() * rhs, self.z() * rhs])
     }
 }
 
@@ -324,5 +354,17 @@ impl<T: Copy + PartialOrd> Vec4<T> {
 impl<T: Copy + PartialOrd> From<[T; 4]> for Vec4<T> {
     fn from(arr: [T; 4]) -> Self {
         Self(arr)
+    }
+}
+
+impl<T: Copy + PartialOrd + Mul<Output = T>> Mul<T> for Vec4<T> {
+    type Output = Self;
+    fn mul(self, rhs: T) -> Self::Output {
+        Self([
+            self.x() * rhs,
+            self.y() * rhs,
+            self.z() * rhs,
+            self.w() * rhs,
+        ])
     }
 }

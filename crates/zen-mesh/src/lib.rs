@@ -44,13 +44,15 @@ pub mod structures;
 
 pub type Scene = Vec<Model>;
 
+#[repr(C)]
+#[derive(Clone, Debug, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
-    position: Vec3<f32>,
-    tex_coords: Vec2<f32>,
-    normal: Vec3<f32>,
+    pub position: [f32; 3],
+    pub tex_coords: [f32; 2],
+    pub normal: [f32; 3],
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 /// Basic Mesh Informations
 pub struct Mesh {
     pub vertices: Vec<Vertex>,
@@ -61,22 +63,15 @@ pub struct Mesh {
 
 impl Mesh {
     pub fn extreme_coordinates(&self) -> (Vec3<f32>, Vec3<f32>) {
-        self.positions.iter().enumerate().fold(
+        self.vertices.iter().fold(
             (
                 Vec3::new(std::f32::MAX, std::f32::MAX, std::f32::MAX),
                 Vec3::new(std::f32::MIN, std::f32::MIN, std::f32::MIN),
             ),
-            |(mut min, mut max), (count, pos)| {
-                if count % 3 == 0 {
-                    min.min_x(*pos);
-                    max.max_x(*pos);
-                } else if count % 3 == 1 {
-                    min.min_y(*pos);
-                    max.max_y(*pos);
-                } else if count % 3 == 2 {
-                    min.min_z(*pos);
-                    max.max_z(*pos);
-                }
+            |(mut min, mut max), vertex| {
+                let pos = Vec3::from(vertex.position);
+                min.min(&pos);
+                max.max(&pos);
                 (min, max)
             },
         )
@@ -84,28 +79,26 @@ impl Mesh {
 
     pub fn scale(&mut self, factor: f32) {
         //let origin = self.positions[0];
-        for pos in self.positions.iter_mut() {
-            *pos *= factor;
+        for vertex in self.vertices.iter_mut() {
+            vertex.position[0] *= factor;
+            vertex.position[1] *= factor;
+            vertex.position[2] *= factor;
         }
     }
 
     // TODO not working
     pub fn pack(self) -> Self {
         let Mesh {
+            vertices,
             indices,
-            positions,
-            normals,
-            tex_coords,
             material,
             num_elements,
         } = self;
         let (mesh, _) = indices.iter().fold(
             (
                 Mesh {
-                    positions: Vec::new(),
+                    vertices: Vec::new(),
                     indices: Vec::new(),
-                    normals: Vec::new(),
-                    tex_coords: Vec::new(),
                     material,
                     num_elements,
                 },
@@ -117,17 +110,8 @@ impl Mesh {
                 } else {
                     let idx = *i as usize;
 
-                    let vertex = &positions[idx..idx + 3];
-                    assert!(vertex.len() == 3);
-                    mesh.positions.extend_from_slice(vertex);
-
-                    let normal = &normals[idx..idx + 3];
-                    assert!(normal.len() == 3);
-                    mesh.normals.extend_from_slice(normal);
-
-                    let tex_coord = &tex_coords[idx..idx + 2];
-                    assert!(tex_coord.len() == 2);
-                    mesh.tex_coords.extend_from_slice(tex_coord);
+                    let vertex = vertices[idx].clone();
+                    mesh.vertices.push(vertex);
 
                     let len = map.len() as u32;
                     map.insert(*i, len);
@@ -172,24 +156,24 @@ impl TryFrom<MrmMesh> for Model {
                     .into_iter()
                     .map(|v| v.to_array())
                     .flatten()
-                    .map(|pos| pos as u32)
+                    .map(|pos| (pos / 3) as u32)
                     .collect::<Vec<u32>>();
 
                 let mut mesh = sub_mesh.wedges.into_iter().fold(
                     Mesh {
-                        positions: vec![],
+                        vertices: Vec::new(),
                         indices,
-                        normals: vec![],
-                        tex_coords: vec![],
                         material: n,
                         num_elements: 0,
                     },
                     |mut mesh, wedge| {
-                        mesh.positions
-                            .append(&mut object_vertices[wedge.vertex_index as usize].to_vec());
+                        let vertex = Vertex {
+                            position: object_vertices[wedge.vertex_index as usize].to_array(),
+                            tex_coords: wedge.tex_coord.to_array(),
+                            normal: wedge.normal.to_array(),
+                        };
+                        mesh.vertices.push(vertex);
                         mesh.num_elements += 1;
-                        mesh.normals.append(&mut wedge.normal.to_vec());
-                        mesh.tex_coords.append(&mut wedge.tex_coord.to_vec());
                         mesh
                     },
                 );
@@ -226,25 +210,16 @@ impl TryFrom<MshMesh> for Model {
             .into_iter()
             .enumerate()
             .map(|(n, polygon)| -> Result<Mesh> {
-                let verts = polygon
+                let vertices = polygon
                     .indices
                     .iter()
-                    .map(|index| vertices[index.vertex as usize].to_array())
-                    .flatten()
-                    .collect::<Vec<f32>>();
-                let norms = polygon
-                    .indices
-                    .iter()
-                    .map(|index| features[index.feature as usize].vert_normal.to_array())
-                    .flatten()
-                    .collect::<Vec<f32>>();
-                let tex_coords = polygon
-                    .indices
-                    .iter()
-                    .map(|index| features[index.feature as usize].tex_coord.to_array())
-                    .flatten()
-                    .collect::<Vec<f32>>();
-                let indices = (0..verts.len() / 3)
+                    .map(|index| Vertex {
+                        position: vertices[index.vertex as usize].to_array(),
+                        tex_coords: features[index.feature as usize].tex_coord.to_array(),
+                        normal: features[index.feature as usize].vert_normal.to_array(),
+                    })
+                    .collect::<Vec<Vertex>>();
+                let indices = (0..vertices.len() / 3)
                     .into_iter()
                     .map(|i| i as u32)
                     .collect::<Vec<u32>>();
@@ -252,12 +227,10 @@ impl TryFrom<MshMesh> for Model {
                 let material = (&materials[polygon.material_index as usize]).try_into()?;
                 new_materials.push(material);
 
-                let num_elements = (verts.len() / 3) as u32;
+                let num_elements = (vertices.len() / 3) as u32;
                 Ok(Mesh {
-                    positions: verts,
-                    normals: norms,
+                    vertices,
                     indices,
-                    tex_coords,
                     material: n,
                     num_elements,
                 })

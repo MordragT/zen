@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let model = Model::try_from(mesh)?;
     let _gltf = gltf::to_gltf(model.clone(), gltf::Output::Binary);
     let mesh = model.meshes[3].clone();
-    println!("{:?}", &mesh.positions[0..3]);
+    println!("{:?}", &mesh.vertices[0..3]);
     zen_render::run(mesh);
 
     // let mesh = Mesh {

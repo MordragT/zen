@@ -152,7 +152,7 @@ impl State {
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(mesh.positions.as_slice()),
+            contents: bytemuck::cast_slice(mesh.vertices.as_slice()),
             usage: wgpu::BufferUsage::VERTEX,
         });
 
@@ -219,11 +219,16 @@ impl State {
                             shader_location: 0,
                             format: wgpu::VertexFormat::Float32x3,
                         },
-                        // wgpu::VertexAttribute {
-                        //     offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
-                        //     shader_location: 1,
-                        //     format: wgpu::VertexFormat::Float32x3,
-                        // },
+                        wgpu::VertexAttribute {
+                            offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                            shader_location: 1,
+                            format: wgpu::VertexFormat::Float32x2,
+                        },
+                        wgpu::VertexAttribute {
+                            offset: std::mem::size_of::<[f32; 5]>() as wgpu::BufferAddress,
+                            shader_location: 2,
+                            format: wgpu::VertexFormat::Float32x3,
+                        },
                     ],
                 }], // 2.
             },
