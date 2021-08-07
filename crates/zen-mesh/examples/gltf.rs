@@ -21,35 +21,64 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
             color: Vec3::new(0.1, 0.2, 0.3),
         }],
-        meshes: vec![Mesh {
-            vertices: vec![
-                Vertex {
-                    position: [0.0, 0.0, 0.0],
-                    tex_coords: [0.0, 0.0],
-                    normal: [0.0, 1.0, 0.0],
-                },
-                Vertex {
-                    position: [1.0, 0.0, 0.0],
-                    tex_coords: [1.0, 0.0],
-                    normal: [0.0, 0.0, 0.0],
-                },
-                Vertex {
-                    position: [0.0, 1.0, 0.0],
-                    tex_coords: [0.0, 1.0],
-                    normal: [0.0, 0.0, 0.0],
-                },
-                Vertex {
-                    position: [1.0, 1.0, 0.0],
-                    tex_coords: [1.0, 1.0],
-                    normal: [0.0, 0.0, 0.0],
-                },
-            ],
-            indices: vec![0, 1, 2, 3, 2, 1],
-            material: 0,
-            num_elements: 4,
-        }],
+        meshes: vec![
+            Mesh {
+                vertices: vec![
+                    Vertex {
+                        position: [0.0, 0.0, 0.0],
+                        tex_coords: [0.0, 0.0],
+                        normal: [0.0, 1.0, 0.0],
+                    },
+                    Vertex {
+                        position: [1.0, 0.0, 0.0],
+                        tex_coords: [1.0, 0.0],
+                        normal: [0.0, 0.0, 0.0],
+                    },
+                    Vertex {
+                        position: [0.0, 1.0, 0.0],
+                        tex_coords: [0.0, 1.0],
+                        normal: [0.0, 0.0, 0.0],
+                    },
+                    Vertex {
+                        position: [1.0, 1.0, 0.0],
+                        tex_coords: [1.0, 1.0],
+                        normal: [0.0, 0.0, 0.0],
+                    },
+                ],
+                indices: vec![0, 1, 2, 3, 2, 1],
+                material: 0,
+                num_elements: 4,
+            },
+            Mesh {
+                vertices: vec![
+                    Vertex {
+                        position: [2.0, 2.0, 2.0],
+                        tex_coords: [0.0, 0.0],
+                        normal: [0.0, 1.0, 0.0],
+                    },
+                    Vertex {
+                        position: [2.0, 3.0, 2.0],
+                        tex_coords: [1.0, 0.0],
+                        normal: [0.0, 0.0, 0.0],
+                    },
+                    Vertex {
+                        position: [2.0, 2.0, 3.0],
+                        tex_coords: [0.0, 1.0],
+                        normal: [0.0, 0.0, 0.0],
+                    },
+                    Vertex {
+                        position: [2.0, 3.0, 3.0],
+                        tex_coords: [1.0, 1.0],
+                        normal: [0.0, 0.0, 0.0],
+                    },
+                ],
+                indices: vec![0, 1, 2, 3, 2, 1],
+                material: 0,
+                num_elements: 4,
+            },
+        ],
     };
 
-    let _gltf = gltf::to_gltf(model, gltf::Output::Binary);
+    let _gltf = gltf::to_gltf(model, gltf::Output::Standard);
     Ok(())
 }
