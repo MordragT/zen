@@ -38,8 +38,10 @@ fn to_padded_byte_vector<T>(vec: Vec<T>) -> Vec<u8> {
 }
 
 /// There are 2 buffers: vertices and indices
-const STANDARD_OUTPUT_BUFFER_NUM: usize = 2;
+const BUFFER_NUM: usize = 2;
 const BUFFER_VIEW_NUM: usize = 2;
+
+// TODO fix Output::Biary
 
 pub fn to_gltf(input: Model, output: Output) -> PathBuf {
     struct RootInformation {
@@ -51,7 +53,6 @@ pub fn to_gltf(input: Model, output: Output) -> PathBuf {
         textures: Vec<json::Texture>,
         images: Vec<json::Image>,
         materials: Vec<json::Material>,
-        length: u32,
     }
 
     impl RootInformation {
@@ -65,7 +66,6 @@ pub fn to_gltf(input: Model, output: Output) -> PathBuf {
                 textures: Vec::new(),
                 images: Vec::new(),
                 materials: Vec::new(),
-                length: 0,
             }
         }
     }
@@ -91,17 +91,9 @@ pub fn to_gltf(input: Model, output: Output) -> PathBuf {
                 let indices_buffer_len = (indices.len() * mem::size_of::<u32>()) as u32;
 
                 let vertices_view = json::buffer::View {
-                    buffer: if output == Output::Standard {
-                        json::Index::new((STANDARD_OUTPUT_BUFFER_NUM * num) as u32)
-                    } else {
-                        json::Index::new(num as u32)
-                    },
+                    buffer: json::Index::new((BUFFER_NUM * num) as u32),
                     byte_length: vertices_buffer_len,
-                    byte_offset: if output == Output::Binary {
-                        Some(0)
-                    } else {
-                        None
-                    },
+                    byte_offset: None,
                     byte_stride: Some(mem::size_of::<Vertex>() as u32),
                     extensions: Default::default(),
                     extras: Default::default(),
@@ -165,17 +157,9 @@ pub fn to_gltf(input: Model, output: Output) -> PathBuf {
                 info.accessors.push(normals);
 
                 let indices_view = json::buffer::View {
-                    buffer: if output == Output::Standard {
-                        json::Index::new(((STANDARD_OUTPUT_BUFFER_NUM * num) + 1) as u32)
-                    } else {
-                        json::Index::new(num as u32)
-                    },
+                    buffer: json::Index::new(((BUFFER_NUM * num) + 1) as u32),
                     byte_length: indices_buffer_len,
-                    byte_offset: if output == Output::Binary {
-                        Some(vertices_buffer_len)
-                    } else {
-                        None
-                    },
+                    byte_offset: None,
                     byte_stride: None,
                     extensions: Default::default(),
                     extras: Default::default(),
@@ -286,35 +270,52 @@ pub fn to_gltf(input: Model, output: Output) -> PathBuf {
                 };
                 info.primitives.push(primitive);
 
-                info.length += match output {
-                    Output::Binary => {
-                        let byte_length = vertices_buffer_len + indices_buffer_len;
-                        // let byte_length = input.meshes.iter().fold(0, |len, mesh| {
-                        //     len + (mesh.vertices.len() * mem::size_of::<Vertex>()) as u32
-                        //         + (mesh.indices.len() * mem::size_of::<u32>()) as u32
-                        // });
-                        let buffer = json::Buffer {
-                            byte_length,
-                            extensions: Default::default(),
-                            extras: Default::default(),
-                            name: None,
-                            uri: None,
-                        };
-                        info.buffers.push(buffer);
+                // let padded_vertices_buffer_len = {
+                //     let mut padded = vertices_buffer_len;
+                //     while padded % 4 != 0 {
+                //         padded += 1;
+                //     }
+                //     padded
+                // };
 
+                let vertices_buffer = json::Buffer {
+                    byte_length: vertices_buffer_len,
+                    extensions: Default::default(),
+                    extras: Default::default(),
+                    name: None,
+                    uri: match output {
+                        Output::Binary => None,
+                        Output::Standard => Some(format!("{}-vertices-{}.bin", name, num)),
+                    },
+                };
+                info.buffers.push(vertices_buffer);
+
+                // let padded_indices_buffer_len = {
+                //     let mut padded = indices_buffer_len;
+                //     while padded % 4 != 0 {
+                //         padded += 1;
+                //     }
+                //     padded
+                // };
+
+                let indices_buffer = json::Buffer {
+                    byte_length: indices_buffer_len,
+                    extensions: Default::default(),
+                    extras: Default::default(),
+                    name: None,
+                    uri: match output {
+                        Output::Binary => None,
+                        Output::Standard => Some(format!("{}-indices-{}.bin", name, num)),
+                    },
+                };
+                info.buffers.push(indices_buffer);
+
+                match output {
+                    Output::Binary => {
                         info.bin.append(&mut to_padded_byte_vector(vertices));
                         info.bin.append(&mut to_padded_byte_vector(indices));
-
-                        byte_length
                     }
                     Output::Standard => {
-                        let vertices_buffer = json::Buffer {
-                            byte_length: vertices_buffer_len,
-                            extensions: Default::default(),
-                            extras: Default::default(),
-                            name: None,
-                            uri: Some(format!("{}-vertices-{}.bin", name, num)),
-                        };
                         let vertices = to_padded_byte_vector(vertices);
                         let mut writer = fs::File::create(
                             FILES_INSTANCE
@@ -324,13 +325,6 @@ pub fn to_gltf(input: Model, output: Output) -> PathBuf {
                         .expect("I/O error");
                         writer.write_all(&vertices).expect("I/O error");
 
-                        let indices_buffer = json::Buffer {
-                            byte_length: indices_buffer_len,
-                            extensions: Default::default(),
-                            extras: Default::default(),
-                            name: None,
-                            uri: Some(format!("{}-indices-{}.bin", name, num)),
-                        };
                         let indices = to_padded_byte_vector(indices);
                         let mut writer = fs::File::create(
                             FILES_INSTANCE
@@ -339,9 +333,6 @@ pub fn to_gltf(input: Model, output: Output) -> PathBuf {
                         )
                         .expect("I/O error");
                         writer.write_all(&indices).expect("I/O error");
-                        info.buffers.push(vertices_buffer);
-                        info.buffers.push(indices_buffer);
-                        0
                     }
                 };
                 info
@@ -356,7 +347,6 @@ pub fn to_gltf(input: Model, output: Output) -> PathBuf {
         textures,
         images,
         materials,
-        length,
     } = info;
 
     let mesh = json::Mesh {
@@ -416,7 +406,7 @@ pub fn to_gltf(input: Model, output: Output) -> PathBuf {
                 header: gltf::binary::Header {
                     magic: b"glTF".clone(),
                     version: 2,
-                    length: json_offset + length,
+                    length: json_offset + bin.len() as u32,
                 },
                 bin: Some(Cow::Owned(bin)),
                 json: Cow::Owned(json_string.into_bytes()),

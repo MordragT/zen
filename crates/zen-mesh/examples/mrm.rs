@@ -19,6 +19,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Indices Len: {}", mesh.indices.len());
         println!("Vertices Len: {}", mesh.vertices.len());
     }
+    let _gltf = gltf::to_gltf(model.clone(), gltf::Output::Standard);
     let _gltf = gltf::to_gltf(model, gltf::Output::Binary);
+
     Ok(())
 }

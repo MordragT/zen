@@ -23,7 +23,7 @@
 
 pub use mrm::MrmMesh;
 pub use msh::MshMesh;
-use zen_math::{Vec2, Vec3};
+use zen_math::Vec3;
 //pub use zen::ZenMesh;
 pub use error::Error;
 use error::Result;
@@ -156,7 +156,7 @@ impl TryFrom<MrmMesh> for Model {
                     .into_iter()
                     .map(|v| v.to_array())
                     .flatten()
-                    .map(|pos| (pos / 3) as u32)
+                    .map(|pos| pos as u32)
                     .collect::<Vec<u32>>();
 
                 let mut mesh = sub_mesh.wedges.into_iter().fold(
