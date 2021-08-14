@@ -13,8 +13,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cursor = Cursor::new(mesh_entry.data);
     let mesh = MrmMesh::new(cursor, "ORC_MASTERTHRONE")?;
     let model = Model::try_from(mesh)?;
-    let _gltf = gltf::to_gltf(model.clone(), gltf::Output::Binary);
-    let mesh = model.meshes[3].clone();
+    //let _gltf = gltf::to_gltf(model.clone(), gltf::Output::Binary);
+    let mesh = model.meshes[0].clone();
     println!("{:?}", &mesh.vertices[0..3]);
     zen_render::run(mesh);
 
