@@ -11,6 +11,8 @@ wgpu = "0.9"
 pollster = "0.2"
 bytemuck = { version = "1.7.0", features = ["derive"] }
 zen-mesh = {  path = "../zen-mesh" }
+zen-texture = { path = "../zen-texture" }
+zen-material = { path = "../zen-material" }
 env_logger = "0.8.4"
 cgmath = "0.18.0"
 

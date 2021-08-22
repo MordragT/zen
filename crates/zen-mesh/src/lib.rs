@@ -162,9 +162,9 @@ impl TryFrom<MrmMesh> for Model {
                 let mut mesh = sub_mesh.wedges.into_iter().fold(
                     Mesh {
                         vertices: Vec::new(),
+                        num_elements: indices.len() as u32,
                         indices,
                         material: n,
-                        num_elements: 0,
                     },
                     |mut mesh, wedge| {
                         let vertex = Vertex {
@@ -173,7 +173,6 @@ impl TryFrom<MrmMesh> for Model {
                             normal: wedge.normal.to_array(),
                         };
                         mesh.vertices.push(vertex);
-                        mesh.num_elements += 1;
                         mesh
                     },
                 );

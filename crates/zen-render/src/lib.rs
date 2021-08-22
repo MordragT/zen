@@ -1,4 +1,5 @@
 use camera::{Camera, CameraController, Projection};
+use model::RenderModel;
 use wgpu::util::DeviceExt;
 use winit::{
     event::*,
@@ -6,20 +7,24 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-use zen_mesh::Mesh;
+use zen_mesh::{Mesh, Model, Vertex};
 
 use crate::uniforms::Uniforms;
 
 pub mod camera;
 pub mod instance;
+pub mod material;
+pub mod mesh;
+pub mod model;
+pub mod texture;
 pub mod uniforms;
 
-pub fn run(mesh: Mesh) {
+pub fn run(model: &Model) {
     env_logger::init();
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
     // Since main can't be async, we're going to need to block
-    let mut state = pollster::block_on(State::new(&window, mesh));
+    let mut state = pollster::block_on(State::new(&window, model));
     let mut last_render_time = std::time::Instant::now();
 
     event_loop.run(move |event, _, control_flow| match event {
@@ -86,8 +91,7 @@ struct State {
     swap_chain: wgpu::SwapChain,
     size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
-    vertex_buffer: wgpu::Buffer,
-    index_buffer: wgpu::Buffer,
+    model_state: RenderModel,
     camera: Camera,
     projection: Projection,
     camera_controller: CameraController,
@@ -95,15 +99,11 @@ struct State {
     uniforms: Uniforms,
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
-    num_vertices: u32,
-    // vertices_buffer: Vec<wgpu::Buffer>,
-    // indices_buffer: Vec<wgpu::Buffer>,
-    // num_indices: u32,
 }
 
 impl State {
     // Creating some of the wgpu types requires async code
-    async fn new(window: &Window, mesh: Mesh) -> Self {
+    async fn new(window: &Window, model: &Model) -> Self {
         let size = window.inner_size();
 
         // The instance is a handle to our GPU
@@ -144,17 +144,37 @@ impl State {
             source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
         });
 
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(mesh.indices.as_slice()),
-            usage: wgpu::BufferUsage::INDEX,
-        });
+        let texture_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStage::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStage::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler {
+                            // This is only for TextureSampleType::Depth
+                            comparison: false,
+                            // This should be true if the sample_type of the texture is:
+                            //     TextureSampleType::Float { filterable: true }
+                            // Otherwise you'll get an error.
+                            filtering: true,
+                        },
+                        count: None,
+                    },
+                ],
+                label: Some("texture_bind_group_layout"),
+            });
 
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(mesh.vertices.as_slice()),
-            usage: wgpu::BufferUsage::VERTEX,
-        });
+        let model_state = RenderModel::new(&device, &queue, model, &texture_bind_group_layout);
 
         let camera = camera::Camera::new((-5.0, 5.0, -1.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
         let projection =
@@ -197,10 +217,7 @@ impl State {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[
-                    //&texture_bind_group_layout,
-                    &uniform_bind_group_layout,
-                ],
+                bind_group_layouts: &[&texture_bind_group_layout, &uniform_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -211,7 +228,7 @@ impl State {
                 module: &shader,
                 entry_point: "main", // 1.
                 buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                    array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
                     step_mode: wgpu::InputStepMode::Vertex,
                     attributes: &[
                         wgpu::VertexAttribute {
@@ -290,7 +307,7 @@ impl State {
         //     },
         // );
 
-        let num_vertices = (mesh.indices.len()) as u32;
+        //let num_vertices = (mesh.indices.len()) as u32;
 
         Self {
             surface,
@@ -307,12 +324,7 @@ impl State {
             uniforms,
             uniform_buffer,
             uniform_bind_group,
-            vertex_buffer,
-            // vertices_buffer,
-            num_vertices,
-            index_buffer,
-            // indices_buffer,
-            // num_indices,
+            model_state,
         }
     }
 
@@ -391,9 +403,7 @@ impl State {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
-            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-            render_pass.draw_indexed(0..self.num_vertices, 0, 0..1);
+            self.model_state.render(&mut render_pass);
 
             // 2.
             // for (n, (vertex_buffer, index_buffer)) in self

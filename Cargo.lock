@@ -2194,7 +2194,9 @@ dependencies = [
  "wgpu",
  "winit",
  "zen-archive",
+ "zen-material",
  "zen-mesh",
+ "zen-texture",
  "zen-types",
 ]
 
