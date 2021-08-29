@@ -11,12 +11,6 @@ impl RenderTexture {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) -> Self {
-        let texture_size = wgpu::Extent3d {
-            width: texture.width(),
-            height: texture.height(),
-            depth_or_array_layers: 1,
-        };
-
         let diffuse_texture = device.create_texture(&texture.desc());
         queue.write_texture(
             // Tells wgpu where to copy the pixel data
@@ -24,22 +18,21 @@ impl RenderTexture {
                 texture: &diffuse_texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
             },
             // The actual pixel data
             texture.as_bytes(),
             // The layout of the texture
-            wgpu::ImageDataLayout {
-                offset: 0,
-                bytes_per_row: std::num::NonZeroU32::new(4 * texture.width()),
-                rows_per_image: std::num::NonZeroU32::new(texture.height()),
-            },
-            texture_size,
+            texture.layout(),
+            texture.extend_3d(),
         );
 
         // We don't need to configure the texture view much, so let's
         // let wgpu define it.
-        let diffuse_texture_view =
-            diffuse_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let diffuse_texture_view = diffuse_texture.create_view(&wgpu::TextureViewDescriptor {
+            format: Some(texture.format()),
+            ..Default::default()
+        });
         let diffuse_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,

@@ -10,12 +10,11 @@ use zen_parser::prelude::{BinaryDeserializer, BinaryRead};
 mod error;
 mod ztex;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum ColorType {
     RGBA8,
     BGRA8,
     RGBA16,
-    RGB8,
 }
 
 #[derive(Clone)]
@@ -29,30 +28,41 @@ pub struct Texture {
 
 #[cfg(feature = "wgpu")]
 impl Texture {
-    pub fn desc(&self) -> wgpu::TextureDescriptor {
-        let size = wgpu::Extent3d {
+    pub fn format(&self) -> wgpu::TextureFormat {
+        match self.color_type {
+            ColorType::RGBA8 => wgpu::TextureFormat::Rgba8Uint,
+            ColorType::RGBA16 => wgpu::TextureFormat::Rgba16Uint,
+            ColorType::BGRA8 => wgpu::TextureFormat::Bgra8Unorm,
+        }
+    }
+
+    pub fn extend_3d(&self) -> wgpu::Extent3d {
+        wgpu::Extent3d {
             width: self.width,
             height: self.height,
             depth_or_array_layers: 1,
-        };
+        }
+    }
 
-        let format = match self.color_type {
-            ColorType::RGBA8 => wgpu::TextureFormat::Rgba8Uint,
-            ColorType::RGBA16 => wgpu::TextureFormat::Rgba16Uint,
-            ColorType::RGB8 => unimplemented!(),
-            ColorType::BGRA8 => wgpu::TextureFormat::Bgra8Unorm,
-        };
-
+    pub fn desc(&self) -> wgpu::TextureDescriptor {
         wgpu::TextureDescriptor {
-            size,
+            size: self.extend_3d(),
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format,
+            format: self.format(),
             // SAMPLED tells wgpu that we want to use this texture in shaders
             // COPY_DST means that we want to copy data to this texture
-            usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
+            usage: wgpu::TextureUsages::COPY_DST,
             label: Some(&self.name),
+        }
+    }
+
+    pub fn layout(&self) -> wgpu::ImageDataLayout {
+        wgpu::ImageDataLayout {
+            offset: 0,
+            bytes_per_row: std::num::NonZeroU32::new(4 * self.width),
+            rows_per_image: std::num::NonZeroU32::new(self.height),
         }
     }
 }
@@ -101,7 +111,6 @@ impl Texture {
             ColorType::BGRA8 => image::ColorType::Bgra8,
             ColorType::RGBA16 => image::ColorType::Rgba16,
             ColorType::RGBA8 => image::ColorType::Rgba8,
-            ColorType::RGB8 => image::ColorType::Rgb8,
         };
         Ok(encoder.encode(self.as_bytes(), self.width, self.height, color_type)?)
     }
@@ -214,12 +223,12 @@ impl Texture {
             }
             ztex::ColorType::P8 => unimplemented!(),
             ztex::ColorType::DXT1 => {
-                let mut decoded = vec![0_u8; size as usize * 3];
-                for chunk in decoded.chunks_mut((width / 4 * 48) as usize) {
+                let mut decoded = vec![0_u8; size as usize * 4];
+                for chunk in decoded.chunks_mut((width / 4 * 64) as usize) {
                     deserializer.len_queue.push((width / 4 * 8) as usize);
                     decode_dxt1_row(<Vec<u8>>::deserialize(&mut deserializer)?.as_slice(), chunk);
                 }
-                Texture::new(width, height, ColorType::RGB8, decoded, name.to_owned())
+                Texture::new(width, height, ColorType::RGBA8, decoded, name.to_owned())
             }
             ztex::ColorType::DXT2 => unimplemented!(),
             ztex::ColorType::DXT3 => {
@@ -310,13 +319,13 @@ fn enc565_decode(value: u16) -> Rgb {
     ]
 }
 
-/// decodes an 8-byte dxt color block into the RGB channels of a 16xRGB or 16xRGBA block.
-/// source should have a length of 8, dest a length of 48 (RGB) or 64 (RGBA)
+/// decodes an 8-byte dxt color block into the RGB channels of a 16xRGBA block.
+/// source should have a length of 8, dest a length of 64 (RGBA)
 fn decode_dxt_colors(source: &[u8], dest: &mut [u8], is_dxt1: bool) {
     // sanity checks, also enable the compiler to elide all following bound checks
-    assert!(source.len() == 8 && (dest.len() == 48 || dest.len() == 64));
+    assert!(source.len() == 8 && dest.len() == 64);
     // calculate pitch to store RGB values in dest (3 for RGB, 4 for RGBA)
-    let pitch = dest.len() / 16;
+    //let pitch = if is_dxt1 { 3 } else { 4 };
 
     // extract color data
     let color0 = u16::from(source[0]) | (u16::from(source[1]) << 8);
@@ -343,14 +352,14 @@ fn decode_dxt_colors(source: &[u8], dest: &mut [u8], is_dxt1: bool) {
         // linearly interpolate one other entry, keep the other at 0
         for i in 0..3 {
             colors[2][i] = ((u16::from(colors[0][i]) + u16::from(colors[1][i]) + 1) / 2) as u8;
+            colors[3][i] = 0xff;
         }
     }
 
     // serialize the result. Every color is determined by looking up
     // two bits in color_table which identify which color to actually pick from the 4 possible colors
     for i in 0..16 {
-        dest[i * pitch..i * pitch + 3]
-            .copy_from_slice(&colors[(color_table >> (i * 2)) as usize & 3]);
+        dest[i * 4..i * 4 + 3].copy_from_slice(&colors[(color_table >> (i * 2)) as usize & 3]);
     }
 }
 
@@ -395,29 +404,29 @@ fn decode_dxt3_block(source: &[u8], dest: &mut [u8]) {
     decode_dxt_colors(&source[8..16], dest, false);
 }
 
-/// Decodes a 8-byte block of dxt1 data to a 16xRGB block
+/// Decodes a 8-byte block of dxt1 data to a 16xRGBA block
 fn decode_dxt1_block(source: &[u8], dest: &mut [u8]) {
-    assert!(source.len() == 8 && dest.len() == 48);
+    assert!(source.len() == 8 && dest.len() == 64);
     decode_dxt_colors(&source, dest, true);
 }
 
-/// Decode a row of DXT1 data to four rows of RGB data.
+/// Decode a row of DXT1 data to four rows of RGBA data.
 /// source.len() should be a multiple of 8, otherwise this panics.
 fn decode_dxt1_row(source: &[u8], dest: &mut [u8]) {
     assert!(source.len() % 8 == 0);
     let block_count = source.len() / 8;
-    assert!(dest.len() >= block_count * 48);
+    assert!(dest.len() >= block_count * 64);
 
     // contains the 16 decoded pixels per block
-    let mut decoded_block = [0u8; 48];
+    let mut decoded_block = [0u8; 64];
 
     for (x, encoded_block) in source.chunks(8).enumerate() {
         decode_dxt1_block(encoded_block, &mut decoded_block);
 
         // copy the values from the decoded block to linewise RGB layout
         for line in 0..4 {
-            let offset = (block_count * line + x) * 12;
-            dest[offset..offset + 12].copy_from_slice(&decoded_block[line * 12..(line + 1) * 12]);
+            let offset = (block_count * line + x) * 16;
+            dest[offset..offset + 16].copy_from_slice(&decoded_block[line * 16..(line + 1) * 16]);
         }
     }
 }
