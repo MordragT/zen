@@ -31,8 +31,8 @@ impl RenderModel {
 
     pub fn render<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
         for state in self.meshes.iter() {
-            state.render(render_pass, 0..1);
             self.materials[state.material()].render(render_pass);
+            state.render(render_pass, 0..1);
         }
     }
 }

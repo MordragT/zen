@@ -18,6 +18,6 @@ impl RenderMaterial {
     }
 
     pub fn render<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
-        render_pass.set_bind_group(1, &self.texture.bind_group, &[]);
+        render_pass.set_bind_group(0, &self.texture.bind_group, &[]);
     }
 }
