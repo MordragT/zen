@@ -1,19 +1,17 @@
 [package]
 name = "zen-render"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-winit = "0.25.0"
 wgpu = "0.10"
-pollster = "0.2"
+winit = "0.25"
 bytemuck = { version = "1.7.0", features = ["derive"] }
 zen-model = {  path = "../zen-model" }
 zen-texture = { path = "../zen-texture" }
 zen-material = { path = "../zen-material" }
-env_logger = "0.8.4"
 cgmath = "0.18.0"
 
 [dev-dependencies]

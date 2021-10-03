@@ -1,11 +1,7 @@
 use camera::{Camera, CameraController, Projection};
 use model::RenderModel;
 use wgpu::util::DeviceExt;
-use winit::{
-    event::*,
-    event_loop::{ControlFlow, EventLoop},
-    window::{Window, WindowBuilder},
-};
+use winit::window::Window;
 
 use zen_model::{Mesh, Model, Vertex};
 
@@ -19,71 +15,71 @@ pub mod model;
 pub mod texture;
 pub mod uniforms;
 
-pub fn run(model: &Model) {
-    env_logger::init();
-    let event_loop = EventLoop::new();
-    let window = WindowBuilder::new().build(&event_loop).unwrap();
-    // Since main can't be async, we're going to need to block
-    let mut state = pollster::block_on(State::new(&window, model));
-    let mut last_render_time = std::time::Instant::now();
+// pub fn run(model: &Model) {
+//     env_logger::init();
+//     let event_loop = EventLoop::new();
+//     let window = WindowBuilder::new().build(&event_loop).unwrap();
+//     // Since main can't be async, we're going to need to block
+//     let mut state = pollster::block_on(State::new(&window, model));
+//     let mut last_render_time = std::time::Instant::now();
 
-    event_loop.run(move |event, _, control_flow| match event {
-        Event::DeviceEvent {
-            ref event,
-            .. // We're not using device_id currently
-        } => {
-            state.input(event);
-        }
-        Event::WindowEvent {
-            ref event,
-            window_id,
-        } if window_id == window.id() => {
-            match event {
-                WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-                WindowEvent::KeyboardInput { input, .. } => match input {
-                    KeyboardInput {
-                        state: ElementState::Pressed,
-                        virtual_keycode: Some(VirtualKeyCode::Escape),
-                        ..
-                    } => {
-                        *control_flow = ControlFlow::Exit;
-                    }
-                    _ => {}
-                },
-                WindowEvent::Resized(physical_size) => {
-                    state.resize(*physical_size);
-                }
-                WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                    state.resize(**new_inner_size);
-                }
-                _ => {}
-            }
-        }
-        Event::RedrawRequested(_) => {
-            let now = std::time::Instant::now();
-            let dt = now - last_render_time;
-            last_render_time = now;
-            state.update(dt);
-            match state.render() {
-                Ok(_) => {}
-                // Recreate the swap_chain if lost
-                Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
-                // The system is out of memory, we should probably quit
-                Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
-                // All other errors (Outdated, Timeout) should be resolved by the next frame
-                Err(e) => eprintln!("{:?}", e),
-            }
-        }
-        Event::MainEventsCleared => {
-            // RedrawRequested will only trigger once, unless we manually
-            // request it.
-            window.request_redraw();
-        }
-        _ => {}
-    });
-}
+//     event_loop.run(move |event, _, control_flow| match event {
+//         Event::DeviceEvent {
+//             ref event,
+//             .. // We're not using device_id currently
+//         } => {
+//             state.input(event);
+//         }
+//         Event::WindowEvent {
+//             ref event,
+//             window_id,
+//         } if window_id == window.id() => {
+//             match event {
+//                 WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+//                 WindowEvent::KeyboardInput { input, .. } => match input {
+//                     KeyboardInput {
+//                         state: ElementState::Pressed,
+//                         virtual_keycode: Some(VirtualKeyCode::Escape),
+//                         ..
+//                     } => {
+//                         *control_flow = ControlFlow::Exit;
+//                     }
+//                     _ => {}
+//                 },
+//                 WindowEvent::Resized(physical_size) => {
+//                     state.resize(*physical_size);
+//                 }
+//                 WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+//                     state.resize(**new_inner_size);
+//                 }
+//                 _ => {}
+//             }
+//         }
+//         Event::RedrawRequested(_) => {
+//             let now = std::time::Instant::now();
+//             let dt = now - last_render_time;
+//             last_render_time = now;
+//             state.update(dt);
+//             match state.render() {
+//                 Ok(_) => {}
+//                 // Recreate the swap_chain if lost
+//                 Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
+//                 // The system is out of memory, we should probably quit
+//                 Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+//                 // All other errors (Outdated, Timeout) should be resolved by the next frame
+//                 Err(e) => eprintln!("{:?}", e),
+//             }
+//         }
+//         Event::MainEventsCleared => {
+//             // RedrawRequested will only trigger once, unless we manually
+//             // request it.
+//             window.request_redraw();
+//         }
+//         _ => {}
+//     });
+// }
 
-struct State {
+pub struct Renderer {
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -101,9 +97,9 @@ struct State {
     uniform_bind_group: wgpu::BindGroup,
 }
 
-impl State {
+impl Renderer {
     // Creating some of the wgpu types requires async code
-    async fn new(window: &Window, model: &Model) -> Self {
+    pub async fn new(window: &Window, model: &Model) -> Self {
         let size = window.inner_size();
 
         // The instance is a handle to our GPU
@@ -346,33 +342,33 @@ impl State {
         //self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
     }
 
-    fn input(&mut self, event: &DeviceEvent) -> bool {
-        match event {
-            DeviceEvent::Key(KeyboardInput {
-                virtual_keycode: Some(key),
-                state,
-                ..
-            }) => self.camera_controller.process_keyboard(*key, *state),
-            DeviceEvent::MouseWheel { delta, .. } => {
-                self.camera_controller.process_scroll(delta);
-                true
-            }
-            DeviceEvent::Button {
-                button: 1, // Left Mouse Button
-                state,
-            } => {
-                self.mouse_pressed = *state == ElementState::Pressed;
-                true
-            }
-            DeviceEvent::MouseMotion { delta } => {
-                if self.mouse_pressed {
-                    self.camera_controller.process_mouse(delta.0, delta.1);
-                }
-                true
-            }
-            _ => false,
-        }
-    }
+    // fn input(&mut self, event: &DeviceEvent) -> bool {
+    //     match event {
+    //         DeviceEvent::Key(KeyboardInput {
+    //             virtual_keycode: Some(key),
+    //             state,
+    //             ..
+    //         }) => self.camera_controller.process_keyboard(*key, *state),
+    //         DeviceEvent::MouseWheel { delta, .. } => {
+    //             self.camera_controller.process_scroll(delta);
+    //             true
+    //         }
+    //         DeviceEvent::Button {
+    //             button: 1, // Left Mouse Button
+    //             state,
+    //         } => {
+    //             self.mouse_pressed = *state == ElementState::Pressed;
+    //             true
+    //         }
+    //         DeviceEvent::MouseMotion { delta } => {
+    //             if self.mouse_pressed {
+    //                 self.camera_controller.process_mouse(delta.0, delta.1);
+    //             }
+    //             true
+    //         }
+    //         _ => false,
+    //     }
+    // }
 
     fn update(&mut self, dt: std::time::Duration) {
         self.camera_controller.update_camera(&mut self.camera, dt);

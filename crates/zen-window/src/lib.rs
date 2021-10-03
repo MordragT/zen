@@ -6,6 +6,7 @@ use winit::{
 };
 use zen_app::App;
 use zen_input::Input;
+use zen_render::Renderer;
 
 pub mod error;
 
@@ -14,11 +15,12 @@ pub struct Window<A: App + 'static, I: Input + 'static> {
     window: WinitWindow,
     app: A,
     input: I,
+    renderer: Renderer,
     pub world: World,
 }
 
 impl<A: App, I: Input> Window<A, I> {
-    pub fn new(app: A, input: I, world: World) -> Self {
+    pub fn new(app: A, input: I, world: World, renderer: Renderer) -> Self {
         env_logger::init();
 
         let event_loop = EventLoop::new();
@@ -29,6 +31,7 @@ impl<A: App, I: Input> Window<A, I> {
             window,
             app,
             input,
+            renderer,
             world,
         }
     }

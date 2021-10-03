@@ -52,6 +52,7 @@ pub trait AssetLoader {
 fn extensions_to_string(extensions: &[&str]) -> String {
     extensions.iter().fold(String::new(), |mut init, ext| {
         init.push_str(ext);
+        init.push(' ');
         init
     })
 }
