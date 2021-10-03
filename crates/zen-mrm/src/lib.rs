@@ -1,19 +1,58 @@
+//! This crate can deserialize [.mrm](Mrm) meshes,
+//! and convert them into [Model] objects.
+//!
+//! ```rust
+//! use std::{convert::TryFrom, fs::File, io::Cursor};
+//! use zen_archive::Vdfs;
+//! use zen_model::{gltf, Model};
+//! use zen_mrm::Mrm;
+//! use zen_types::path::INSTANCE;
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let vdf_file = File::open(INSTANCE.meshes())?;
+//! let vdf = Vdfs::new(vdf_file)?;
+//! let mesh_entry = vdf
+//!     .get_by_name("ORC_MASTERTHRONE.MRM")
+//!     .expect("Should be there!");
+//! let cursor = Cursor::new(mesh_entry.data);
+//! let mesh = Mrm::new(cursor, "ORC_MASTERTHRONE")?;
+//! let model = Model::try_from(mesh)?;
+//! let _gltf = gltf::to_gltf(mesh, gltf::Output::Binary);
+//! #    Ok(())
+//! # }
+//! ```
+
 pub use error::Error;
 use error::Result;
 use serde::Deserialize;
-use std::io::{Seek, SeekFrom};
+use std::io::{Cursor, Seek, SeekFrom};
 use sub_mesh::*;
+use zen_app::{Asset, AssetLoader};
 use zen_material::*;
 use zen_math::{Vec2, Vec3, Vec4};
 use zen_model::*;
 use zen_parser::prelude::*;
-//use zen_types::mesh::{self, mrm};
 
 mod error;
 mod sub_mesh;
 
 const PROG_MESH: u16 = 45312;
 //const PROG_MESH_END: u16 = 45567;
+
+pub struct MrmLoader;
+
+impl AssetLoader for MrmLoader {
+    type Error = Error;
+    fn load(data: &[u8], name: &str) -> Result<Asset> {
+        let cursor = Cursor::new(data);
+        let mrm = Mrm::new(cursor, name)?;
+        let model = Model::try_from(mrm)?;
+        Ok(Asset::Model(model))
+    }
+    fn extensions() -> &'static [&'static str] {
+        &["mrm"]
+    }
+}
 
 /// Holds data of an .mrm file
 /// Mrm == Mutli Resolution Mesh
@@ -26,7 +65,61 @@ pub struct Mrm {
     pub bounding_box: (Vec3<f32>, Vec3<f32>),
 }
 
+impl TryFrom<Mrm> for Model {
+    type Error = Error;
+    fn try_from(object_mesh: Mrm) -> Result<Self> {
+        let (object_sub_meshes, object_vertices) = (object_mesh.sub_meshes, object_mesh.vertices);
+
+        let mut materials = Vec::new();
+        let meshes = object_sub_meshes
+            .into_iter()
+            .enumerate()
+            .map(|(n, sub_mesh)| {
+                let indices = sub_mesh
+                    .triangles
+                    .into_iter()
+                    .map(|v| v.to_array())
+                    .flatten()
+                    .map(|pos| pos as u32)
+                    .collect::<Vec<u32>>();
+
+                let mut mesh = sub_mesh.wedges.into_iter().fold(
+                    Mesh {
+                        vertices: Vec::new(),
+                        num_elements: indices.len() as u32,
+                        indices,
+                        material: n,
+                    },
+                    |mut mesh, wedge| {
+                        let vertex = Vertex {
+                            position: object_vertices[wedge.vertex_index as usize].to_array(),
+                            tex_coords: wedge.tex_coord.to_array(),
+                            normal: wedge.normal.to_array(),
+                        };
+                        mesh.vertices.push(vertex);
+                        mesh
+                    },
+                );
+
+                mesh.scale(0.02);
+
+                //let mesh = mesh.pack();
+                let material = Material::try_from(&sub_mesh.material)?;
+                materials.push(material);
+
+                Ok(mesh)
+            })
+            .collect::<Result<Vec<Mesh>>>()?;
+        Ok(Self {
+            name: object_mesh.name,
+            meshes,
+            materials,
+        })
+    }
+}
+
 impl Mrm {
+    /// Creates a new mutli resolution mesh from a reader
     pub fn new<R: BinaryRead + AsciiRead>(reader: R, name: &str) -> Result<Mrm> {
         let mut deserializer = BinaryDeserializer::from(reader);
 
@@ -198,59 +291,6 @@ impl Mrm {
             sub_meshes,
             alpha_test,
             bounding_box,
-        })
-    }
-}
-
-impl TryFrom<Mrm> for Model {
-    type Error = Error;
-    fn try_from(object_mesh: Mrm) -> Result<Self> {
-        let (object_sub_meshes, object_vertices) = (object_mesh.sub_meshes, object_mesh.vertices);
-
-        let mut materials = Vec::new();
-        let meshes = object_sub_meshes
-            .into_iter()
-            .enumerate()
-            .map(|(n, sub_mesh)| {
-                let indices = sub_mesh
-                    .triangles
-                    .into_iter()
-                    .map(|v| v.to_array())
-                    .flatten()
-                    .map(|pos| pos as u32)
-                    .collect::<Vec<u32>>();
-
-                let mut mesh = sub_mesh.wedges.into_iter().fold(
-                    Mesh {
-                        vertices: Vec::new(),
-                        num_elements: indices.len() as u32,
-                        indices,
-                        material: n,
-                    },
-                    |mut mesh, wedge| {
-                        let vertex = Vertex {
-                            position: object_vertices[wedge.vertex_index as usize].to_array(),
-                            tex_coords: wedge.tex_coord.to_array(),
-                            normal: wedge.normal.to_array(),
-                        };
-                        mesh.vertices.push(vertex);
-                        mesh
-                    },
-                );
-
-                mesh.scale(0.02);
-
-                //let mesh = mesh.pack();
-                let material = Material::try_from(&sub_mesh.material)?;
-                materials.push(material);
-
-                Ok(mesh)
-            })
-            .collect::<Result<Vec<Mesh>>>()?;
-        Ok(Self {
-            name: object_mesh.name,
-            meshes,
-            materials,
         })
     }
 }

@@ -4,15 +4,12 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::{Window as WinitWindow, WindowBuilder},
 };
+use zen_app::App;
 use zen_input::Input;
-//use zen_ects::{stages, EventLifetime, WorldInterface, ZenWorld};
-//use zen_input::keyboard::KeyCode;
 
 pub mod error;
 
-pub trait Application {}
-
-pub struct Window<A: Application + 'static, I: Input + 'static> {
+pub struct Window<A: App + 'static, I: Input + 'static> {
     event_loop: EventLoop<()>,
     window: WinitWindow,
     app: A,
@@ -20,7 +17,7 @@ pub struct Window<A: Application + 'static, I: Input + 'static> {
     pub world: World,
 }
 
-impl<A: Application, I: Input> Window<A, I> {
+impl<A: App, I: Input> Window<A, I> {
     pub fn new(app: A, input: I, world: World) -> Self {
         env_logger::init();
 
@@ -37,6 +34,7 @@ impl<A: Application, I: Input> Window<A, I> {
     }
 
     pub fn run(mut self) {
+        self.app.on_init(&mut self.world);
         self.event_loop
             .run(move |event, _, control_flow: &mut ControlFlow| {
                 match event {
@@ -86,6 +84,11 @@ impl<A: Application, I: Input> Window<A, I> {
                     },
                     _ => {}
                 };
+                self.app.on_first(&mut self.world);
+                self.app.on_pre_update(&mut self.world);
+                self.app.on_update(&mut self.world);
+                self.app.on_post_update(&mut self.world);
+                self.app.on_last(&mut self.world);
             });
     }
 }

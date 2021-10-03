@@ -17,7 +17,8 @@ members = ["crates/*"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-zen-archive = {  path = "crates/zen-archive" }
+zen-app = { path = "crates/zen-app" }
+zen-archive = { path = "crates/zen-archive" }
 zen-mrm = { path = "crates/zen-mrm", optional = true }
 zen-msh = { path = "crates/zen-msh", optional = true }
 zen-window = { path = "crates/zen-window" }

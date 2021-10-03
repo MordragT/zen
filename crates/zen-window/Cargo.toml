@@ -9,7 +9,7 @@ edition = "2021"
 winit = "0.25.0"
 env_logger = "0.8.4"
 hecs = "0.6.5"
-#zen-ects = { path = "../zen-ects" }
+zen-app = { path = "../zen-app" }
 zen-input = { path = "../zen-input" }
 
 

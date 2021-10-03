@@ -1,12 +1,36 @@
+//! This crate can deserialize [.msh](Msh) (compiled meshes),
+//! and convert them into [Model] objects.
+//!
+//! ```rust
+//! use std::{convert::TryFrom, fs::File, io::Cursor};
+//! use zen_archive::Vdfs;
+//! use zen_msh::Msh;
+//! use zen_model::{gltf, Model};
+//! use zen_types::path::INSTANCE;
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let vdf_file = File::open(INSTANCE.meshes())?;
+//! let vdf = Vdfs::new(vdf_file)?;
+//! let mesh_entry = vdf
+//!     .get_by_name("MFX_FEAR4.MSH")
+//!     .expect("Should be there!");
+//! let cursor = Cursor::new(mesh_entry.data);
+//! let mesh = Msh::new(cursor, "FEAR4")?;
+//! let model = Model::try_from(mesh)?;
+//! let _gltf = gltf::to_gltf(mesh, gltf::Output::Binary);
+//! #    Ok(())
+//! # }
+//!
+
 pub use error::Error;
 use error::Result;
 use serde::Deserialize;
 use std::convert::TryFrom;
-use std::io::{Seek, SeekFrom};
+use std::io::{Cursor, Seek, SeekFrom};
+use zen_app::{Asset, AssetLoader};
 use zen_math::Vec3;
 use zen_model::*;
 use zen_parser::prelude::*;
-//use zen_types::mesh::{self, msh};
 
 mod error;
 mod structures;
@@ -23,6 +47,21 @@ const MESH_END: u16 = 0xB060;
 
 const GOTHIC2_6: u32 = 265;
 const GOTHIC1_08K: u32 = 9;
+
+pub struct MshLoader;
+
+impl AssetLoader for MshLoader {
+    type Error = Error;
+    fn load(data: &[u8], name: &str) -> Result<Asset> {
+        let cursor = Cursor::new(data);
+        let msh = Msh::new(cursor, name)?;
+        let model = Model::try_from(msh)?;
+        Ok(Asset::Model(model))
+    }
+    fn extensions() -> &'static [&'static str] {
+        &["msh"]
+    }
+}
 
 pub struct Msh {
     pub name: String,

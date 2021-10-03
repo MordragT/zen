@@ -1941,6 +1941,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b07db065a5cf61a7e4ba64f29e67db906fb1787316516c4e6e5ff0fea1efcd8a"
 
 [[package]]
+name = "zen-app"
+version = "0.1.0"
+dependencies = [
+ "hecs",
+ "zen-model",
+]
+
+[[package]]
 name = "zen-archive"
 version = "0.0.1"
 dependencies = [
@@ -1967,6 +1975,7 @@ dependencies = [
 name = "zen-loader"
 version = "0.0.1"
 dependencies = [
+ "zen-app",
  "zen-archive",
  "zen-daedalus",
  "zen-material",
@@ -2022,6 +2031,7 @@ name = "zen-mrm"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "zen-app",
  "zen-archive",
  "zen-material",
  "zen-math",
@@ -2035,6 +2045,7 @@ name = "zen-msh"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "zen-app",
  "zen-archive",
  "zen-material",
  "zen-math",
@@ -2094,5 +2105,6 @@ dependencies = [
  "env_logger",
  "hecs",
  "winit",
+ "zen-app",
  "zen-input",
 ]

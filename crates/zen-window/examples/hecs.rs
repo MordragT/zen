@@ -1,6 +1,7 @@
 use hecs::{PreparedQuery, World};
+use zen_app::App;
 use zen_input::{Input, KeyboardInput, MouseInput};
-use zen_window::{Application, Window};
+use zen_window::Window;
 
 pub fn main() {
     let app = ZenApplication {};
@@ -12,7 +13,16 @@ pub fn main() {
 
 struct ZenApplication {}
 
-impl Application for ZenApplication {}
+impl App for ZenApplication {
+    fn on_init(&mut self, _world: &mut World) {
+        println!("Starting Application...");
+    }
+    fn on_first(&mut self, _world: &mut World) {}
+    fn on_pre_update(&mut self, _world: &mut World) {}
+    fn on_update(&mut self, _world: &mut World) {}
+    fn on_post_update(&mut self, _world: &mut World) {}
+    fn on_last(&mut self, _world: &mut World) {}
+}
 
 struct ZenInput {}
 

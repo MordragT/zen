@@ -10,6 +10,7 @@ zen-math = { path = "../zen-math" }
 zen-parser = { path = "../zen-parser" }
 zen-material = { path = "../zen-material" }
 zen-model = { path = "../zen-model" }
+zen-app = { path = "../zen-app" }
 serde = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]

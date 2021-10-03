@@ -205,7 +205,7 @@ pub fn to_gltf(input: Model, output: Output) -> PathBuf {
                 let image = json::Image {
                     name: None,
                     buffer_view: None, //Some(json::Index::new(i as u32 * NUM + 4)),
-                    mime_type: Some(json::image::MimeType("image/png".to_string())),
+                    mime_type: Some(json::image::MimeType("image/png".to_owned())),
                     uri: Some(
                         Path::new("../")
                             .join(image_path.strip_prefix(&FILES_INSTANCE.base_path).unwrap())

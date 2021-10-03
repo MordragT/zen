@@ -1,25 +1,5 @@
-//! This crate can deserialize [.mrm](MrmMesh) or [.msh](MshMesh) meshes,
-//! and convert them into [gltf] files.
-//!
-//! ```rust
-//! use std::{convert::TryFrom, fs::File, io::Cursor};
-//! use zen_archive::Vdfs;
-//! use zen_mesh::{gltf, mrm::MrmMesh, Model};
-//! use zen_types::path::INSTANCE;
-//!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! let vdf_file = File::open(INSTANCE.meshes())?;
-//! let vdf = Vdfs::new(vdf_file)?;
-//! let mesh_entry = vdf
-//!     .get_by_name("ORC_MASTERTHRONE.MRM")
-//!     .expect("Should be there!");
-//! let cursor = Cursor::new(mesh_entry.data);
-//! let mesh = MrmMesh::new(cursor, "ORC_MASTERTHRONE")?;
-//! let mesh = Model::try_from(mesh)?;
-//! let _gltf = gltf::to_gltf(mesh, gltf::Output::Binary);
-//! #    Ok(())
-//! # }
-//! ```
+//! This crate holds data structures required for [Model] objects
+//! and different operations on them.
 
 use std::collections::HashMap;
 use zen_material::Material;
@@ -33,6 +13,7 @@ pub type Scene = Vec<Model>;
 
 #[repr(C)]
 #[derive(Clone, Debug, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+/// A simple Vertex
 pub struct Vertex {
     pub position: [f32; 3],
     pub tex_coords: [f32; 2],
