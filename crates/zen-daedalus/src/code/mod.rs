@@ -62,7 +62,7 @@ impl Code {
                         }
                         name
                     } else {
-                        "".to_string()
+                        "".to_owned()
                     };
                     let properties = Properties::new(
                         i32::deserialize(&mut deserializer)?,
