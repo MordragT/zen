@@ -1,31 +1,43 @@
-use crate::error::*;
+pub use error::Error;
+use error::Result;
 use serde::Deserialize;
 use std::io::{Seek, SeekFrom};
+use sub_mesh::*;
+use zen_material::*;
 use zen_math::{Vec2, Vec3, Vec4};
+use zen_model::*;
 use zen_parser::prelude::*;
 //use zen_types::mesh::{self, mrm};
 
-mod structures;
+mod error;
+mod sub_mesh;
 
 const PROG_MESH: u16 = 45312;
 //const PROG_MESH_END: u16 = 45567;
 
 /// Holds data of an .mrm file
 /// Mrm == Mutli Resolution Mesh
-pub struct MrmMesh {
+pub struct Mrm {
     pub name: String,
     pub vertices: Vec<Vec3<f32>>,
     pub normals: Vec<Vec3<f32>>,
-    pub sub_meshes: Vec<structures::SubMesh>,
+    pub sub_meshes: Vec<SubMesh>,
     pub alpha_test: bool,
     pub bounding_box: (Vec3<f32>, Vec3<f32>),
 }
 
-impl MrmMesh {
-    pub fn new<R: BinaryRead + AsciiRead>(reader: R, name: &str) -> Result<MrmMesh> {
+impl Mrm {
+    pub fn new<R: BinaryRead + AsciiRead>(reader: R, name: &str) -> Result<Mrm> {
         let mut deserializer = BinaryDeserializer::from(reader);
 
-        let chunk = <crate::structures::Chunk>::deserialize(&mut deserializer)?;
+        #[derive(Deserialize)]
+        #[repr(C, packed(4))]
+        struct Chunk {
+            id: u16,
+            length: u32,
+        }
+
+        let chunk = <Chunk>::deserialize(&mut deserializer)?;
         let chunk_end = SeekFrom::Current(chunk.length as i64);
 
         if chunk.id != PROG_MESH {
@@ -43,10 +55,10 @@ impl MrmMesh {
             .seek(SeekFrom::Current(data_size as i64))?;
 
         let num_sub_meshes = u8::deserialize(&mut deserializer)?;
-        let main_offsets = <structures::Offset>::deserialize(&mut deserializer)?;
+        let main_offsets = <Offset>::deserialize(&mut deserializer)?;
 
         deserializer.len_queue.push(num_sub_meshes as usize);
-        let sub_mesh_offsets = <Vec<structures::SubMeshOffsets>>::deserialize(&mut deserializer)?;
+        let sub_mesh_offsets = <Vec<SubMeshOffsets>>::deserialize(&mut deserializer)?;
 
         // let mut ascii_de = AsciiDeserializer::from(deserializer);
         // ascii_de.read_header()?;
@@ -55,11 +67,10 @@ impl MrmMesh {
 
         let mut materials = (0..num_sub_meshes)
             .map(|_| {
-                let material: zen_material::GeneralMaterial = {
+                let material: GeneralMaterial = {
                     let _name = String::deserialize(&mut deserializer)?;
                     // Skip name and chunk headers
-                    let material_header =
-                        zen_material::ChunkHeader::deserialize(&mut deserializer)?;
+                    let material_header = ChunkHeader::deserialize(&mut deserializer)?;
 
                     // Skip chunk header
                     let _name = String::deserialize(&mut deserializer)?;
@@ -68,14 +79,14 @@ impl MrmMesh {
                     // Save into Vec
                     match material_header.version {
                         zen_material::GOTHIC2 => {
-                            zen_material::AdvancedMaterial::deserialize(&mut deserializer)?.into()
+                            AdvancedMaterial::deserialize(&mut deserializer)?.into()
                         }
-                        _ => zen_material::BasicMaterial::deserialize(&mut deserializer)?.into(),
+                        _ => BasicMaterial::deserialize(&mut deserializer)?.into(),
                     }
                 };
                 Ok(material)
             })
-            .collect::<Result<Vec<zen_material::GeneralMaterial>>>()?;
+            .collect::<Result<Vec<GeneralMaterial>>>()?;
 
         // TODO gothic 1 should not read byte
         let alpha_test = bool::deserialize(&mut deserializer)?;
@@ -113,7 +124,7 @@ impl MrmMesh {
                     .parser
                     .seek(SeekFrom::Start(data_seek + offset.wedges.offset as u64))?;
                 deserializer.len_queue.push(offset.wedges.size as usize);
-                let wedges = <Vec<structures::Wedge>>::deserialize(&mut deserializer)?;
+                let wedges = <Vec<Wedge>>::deserialize(&mut deserializer)?;
 
                 deserializer
                     .parser
@@ -135,8 +146,7 @@ impl MrmMesh {
                 deserializer
                     .len_queue
                     .push(offset.triangle_planes.size as usize);
-                let triangle_planes =
-                    <Vec<crate::structures::Plane>>::deserialize(&mut deserializer)?;
+                let triangle_planes = <Vec<Plane>>::deserialize(&mut deserializer)?;
 
                 deserializer.seek(SeekFrom::Start(
                     data_seek + offset.triangle_edges.offset as u64,
@@ -166,7 +176,7 @@ impl MrmMesh {
                 deserializer.len_queue.push(offset.wedge_map.size as usize);
                 let wedge_map = <Vec<u16>>::deserialize(&mut deserializer)?;
 
-                Ok(structures::SubMesh::new(
+                Ok(SubMesh::new(
                     materials.remove(0),
                     triangles,
                     wedges,
@@ -179,7 +189,7 @@ impl MrmMesh {
                     edge_scores,
                 ))
             })
-            .collect::<Result<Vec<structures::SubMesh>>>()?;
+            .collect::<Result<Vec<SubMesh>>>()?;
         deserializer.seek(chunk_end)?;
         Ok(Self {
             name: name.to_string(),
@@ -188,6 +198,59 @@ impl MrmMesh {
             sub_meshes,
             alpha_test,
             bounding_box,
+        })
+    }
+}
+
+impl TryFrom<Mrm> for Model {
+    type Error = Error;
+    fn try_from(object_mesh: Mrm) -> Result<Self> {
+        let (object_sub_meshes, object_vertices) = (object_mesh.sub_meshes, object_mesh.vertices);
+
+        let mut materials = Vec::new();
+        let meshes = object_sub_meshes
+            .into_iter()
+            .enumerate()
+            .map(|(n, sub_mesh)| {
+                let indices = sub_mesh
+                    .triangles
+                    .into_iter()
+                    .map(|v| v.to_array())
+                    .flatten()
+                    .map(|pos| pos as u32)
+                    .collect::<Vec<u32>>();
+
+                let mut mesh = sub_mesh.wedges.into_iter().fold(
+                    Mesh {
+                        vertices: Vec::new(),
+                        num_elements: indices.len() as u32,
+                        indices,
+                        material: n,
+                    },
+                    |mut mesh, wedge| {
+                        let vertex = Vertex {
+                            position: object_vertices[wedge.vertex_index as usize].to_array(),
+                            tex_coords: wedge.tex_coord.to_array(),
+                            normal: wedge.normal.to_array(),
+                        };
+                        mesh.vertices.push(vertex);
+                        mesh
+                    },
+                );
+
+                mesh.scale(0.02);
+
+                //let mesh = mesh.pack();
+                let material = Material::try_from(&sub_mesh.material)?;
+                materials.push(material);
+
+                Ok(mesh)
+            })
+            .collect::<Result<Vec<Mesh>>>()?;
+        Ok(Self {
+            name: object_mesh.name,
+            meshes,
+            materials,
         })
     }
 }

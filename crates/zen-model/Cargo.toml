@@ -1,5 +1,5 @@
 [package]
-name = "zen-mesh"
+name = "zen-model"
 version = "0.0.1"
 authors = ["MordragT <scrat_games@gmx.de>"]
 edition = "2018"
@@ -20,6 +20,7 @@ bytemuck = { version = "1.7.0", features = ["derive"] }
 
 [dev-dependencies]
 zen-archive = {  path = "../zen-archive" }
+zen-mrm = { path = "../zen-mrm" }
 
 [features]
 default = ["to-gltf"]

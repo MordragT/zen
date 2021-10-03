@@ -1,7 +1,7 @@
 use std::ops::Range;
 
 use wgpu::{util::DeviceExt, RenderPass};
-use zen_mesh::Mesh;
+use zen_model::Mesh;
 
 pub struct RenderMesh {
     vertex_buffer: wgpu::Buffer,

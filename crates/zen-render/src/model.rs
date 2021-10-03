@@ -1,4 +1,4 @@
-use zen_mesh::Model;
+use zen_model::Model;
 
 use crate::{material::RenderMaterial, mesh::RenderMesh, texture::RenderTexture};
 

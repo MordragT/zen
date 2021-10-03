@@ -10,7 +10,7 @@ winit = "0.25.0"
 wgpu = "0.10"
 pollster = "0.2"
 bytemuck = { version = "1.7.0", features = ["derive"] }
-zen-mesh = {  path = "../zen-mesh" }
+zen-model = {  path = "../zen-model" }
 zen-texture = { path = "../zen-texture" }
 zen-material = { path = "../zen-material" }
 env_logger = "0.8.4"

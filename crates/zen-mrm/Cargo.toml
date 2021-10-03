@@ -1,0 +1,18 @@
+[package]
+name = "zen-mrm"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+zen-math = { path = "../zen-math" }
+zen-parser = { path = "../zen-parser" }
+zen-material = { path = "../zen-material" }
+zen-model = { path = "../zen-model" }
+serde = { version = "1.0", features = ["derive"] }
+
+
+[dev-dependencies]
+zen-types = { path = "../zen-types" }
+zen-archive = { path = "../zen-archive" }

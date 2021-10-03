@@ -7,7 +7,7 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-use zen_mesh::{Mesh, Model, Vertex};
+use zen_model::{Mesh, Model, Vertex};
 
 use crate::uniforms::Uniforms;
 

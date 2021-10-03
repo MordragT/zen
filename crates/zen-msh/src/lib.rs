@@ -1,11 +1,14 @@
-use crate::error::*;
+pub use error::Error;
+use error::Result;
 use serde::Deserialize;
 use std::convert::TryFrom;
 use std::io::{Seek, SeekFrom};
 use zen_math::Vec3;
+use zen_model::*;
 use zen_parser::prelude::*;
 //use zen_types::mesh::{self, msh};
 
+mod error;
 mod structures;
 
 const MESH: u16 = 0xB000;
@@ -21,7 +24,7 @@ const MESH_END: u16 = 0xB060;
 const GOTHIC2_6: u32 = 265;
 const GOTHIC1_08K: u32 = 9;
 
-pub struct MshMesh {
+pub struct Msh {
     pub name: String,
     pub materials: Vec<zen_material::GeneralMaterial>,
     pub vertices: Vec<Vec3<f32>>,
@@ -29,9 +32,57 @@ pub struct MshMesh {
     pub polygons: Vec<structures::Polygon>,
 }
 
-impl TryFrom<Box<MshMeshBuilder>> for MshMesh {
+impl TryFrom<Msh> for Model {
     type Error = Error;
-    fn try_from(builder: Box<MshMeshBuilder>) -> Result<Self> {
+    fn try_from(mesh: Msh) -> Result<Self> {
+        let Msh {
+            name,
+            materials,
+            vertices,
+            features,
+            polygons,
+        } = mesh;
+        let mut new_materials = Vec::new();
+        let meshes = polygons
+            .into_iter()
+            .enumerate()
+            .map(|(n, polygon)| -> Result<Mesh> {
+                let vertices = polygon
+                    .indices
+                    .iter()
+                    .map(|index| Vertex {
+                        position: vertices[index.vertex as usize].to_array(),
+                        tex_coords: features[index.feature as usize].tex_coord.to_array(),
+                        normal: features[index.feature as usize].vert_normal.to_array(),
+                    })
+                    .collect::<Vec<Vertex>>();
+                let indices = (0..vertices.len() / 3)
+                    .into_iter()
+                    .map(|i| i as u32)
+                    .collect::<Vec<u32>>();
+
+                let material = (&materials[polygon.material_index as usize]).try_into()?;
+                new_materials.push(material);
+
+                let num_elements = (vertices.len() / 3) as u32;
+                Ok(Mesh {
+                    vertices,
+                    indices,
+                    material: n,
+                    num_elements,
+                })
+            })
+            .collect::<Result<Vec<Mesh>>>()?;
+        Ok(Model {
+            name,
+            meshes,
+            materials: new_materials,
+        })
+    }
+}
+impl TryFrom<Box<MshBuilder>> for Msh {
+    type Error = Error;
+    fn try_from(builder: Box<MshBuilder>) -> Result<Self> {
         let materials = match builder.materials {
             Some(m) => m,
             None => return Err(Error::ExpectedValue("Expected material vec.".to_owned())),
@@ -59,7 +110,7 @@ impl TryFrom<Box<MshMeshBuilder>> for MshMesh {
 }
 
 #[derive(Default)]
-pub struct MshMeshBuilder {
+pub struct MshBuilder {
     pub name: String,
     pub version: Option<u32>,
     //pub mesh: Option<()>,
@@ -222,10 +273,17 @@ fn deserialize_poly_list<R: BinaryRead + AsciiRead>(
 
 fn read_chunk<R: BinaryRead + AsciiRead>(
     mut reader: R,
-    mut builder: Box<MshMeshBuilder>,
-) -> Result<MshMesh> {
+    mut builder: Box<MshBuilder>,
+) -> Result<Msh> {
+    #[derive(Deserialize)]
+    #[repr(C, packed(4))]
+    struct Chunk {
+        id: u16,
+        length: u32,
+    }
+
     let mut deserializer = BinaryDeserializer::from(&mut reader);
-    let chunk = <crate::structures::Chunk>::deserialize(&mut deserializer)?;
+    let chunk = <Chunk>::deserialize(&mut deserializer)?;
     let chunk_end = deserializer.seek(SeekFrom::Current(0))? + chunk.length as u64;
 
     match chunk.id {
@@ -267,7 +325,7 @@ fn read_chunk<R: BinaryRead + AsciiRead>(
             builder.polygons = Some(deserialize_poly_list::<R>(&mut reader, chunk_end, version)?);
             read_chunk(reader, builder)
         }
-        MESH_END => MshMesh::try_from(builder),
+        MESH_END => Msh::try_from(builder),
         _ => {
             eprintln!("Unknown chunk.");
             deserializer.seek(SeekFrom::Start(chunk_end))?;
@@ -276,11 +334,11 @@ fn read_chunk<R: BinaryRead + AsciiRead>(
     }
 }
 
-impl MshMesh {
-    pub fn new<R: BinaryRead + AsciiRead>(reader: R, name: &str) -> Result<MshMesh> {
+impl Msh {
+    pub fn new<R: BinaryRead + AsciiRead>(reader: R, name: &str) -> Result<Msh> {
         read_chunk(
             reader,
-            Box::new(MshMeshBuilder {
+            Box::new(MshBuilder {
                 name: name.to_owned(),
                 ..Default::default()
             }),

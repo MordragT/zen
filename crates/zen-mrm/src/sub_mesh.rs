@@ -1,7 +1,12 @@
-use crate::structures::*;
 use serde::Deserialize;
 use zen_material::GeneralMaterial;
 use zen_math::{Vec2, Vec3};
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Plane {
+    pub distance: f32,
+    pub normal: Vec3<f32>,
+}
 
 #[derive(Deserialize, Debug)]
 pub struct DataEntry {

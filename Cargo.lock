@@ -1957,10 +1957,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "zen-ects"
-version = "0.1.0"
-
-[[package]]
 name = "zen-input"
 version = "0.1.0"
 dependencies = [
@@ -1975,11 +1971,14 @@ dependencies = [
  "zen-daedalus",
  "zen-material",
  "zen-math",
- "zen-mesh",
+ "zen-model",
+ "zen-mrm",
+ "zen-msh",
  "zen-parser",
  "zen-render",
  "zen-texture",
  "zen-types",
+ "zen-window",
 ]
 
 [[package]]
@@ -2002,7 +2001,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "zen-mesh"
+name = "zen-model"
 version = "0.0.1"
 dependencies = [
  "bytemuck",
@@ -2012,8 +2011,35 @@ dependencies = [
  "zen-archive",
  "zen-material",
  "zen-math",
+ "zen-mrm",
  "zen-parser",
  "zen-texture",
+ "zen-types",
+]
+
+[[package]]
+name = "zen-mrm"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "zen-archive",
+ "zen-material",
+ "zen-math",
+ "zen-model",
+ "zen-parser",
+ "zen-types",
+]
+
+[[package]]
+name = "zen-msh"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "zen-archive",
+ "zen-material",
+ "zen-math",
+ "zen-model",
+ "zen-parser",
  "zen-types",
 ]
 
@@ -2037,7 +2063,7 @@ dependencies = [
  "winit",
  "zen-archive",
  "zen-material",
- "zen-mesh",
+ "zen-model",
  "zen-texture",
  "zen-types",
 ]

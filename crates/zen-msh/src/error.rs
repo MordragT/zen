@@ -10,7 +10,6 @@ pub enum Error {
     Binary(binary::Error),
     Ascii(ascii::Error),
     UnknownGameVersion(u32),
-    ExpectedIdentifier(String),
     ExpectedValue(String),
     Material(zen_material::Error),
 }
@@ -25,7 +24,6 @@ impl fmt::Display for Error {
             Self::UnknownGameVersion(version) => {
                 f.write_str(&format!("Unknown game version {}, please patch", version))
             }
-            Self::ExpectedIdentifier(s) => f.write_str(&s),
             Self::ExpectedValue(s) => f.write_str(&s),
             Self::Material(e) => f.write_str(&e.to_string()),
         }

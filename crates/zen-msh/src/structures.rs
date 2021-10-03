@@ -1,6 +1,11 @@
-use crate::structures::Plane;
 use serde::Deserialize;
 use zen_math::{Vec2, Vec3};
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Plane {
+    pub distance: f32,
+    pub normal: Vec3<f32>,
+}
 
 #[derive(Deserialize)]
 #[repr(C, packed(4))]

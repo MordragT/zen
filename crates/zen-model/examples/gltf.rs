@@ -1,9 +1,6 @@
 use zen_material::Material;
 use zen_math::Vec3;
-use zen_mesh::gltf;
-use zen_mesh::Mesh;
-use zen_mesh::Model;
-use zen_mesh::Vertex;
+use zen_model::{gltf, Mesh, Model, Vertex};
 use zen_texture::Texture;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
