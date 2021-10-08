@@ -1,33 +1,28 @@
-use hecs::World;
+// use hecs::World;
+// use std::time::Duration;
+use winit::event::{ElementState, VirtualKeyCode};
 
-pub trait WASDInput {
-    fn on_d(&mut self, world: &mut World);
-    fn on_s(&mut self, world: &mut World);
-    fn on_a(&mut self, world: &mut World);
-    fn on_w(&mut self, world: &mut World);
+// pub trait KeyboardInput {
+//     fn on_key(
+//         &mut self,
+//         key: VirtualKeyCode,
+//         state: ElementState,
+//         delta: Duration,
+//         world: &mut World,
+//     );
+// }
+
+// pub trait KeyboardInput {
+//     fn on_key(world: &mut World);
+// }
+
+pub struct KeyboardInput {
+    pub state: ElementState,
+    pub code: VirtualKeyCode,
 }
 
-pub trait KeyboardInput: WASDInput {
-    fn on_b(&mut self, world: &mut World);
-    fn on_c(&mut self, world: &mut World);
-    fn on_e(&mut self, world: &mut World);
-    fn on_f(&mut self, world: &mut World);
-    fn on_g(&mut self, world: &mut World);
-    fn on_h(&mut self, world: &mut World);
-    fn on_i(&mut self, world: &mut World);
-    fn on_j(&mut self, world: &mut World);
-    fn on_k(&mut self, world: &mut World);
-    fn on_l(&mut self, world: &mut World);
-    fn on_m(&mut self, world: &mut World);
-    fn on_n(&mut self, world: &mut World);
-    fn on_o(&mut self, world: &mut World);
-    fn on_p(&mut self, world: &mut World);
-    fn on_q(&mut self, world: &mut World);
-    fn on_r(&mut self, world: &mut World);
-    fn on_t(&mut self, world: &mut World);
-    fn on_u(&mut self, world: &mut World);
-    fn on_v(&mut self, world: &mut World);
-    fn on_x(&mut self, world: &mut World);
-    fn on_y(&mut self, world: &mut World);
-    fn on_z(&mut self, world: &mut World);
+impl KeyboardInput {
+    pub const fn new(state: ElementState, code: VirtualKeyCode) -> Self {
+        Self { state, code }
+    }
 }

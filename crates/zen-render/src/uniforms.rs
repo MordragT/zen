@@ -1,4 +1,5 @@
-use crate::camera::{Camera, Projection};
+use glam::Mat4;
+use zen_camera::{FirstPersonCamera, Projection};
 
 // We need this for Rust to store our data correctly for the shaders
 #[repr(C)]
@@ -12,14 +13,13 @@ pub struct Uniforms {
 
 impl Uniforms {
     pub fn new() -> Self {
-        use cgmath::SquareMatrix;
         Self {
-            view_proj: cgmath::Matrix4::identity().into(),
+            view_proj: Mat4::IDENTITY.to_cols_array_2d(),
         }
     }
 
-    pub fn update_view_proj(&mut self, camera: &Camera, projection: &Projection) {
+    pub fn update_view_proj(&mut self, camera: &FirstPersonCamera, projection: &Projection) {
         //self.view_position = camera.position.to_homogeneous().into();
-        self.view_proj = (projection.calc_matrix() * camera.calc_matrix()).into();
+        self.view_proj = (projection.calc_matrix() * camera.calc_matrix()).to_cols_array_2d();
     }
 }

@@ -60,15 +60,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "approx"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f2a05fd1bd10b2527e20a2cd32d8873d115b8b39fe219ee25f42a8aca6ba278"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
 name = "arrayvec"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -198,16 +189,6 @@ name = "cfg_aliases"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
-
-[[package]]
-name = "cgmath"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a98d30140e3296250832bbaaff83b27dcd6fa3cc70fb6f1f3e5c9c0023b5317"
-dependencies = [
- "approx",
- "num-traits",
-]
 
 [[package]]
 name = "cocoa"
@@ -593,12 +574,6 @@ dependencies = [
  "color_quant",
  "weezl",
 ]
-
-[[package]]
-name = "glam"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "525a3e490ba77b8e326fb67d4b44b4bd2f920f44d4cc73ccec50adc68e3bee34"
 
 [[package]]
 name = "glow"
@@ -1391,6 +1366,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
 
 [[package]]
+name = "safe_arch"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1ff3d6d9696af502cc3110dacce942840fb06ff4514cad92236ecc455f2ce05"
+dependencies = [
+ "bytemuck",
+]
+
+[[package]]
 name = "same-file"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1574,6 +1558,15 @@ name = "ttf-parser"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e5d7cd7ab3e47dda6e56542f4bbf3824c15234958c6e1bd6aaa347e93499fdc"
+
+[[package]]
+name = "ultraviolet"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16b9e3507eba17043af05c8a72fce3ec2c24b58945f45732e71dbc6646d904a7"
+dependencies = [
+ "wide",
+]
 
 [[package]]
 name = "unicode-width"
@@ -1851,6 +1844,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "wide"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46bbe7c604a27ca0b05c5503221e76da628225b568e6f1280b42dbad3b72d89b"
+dependencies = [
+ "bytemuck",
+ "safe_arch",
+]
+
+[[package]]
 name = "winapi"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1966,8 +1969,16 @@ dependencies = [
 name = "zen-camera"
 version = "0.1.0"
 dependencies = [
- "glam",
+ "hecs",
+ "ultraviolet",
+ "winit",
+ "zen-core",
+ "zen-input",
 ]
+
+[[package]]
+name = "zen-core"
+version = "0.1.0"
 
 [[package]]
 name = "zen-daedalus"
@@ -1982,6 +1993,7 @@ name = "zen-input"
 version = "0.1.0"
 dependencies = [
  "hecs",
+ "winit",
 ]
 
 [[package]]
@@ -1990,6 +2002,8 @@ version = "0.0.1"
 dependencies = [
  "zen-app",
  "zen-archive",
+ "zen-camera",
+ "zen-core",
  "zen-daedalus",
  "zen-material",
  "zen-math",
@@ -2080,10 +2094,11 @@ name = "zen-render"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
- "cgmath",
+ "ultraviolet",
  "wgpu",
  "winit",
  "zen-archive",
+ "zen-camera",
  "zen-material",
  "zen-model",
  "zen-texture",
@@ -2118,6 +2133,8 @@ dependencies = [
  "pollster",
  "winit",
  "zen-app",
+ "zen-camera",
+ "zen-core",
  "zen-input",
  "zen-render",
 ]

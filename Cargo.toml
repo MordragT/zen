@@ -19,6 +19,8 @@ members = ["crates/*"]
 [dependencies]
 zen-app = { path = "crates/zen-app" }
 zen-archive = { path = "crates/zen-archive" }
+zen-camera = { path = "crates/zen-camera" }
+zen-core = { path = "crates/zen-core" }
 zen-mrm = { path = "crates/zen-mrm", optional = true }
 zen-msh = { path = "crates/zen-msh", optional = true }
 zen-window = { path = "crates/zen-window" }

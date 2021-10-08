@@ -5,32 +5,32 @@ use winit::{
     window::{Window as WinitWindow, WindowBuilder},
 };
 use zen_app::App;
-use zen_input::Input;
+use zen_core::EventQueue;
+use zen_input::{CursorEntered, CursorLeft, KeyboardInput, MouseInput, MouseMotion, MouseWheel};
 use zen_render::Renderer;
 
 pub mod error;
 
-pub struct Window<A: App + 'static, I: Input + 'static> {
+pub struct Window<A: App + 'static> {
     event_loop: EventLoop<()>,
     window: WinitWindow,
     app: A,
-    input: I,
     renderer: Renderer,
     pub world: World,
 }
 
-impl<A: App, I: Input> Window<A, I> {
-    pub fn new(app: A, input: I, world: World, renderer: Renderer) -> Self {
+impl<A: App> Window<A> {
+    pub fn new(app: A, world: World) -> Self {
         env_logger::init();
 
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new().build(&event_loop).unwrap();
+        let renderer = pollster::block_on(Renderer::new(&window));
 
         Self {
             event_loop,
             window,
             app,
-            input,
             renderer,
             world,
         }
@@ -41,6 +41,16 @@ impl<A: App, I: Input> Window<A, I> {
         self.event_loop
             .run(move |event, _, control_flow: &mut ControlFlow| {
                 match event {
+                    Event::DeviceEvent { ref event, .. } => match event {
+                        DeviceEvent::MouseMotion { delta } => {
+                            for (_id, queue) in
+                                self.world.query_mut::<&mut EventQueue<MouseMotion>>()
+                            {
+                                queue.push(MouseMotion::new(*delta));
+                            }
+                        }
+                        _ => {}
+                    },
                     Event::WindowEvent {
                         ref event,
                         window_id,
@@ -48,43 +58,82 @@ impl<A: App, I: Input> Window<A, I> {
                         WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                         WindowEvent::KeyboardInput {
                             input:
-                                KeyboardInput {
-                                    state: ElementState::Pressed,
-                                    virtual_keycode: Some(key_code),
+                                winit::event::KeyboardInput {
+                                    state,
+                                    virtual_keycode: Some(code),
                                     ..
                                 },
                             ..
-                        } => match key_code {
-                            VirtualKeyCode::A => self.input.on_a(&mut self.world),
-                            VirtualKeyCode::B => self.input.on_b(&mut self.world),
-                            VirtualKeyCode::C => self.input.on_c(&mut self.world),
-                            VirtualKeyCode::D => self.input.on_d(&mut self.world),
-                            VirtualKeyCode::E => self.input.on_e(&mut self.world),
-                            VirtualKeyCode::F => self.input.on_f(&mut self.world),
-                            VirtualKeyCode::G => self.input.on_g(&mut self.world),
-                            VirtualKeyCode::H => self.input.on_h(&mut self.world),
-                            VirtualKeyCode::I => self.input.on_i(&mut self.world),
-                            VirtualKeyCode::J => self.input.on_j(&mut self.world),
-                            VirtualKeyCode::K => self.input.on_k(&mut self.world),
-                            VirtualKeyCode::L => self.input.on_l(&mut self.world),
-                            VirtualKeyCode::M => self.input.on_m(&mut self.world),
-                            VirtualKeyCode::N => self.input.on_n(&mut self.world),
-                            VirtualKeyCode::O => self.input.on_o(&mut self.world),
-                            VirtualKeyCode::P => self.input.on_p(&mut self.world),
-                            VirtualKeyCode::Q => self.input.on_q(&mut self.world),
-                            VirtualKeyCode::R => self.input.on_r(&mut self.world),
-                            VirtualKeyCode::S => self.input.on_s(&mut self.world),
-                            VirtualKeyCode::T => self.input.on_t(&mut self.world),
-                            VirtualKeyCode::U => self.input.on_u(&mut self.world),
-                            VirtualKeyCode::V => self.input.on_v(&mut self.world),
-                            VirtualKeyCode::W => self.input.on_w(&mut self.world),
-                            VirtualKeyCode::X => self.input.on_x(&mut self.world),
-                            VirtualKeyCode::Y => self.input.on_y(&mut self.world),
-                            VirtualKeyCode::Z => self.input.on_z(&mut self.world),
-                            _ => {}
-                        },
+                        } => {
+                            for (_id, queue) in
+                                self.world.query_mut::<&mut EventQueue<KeyboardInput>>()
+                            {
+                                queue.push(KeyboardInput::new(*state, *code));
+                            }
+                        }
+                        WindowEvent::MouseWheel { delta, .. } => {
+                            for (_id, queue) in
+                                self.world.query_mut::<&mut EventQueue<MouseWheel>>()
+                            {
+                                queue.push(MouseWheel::new(*delta));
+                            }
+                        }
+                        WindowEvent::MouseInput {
+                            button, // Left Mouse Button
+                            state,
+                            ..
+                        } => {
+                            for (_id, queue) in
+                                self.world.query_mut::<&mut EventQueue<MouseInput>>()
+                            {
+                                queue.push(MouseInput::new(*button, *state));
+                            }
+                        }
+                        WindowEvent::CursorEntered { .. } => {
+                            for (_id, queue) in
+                                self.world.query_mut::<&mut EventQueue<CursorEntered>>()
+                            {
+                                queue.push(CursorEntered {});
+                            }
+                        }
+                        WindowEvent::CursorLeft { .. } => {
+                            for (_id, queue) in
+                                self.world.query_mut::<&mut EventQueue<CursorLeft>>()
+                            {
+                                queue.push(CursorLeft {});
+                            }
+                        }
+                        WindowEvent::Resized(physical_size) => {
+                            self.renderer.resize(*physical_size);
+                        }
+                        WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+                            self.renderer.resize(**new_inner_size);
+                        }
                         _ => {}
                     },
+
+                    Event::RedrawRequested(_) => {
+                        // let now = std::time::Instant::now();
+                        // let dt = now - last_render_time;
+                        // last_render_time = now;
+                        self.renderer.update();
+                        match self.renderer.render() {
+                            Ok(_) => {}
+                            // // Recreate the swap_chain if lost
+                            // Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
+                            // // The system is out of memory, we should probably quit
+                            // Err(wgpu::SurfaceError::OutOfMemory) => {
+                            //     *control_flow = ControlFlow::Exit
+                            // }
+                            // All other errors (Outdated, Timeout) should be resolved by the next frame
+                            Err(e) => eprintln!("{:?}", e),
+                        }
+                    }
+                    Event::MainEventsCleared => {
+                        // RedrawRequested will only trigger once, unless we manually
+                        // request it.
+                        self.window.request_redraw();
+                    }
                     _ => {}
                 };
                 self.app.on_first(&mut self.world);
@@ -92,6 +141,7 @@ impl<A: App, I: Input> Window<A, I> {
                 self.app.on_update(&mut self.world);
                 self.app.on_post_update(&mut self.world);
                 self.app.on_last(&mut self.world);
+                //  self.world.get_mut(mouse_motion) -> mouse_motion = None
             });
     }
 }

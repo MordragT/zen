@@ -1,13 +1,14 @@
-use camera::{Camera, CameraController, Projection};
+//use camera::{Camera, CameraController, Projection};
 use model::RenderModel;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
+use zen_camera::{Camera, Projection};
 
 use zen_model::{Mesh, Model, Vertex};
 
 use crate::uniforms::Uniforms;
 
-pub mod camera;
+//pub mod camera;
 pub mod instance;
 pub mod material;
 pub mod mesh;
@@ -87,10 +88,10 @@ pub struct Renderer {
     //swap_chain: wgpu::SwapChain,
     size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
-    model_state: RenderModel,
-    camera: Camera,
+    //model_state: RenderModel,
+    //camera: Camera,
     projection: Projection,
-    camera_controller: CameraController,
+    //camera_controller: CameraController,
     mouse_pressed: bool,
     uniforms: Uniforms,
     uniform_buffer: wgpu::Buffer,
@@ -99,7 +100,7 @@ pub struct Renderer {
 
 impl Renderer {
     // Creating some of the wgpu types requires async code
-    pub async fn new(window: &Window, model: &Model) -> Self {
+    pub async fn new(window: &Window) -> Self {
         let size = window.inner_size();
 
         // The instance is a handle to our GPU
@@ -143,10 +144,9 @@ impl Renderer {
         };
         surface.configure(&device, &config);
 
-        let camera = camera::Camera::new((-5.0, 5.0, -1.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
-        let projection =
-            camera::Projection::new(size.width, size.height, cgmath::Deg(45.0), 0.1, 100.0);
-        let camera_controller = camera::CameraController::new(4.0, 0.4);
+        //let camera = FirstPersonCamera::new((-5.0, 5.0, -1.0), -90.0, -20.0);
+        let projection = Projection::new(size.width, size.height, 45.0, 0.1, 100.0);
+        //let camera_controller = camera::CameraController::new(4.0, 0.4);
 
         let mut uniforms = Uniforms::new();
         uniforms.update_view_proj(&camera, &projection);
@@ -212,7 +212,7 @@ impl Renderer {
                 label: Some("texture_bind_group_layout"),
             });
 
-        let model_state = RenderModel::new(&device, &queue, model, &texture_bind_group_layout);
+        //let model_state = RenderModel::new(&device, &queue, model, &texture_bind_group_layout);
 
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
@@ -323,18 +323,18 @@ impl Renderer {
             //swap_chain,
             size,
             render_pipeline,
-            camera,
+            //camera,
             projection,
-            camera_controller,
+            //camera_controller,
             mouse_pressed: false,
             uniforms,
             uniform_buffer,
             uniform_bind_group,
-            model_state,
+            //model_state,
         }
     }
 
-    fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+    pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         self.projection.resize(new_size.width, new_size.height);
         self.size = new_size;
         //self.sc_desc.width = new_size.width;
@@ -370,8 +370,8 @@ impl Renderer {
     //     }
     // }
 
-    fn update(&mut self, dt: std::time::Duration) {
-        self.camera_controller.update_camera(&mut self.camera, dt);
+    pub fn update(&mut self) {
+        //self.camera_controller.update_camera(&mut self.camera, dt);
         self.uniforms
             .update_view_proj(&self.camera, &self.projection);
         self.queue.write_buffer(
@@ -381,7 +381,7 @@ impl Renderer {
         );
     }
 
-    fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let frame = self.surface.get_current_frame()?.output;
         let view = frame
             .texture
@@ -412,7 +412,7 @@ impl Renderer {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(1, &self.uniform_bind_group, &[]);
-            self.model_state.render(&mut render_pass);
+            //self.model_state.render(&mut render_pass);
             // 2.
             // for (n, (vertex_buffer, index_buffer)) in self
             //     .vertices_buffer
