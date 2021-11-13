@@ -3,7 +3,7 @@ use model::RenderModel;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 use zen_camera::{Camera, Projection};
-
+use hecs::{World, PreparedQuery};
 use zen_model::{Mesh, Model, Vertex};
 
 use crate::uniforms::Uniforms;
@@ -80,6 +80,20 @@ pub mod uniforms;
 //     });
 // }
 
+pub struct Resized {
+    width: u32,
+    height: u32,
+}
+
+impl Resized {
+    pub const fn new(width: u32, height: u32) -> Self {
+        Self {
+            width, height
+        }
+    }
+}
+
+
 pub struct Renderer {
     surface: wgpu::Surface,
     device: wgpu::Device,
@@ -90,7 +104,7 @@ pub struct Renderer {
     render_pipeline: wgpu::RenderPipeline,
     //model_state: RenderModel,
     //camera: Camera,
-    projection: Projection,
+    //projection: Projection,
     //camera_controller: CameraController,
     mouse_pressed: bool,
     uniforms: Uniforms,
@@ -145,11 +159,12 @@ impl Renderer {
         surface.configure(&device, &config);
 
         //let camera = FirstPersonCamera::new((-5.0, 5.0, -1.0), -90.0, -20.0);
-        let projection = Projection::new(size.width, size.height, 45.0, 0.1, 100.0);
+        //let projection = Projection::new(size.width, size.height, 45.0, 0.1, 100.0);
         //let camera_controller = camera::CameraController::new(4.0, 0.4);
 
         let mut uniforms = Uniforms::new();
-        uniforms.update_view_proj(&camera, &projection);
+        // TODO update view projection with hecs world query
+        // uniforms.update_view_proj(&camera, &projection);
 
         let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Uniform Buffer"),
@@ -324,7 +339,7 @@ impl Renderer {
             size,
             render_pipeline,
             //camera,
-            projection,
+            // projection,
             //camera_controller,
             mouse_pressed: false,
             uniforms,
@@ -335,7 +350,7 @@ impl Renderer {
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
-        self.projection.resize(new_size.width, new_size.height);
+        //self.projection.resize(new_size.width, new_size.height);
         self.size = new_size;
         //self.sc_desc.width = new_size.width;
         //self.sc_desc.height = new_size.height;
@@ -370,15 +385,16 @@ impl Renderer {
     //     }
     // }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, world: &mut World, query: &mut PreparedQuery<(&Camera, &Projection)>) {
+        for (_id, (camera, projection)) in query.query_mut(world) {
         //self.camera_controller.update_camera(&mut self.camera, dt);
         self.uniforms
-            .update_view_proj(&self.camera, &self.projection);
+            .update_view_proj(&camera, &projection);
         self.queue.write_buffer(
             &self.uniform_buffer,
             0,
             bytemuck::cast_slice(&[self.uniforms]),
-        );
+        );}
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {

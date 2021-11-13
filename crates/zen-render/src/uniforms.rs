@@ -1,5 +1,5 @@
-use glam::Mat4;
-use zen_camera::{FirstPersonCamera, Projection};
+use ultraviolet::Mat4;
+use zen_camera::{Projection, Camera};
 
 // We need this for Rust to store our data correctly for the shaders
 #[repr(C)]
@@ -8,18 +8,18 @@ use zen_camera::{FirstPersonCamera, Projection};
 pub struct Uniforms {
     // We can't use cgmath with bytemuck directly so we'll have
     // to convert the Matrix4 into a 4x4 f32 array
-    view_proj: [[f32; 4]; 4],
+    view_proj: Mat4,
 }
 
 impl Uniforms {
     pub fn new() -> Self {
         Self {
-            view_proj: Mat4::IDENTITY.to_cols_array_2d(),
+            view_proj: Mat4::identity(),
         }
     }
 
-    pub fn update_view_proj(&mut self, camera: &FirstPersonCamera, projection: &Projection) {
+    pub fn update_view_proj(&mut self, camera: &Camera, projection: &Projection) {
         //self.view_position = camera.position.to_homogeneous().into();
-        self.view_proj = (projection.calc_matrix() * camera.calc_matrix()).to_cols_array_2d();
+        self.view_proj = (projection.calc_matrix() * camera.into_homogeneous_matrix());
     }
 }

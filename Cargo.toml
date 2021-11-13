@@ -10,7 +10,6 @@ readme = "README.md"
 keywords = ["gothic", "zen", "game-engine", "data-formats", "loader"]
 resolver = "2"
 
-
 [workspace]
 members = ["crates/*"]
 

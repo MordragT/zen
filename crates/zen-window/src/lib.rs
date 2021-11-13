@@ -1,26 +1,27 @@
-use hecs::World;
+use hecs::{World, PreparedQuery};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
     window::{Window as WinitWindow, WindowBuilder},
 };
 use zen_app::App;
+use zen_camera::{Projection, Camera};
 use zen_core::EventQueue;
 use zen_input::{CursorEntered, CursorLeft, KeyboardInput, MouseInput, MouseMotion, MouseWheel};
-use zen_render::Renderer;
+use zen_render::{Renderer, Resized};
 
 pub mod error;
 
-pub struct Window<A: App + 'static> {
+pub struct Window {
     event_loop: EventLoop<()>,
     window: WinitWindow,
-    app: A,
+    // app: FnMut(&mut World),
     renderer: Renderer,
     pub world: World,
 }
 
-impl<A: App> Window<A> {
-    pub fn new(app: A, world: World) -> Self {
+impl Window {
+    pub fn new(world: World) -> Self {
         env_logger::init();
 
         let event_loop = EventLoop::new();
@@ -30,14 +31,16 @@ impl<A: App> Window<A> {
         Self {
             event_loop,
             window,
-            app,
+            // app,
             renderer,
             world,
         }
     }
 
-    pub fn run(mut self) {
-        self.app.on_init(&mut self.world);
+    pub fn run(mut self, app: impl Fn(&mut World) + 'static) {
+        let mut camera_projection = PreparedQuery::<(&Camera, &Projection)>::default();
+        
+        // self.app.on_init(&mut self.world);
         self.event_loop
             .run(move |event, _, control_flow: &mut ControlFlow| {
                 match event {
@@ -103,8 +106,8 @@ impl<A: App> Window<A> {
                                 queue.push(CursorLeft {});
                             }
                         }
-                        WindowEvent::Resized(physical_size) => {
-                            self.renderer.resize(*physical_size);
+                        WindowEvent::Resized(physical_size) => for (_id, queue) in self.world.query_mut::<&mut EventQueue<Resized>>() {
+                            queue.push(Resized::new(physical_size.width, physical_size.height));
                         }
                         WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                             self.renderer.resize(**new_inner_size);
@@ -116,7 +119,7 @@ impl<A: App> Window<A> {
                         // let now = std::time::Instant::now();
                         // let dt = now - last_render_time;
                         // last_render_time = now;
-                        self.renderer.update();
+                        self.renderer.update(&mut self.world, &mut camera_projection);
                         match self.renderer.render() {
                             Ok(_) => {}
                             // // Recreate the swap_chain if lost
@@ -136,11 +139,12 @@ impl<A: App> Window<A> {
                     }
                     _ => {}
                 };
-                self.app.on_first(&mut self.world);
-                self.app.on_pre_update(&mut self.world);
-                self.app.on_update(&mut self.world);
-                self.app.on_post_update(&mut self.world);
-                self.app.on_last(&mut self.world);
+                app(&mut self.world);
+                // self.app.on_first(&mut self.world);
+                // self.app.on_pre_update(&mut self.world);
+                // self.app.on_update(&mut self.world);
+                // self.app.on_post_update(&mut self.world);
+                // self.app.on_last(&mut self.world);
                 //  self.world.get_mut(mouse_motion) -> mouse_motion = None
             });
     }

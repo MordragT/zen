@@ -10,6 +10,7 @@ winit = "0.25.0"
 env_logger = "0.8.4"
 hecs = "0.6.5"
 zen-app = { path = "../zen-app" }
+zen-camera = { path = "../zen-camera" }
 zen-core = { path = "../zen-core" }
 zen-input = { path = "../zen-input" }
 zen-render = { path = "../zen-render" }

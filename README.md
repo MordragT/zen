@@ -1,8 +1,8 @@
-## Zen Loader
+## Zen - Game Engine
 
-- Rewrite of the [Zenlib](https://github.com/ataulien/ZenLib) in Rust
-- Provides a library to open zengine specific data formats
-- And export data to modern data formats
+The zen game engine started as port of the [Zenlib](https://github.com/ataulien/ZenLib) in Rust,
+but has since then matured into a own game engine with the capability to load different Fileformats
+used in the original Gothic Games, respectively the Zengine.
 
 - At the moment you can open [VDFS-Archives](https://mordragt.github.io/zen-loader/zen_archive/index.html), and export [Multiresolution-Meshes](https://mordragt.github.io/zen-loader/zen_mesh/mrm/struct.MrmMesh.html) (.mrm) aswell as normal [Zengin-Meshes](https://mordragt.github.io/zen-loader/zen_mesh/msh/struct.MshMesh.html) (.msh) from the archives to gltf files.
 - The corresponding [textures](https://mordragt.github.io/zen-loader/zen_texture/index.html) will also be exported (similiar to dds textures), or you can export those textures one by one aswell.

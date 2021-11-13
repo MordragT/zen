@@ -7,13 +7,14 @@ edition = "2021"
 
 [dependencies]
 wgpu = "0.10"
+hecs = "0.6.5"
 winit = "0.25"
 bytemuck = { version = "1.7.0", features = ["derive"] }
 zen-model = {  path = "../zen-model" }
 zen-texture = { path = "../zen-texture" }
 zen-material = { path = "../zen-material" }
 zen-camera = { path = "../zen-camera" }
-ultraviolet = "0.8"
+ultraviolet = { version = "0.8", features = ["bytemuck"] }
 
 [dev-dependencies]
 zen-types = {  path = "../zen-types" }
