@@ -32,17 +32,17 @@ impl Projection {
 
 pub type Camera = Isometry3;
 
-pub fn calc_matrix(world: &mut World, query: &mut PreparedQuery<&mut Camera>) -> Mat4 {
-    for (_id, camera) in query.query_mut(world) {
-        // Mat4::look_at(
-        //     isometry.translation,
-        //     Vec3::new(self.yaw.cos(), self.pitch.sin(), self.yaw.sin()).normalize(),
-        //     Vec3::Y,
-        // )
-        return Isometry3::into_homogeneous_matrix(*camera);
-    }
-    Mat4::identity()
-}
+// pub fn calc_matrix(world: &mut World, query: &mut PreparedQuery<&mut Camera>) -> Mat4 {
+//     for (_id, camera) in query.query_mut(world) {
+//         // Mat4::look_at(
+//         //     isometry.translation,
+//         //     Vec3::new(self.yaw.cos(), self.pitch.sin(), self.yaw.sin()).normalize(),
+//         //     Vec3::Y,
+//         // )
+//         return Isometry3::into_homogeneous_matrix(*camera);
+//     }
+//     Mat4::identity()
+// }
 
 // pub struct Camera {
 //     pub left: f32,

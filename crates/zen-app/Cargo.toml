@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 zen-model = { path = "../zen-model" }
-hecs = "0.6"
+hecs = "0.7"

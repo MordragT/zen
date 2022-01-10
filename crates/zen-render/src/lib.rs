@@ -1,108 +1,39 @@
-//use camera::{Camera, CameraController, Projection};
-use model::RenderModel;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 use zen_camera::{Camera, Projection};
 use hecs::{World, PreparedQuery};
 use zen_model::{Mesh, Model, Vertex};
-
+use zen_texture::Texture;
 use crate::uniforms::Uniforms;
+use bundles::{ModelBundle, MeshBundle};
+use draw::DrawModel;
 
-//pub mod camera;
-pub mod instance;
-pub mod material;
-pub mod mesh;
-pub mod model;
-pub mod texture;
+pub mod draw;
 pub mod uniforms;
+mod bundles;
 
-// pub fn run(model: &Model) {
-//     env_logger::init();
-//     let event_loop = EventLoop::new();
-//     let window = WindowBuilder::new().build(&event_loop).unwrap();
-//     // Since main can't be async, we're going to need to block
-//     let mut state = pollster::block_on(State::new(&window, model));
-//     let mut last_render_time = std::time::Instant::now();
-
-//     event_loop.run(move |event, _, control_flow| match event {
-//         Event::DeviceEvent {
-//             ref event,
-//             .. // We're not using device_id currently
-//         } => {
-//             state.input(event);
-//         }
-//         Event::WindowEvent {
-//             ref event,
-//             window_id,
-//         } if window_id == window.id() => {
-//             match event {
-//                 WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-//                 WindowEvent::KeyboardInput { input, .. } => match input {
-//                     KeyboardInput {
-//                         state: ElementState::Pressed,
-//                         virtual_keycode: Some(VirtualKeyCode::Escape),
-//                         ..
-//                     } => {
-//                         *control_flow = ControlFlow::Exit;
-//                     }
-//                     _ => {}
-//                 },
-//                 WindowEvent::Resized(physical_size) => {
-//                     state.resize(*physical_size);
-//                 }
-//                 WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-//                     state.resize(**new_inner_size);
-//                 }
-//                 _ => {}
-//             }
-//         }
-//         Event::RedrawRequested(_) => {
-//             let now = std::time::Instant::now();
-//             let dt = now - last_render_time;
-//             last_render_time = now;
-//             state.update(dt);
-//             match state.render() {
-//                 Ok(_) => {}
-//                 // Recreate the swap_chain if lost
-//                 Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
-//                 // The system is out of memory, we should probably quit
-//                 Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
-//                 // All other errors (Outdated, Timeout) should be resolved by the next frame
-//                 Err(e) => eprintln!("{:?}", e),
-//             }
-//         }
-//         Event::MainEventsCleared => {
-//             // RedrawRequested will only trigger once, unless we manually
-//             // request it.
-//             window.request_redraw();
-//         }
-//         _ => {}
-//     });
-// }
-
-pub struct Resized {
-    width: u32,
-    height: u32,
+pub trait Renderer {
+    type Error: std::error::Error;
+    // fn add_mesh(&mut self, mesh: &Mesh) -> (usize, usize);
+    // fn add_texture(&mut self) -> usize;    
+    fn size(&self) -> (u32, u32);
+    fn resize(&mut self, world: &mut World, width: u32, height: u32);
+    fn update(&mut self, world: &mut World);
+    fn render(&mut self, world: &mut World) -> Result<(), Self::Error>;
 }
 
-impl Resized {
-    pub const fn new(width: u32, height: u32) -> Self {
-        Self {
-            width, height
-        }
-    }
-}
-
-
-pub struct Renderer {
+pub struct WgpuRenderer {
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
     //sc_desc: wgpu::SwapChainDescriptor,
     //swap_chain: wgpu::SwapChain,
-    size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
-    //model_state: RenderModel,
+    config: wgpu::SurfaceConfiguration,
+    // vertex_buffers: Vec<wgpu::Buffer>,
+    // index_buffers: Vec<wgpu::Buffer>,
+    // texture_bind_groups: Vec<wgpu::BindGroup>,
+    //model_states: Vec<GpuModel>,
     //camera: Camera,
     //projection: Projection,
     //camera_controller: CameraController,
@@ -112,10 +43,145 @@ pub struct Renderer {
     uniform_bind_group: wgpu::BindGroup,
 }
 
-impl Renderer {
+
+impl Renderer for WgpuRenderer {
+    type Error = wgpu::SurfaceError;
+    // fn add_mesh(&mut self, mesh: &Mesh) -> (usize, usize) {
+    //     let index_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+    //         label: Some("Index Buffer"),
+    //         contents: bytemuck::cast_slice(mesh.indices.as_slice()),
+    //         usage: wgpu::BufferUsages::INDEX,
+    //     });
+    //     let index_buffer_id = self.index_buffers.push(index_buffer);
+
+    //     let vertex_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+    //         label: Some("Vertex Buffer"),
+    //         contents: bytemuck::cast_slice(mesh.vertices.as_slice()),
+    //         usage: wgpu::BufferUsages::VERTEX,
+    //     });
+    //     let vertex_buffer_id = self.vertex_buffers.push(vertex_buffer);
+        
+    //     (vertex_buffer, index_buffer)
+    // }
+    
+    // fn add_texture(&mut self, )
+    fn size(&self) -> (u32, u32) {
+        (self.config.width, self.config.height)
+    }
+    
+    fn resize(&mut self, world: &mut World, width: u32, height: u32) {
+        //self.projection.resize(new_size.width, new_size.height);
+        for (_id, projection) in world.query_mut::<&mut Projection>() {
+            projection.resize(width, height);
+        }
+        self.config.width = width;
+        self.config.height = height;
+        self.surface.configure(&self.device, &self.config);
+    }
+
+    fn update(&mut self, world: &mut World) {
+        for (_id, (camera, projection)) in world.query_mut::<(&mut Camera, &mut Projection)>() {
+        //self.camera_controller.update_camera(&mut self.camera, dt);
+        self.uniforms
+            .update_view_proj(&camera, &projection);
+        self.queue.write_buffer(
+            &self.uniform_buffer,
+            0,
+            bytemuck::cast_slice(&[self.uniforms]),
+        );}
+    }
+
+    fn render(&mut self, world: &mut World) -> Result<(), wgpu::SurfaceError> {
+        let frame = self.surface.get_current_texture()?;
+        let view = frame.texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.1,
+                            g: 0.2,
+                            b: 0.3,
+                            a: 1.0,
+                        }),
+                        store: true,
+                    },
+                }],
+                depth_stencil_attachment: None,
+            });
+
+            render_pass.set_pipeline(&self.render_pipeline);
+            // render_pass.set_bind_group(1, &self.uniform_bind_group, &[]);
+            // TODO add DrawModel trait functions            
+            for (id, model) in world.query_mut::<&mut ModelBundle>() {
+                render_pass.draw_model(model, &self.uniform_bind_group);                
+            }
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+        frame.present();
+
+        Ok(())
+    }
+}
+
+pub fn light_bind_group_layout(device: &mut wgpu::Device) -> wgpu::BindGroupLayout {
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+            label: None,
+        })
+}
+
+pub fn texture_bind_group_layout(device: &mut wgpu::Device) -> wgpu::BindGroupLayout {
+    
+    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        // Uint due to texture::format
+                        sample_type: wgpu::TextureSampleType::Uint,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+            label: Some("texture_bind_group_layout"),
+        })
+}
+
+impl WgpuRenderer {    
     // Creating some of the wgpu types requires async code
-    pub async fn new(window: &Window) -> Self {
-        let size = window.inner_size();
+    pub async fn new(window: &Window, world: &mut World) -> Self {
+        let physical_size = window.inner_size();
+        let size = (physical_size.width, physical_size.height);
 
         // The instance is a handle to our GPU
         // BackendBit::PRIMARY => Vulkan + Metal + DX12 + Browser WebGPU
@@ -125,10 +191,11 @@ impl Renderer {
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
                 compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
             })
             .await
             .unwrap();
-        let (device, queue) = adapter
+        let (mut device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
                     features: wgpu::Features::empty(),
@@ -152,8 +219,8 @@ impl Renderer {
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface.get_preferred_format(&adapter).unwrap(),
-            width: size.width,
-            height: size.height,
+            width: size.0,
+            height: size.1,
             present_mode: wgpu::PresentMode::Fifo,
         };
         surface.configure(&device, &config);
@@ -196,45 +263,16 @@ impl Renderer {
             label: Some("uniform_bind_group"),
         });
 
-        let texture_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            multisampled: false,
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            // Uint due to texture::format
-                            sample_type: wgpu::TextureSampleType::Uint,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler {
-                            // This is only for TextureSampleType::Depth
-                            comparison: false,
-                            // This should be true if the sample_type of the texture is:
-                            //     TextureSampleType::Float { filterable: true }
-                            // Otherwise you'll get an error.
-                            filtering: true,
-                        },
-                        count: None,
-                    },
-                ],
-                label: Some("texture_bind_group_layout"),
-            });
-
-        //let model_state = RenderModel::new(&device, &queue, model, &texture_bind_group_layout);
-
+            
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
             //flags: wgpu::ShaderFlags::all(),
             source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
         });
-
+        
+        let texture_bind_group_layout = 
+texture_bind_group_layout(&mut device);
+        
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
@@ -247,7 +285,7 @@ impl Renderer {
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
-                entry_point: "main", // 1.
+                entry_point: "vs_main", // 1.
                 buffers: &[wgpu::VertexBufferLayout {
                     array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
                     step_mode: wgpu::VertexStepMode::Vertex,
@@ -273,7 +311,7 @@ impl Renderer {
             fragment: Some(wgpu::FragmentState {
                 // 3.
                 module: &shader,
-                entry_point: "main",
+                entry_point: "fs_main",
                 targets: &[wgpu::ColorTargetState {
                     // 4.
                     format: config.format,
@@ -289,7 +327,7 @@ impl Renderer {
                 // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
                 polygon_mode: wgpu::PolygonMode::Fill,
                 // Requires Features::DEPTH_CLAMPING
-                clamp_depth: false,
+                unclipped_depth: false,
                 // Requires Features::CONSERVATIVE_RASTERIZATION
                 conservative: false,
             },
@@ -300,7 +338,9 @@ impl Renderer {
                 mask: !0,                         // 3.
                 alpha_to_coverage_enabled: false, // 4.
             },
+            multiview: None,
         });
+        
 
         // let (num_vertices, vertices_buffer, num_indices, indices_buffer) = scene.into_iter().fold(
         //     (0, Vec::new(), 0, Vec::new()),
@@ -330,13 +370,13 @@ impl Renderer {
 
         //let num_vertices = (mesh.indices.len()) as u32;
 
-        Self {
+        let mut renderer = Self {
             surface,
             device,
             queue,
             //sc_desc,
             //swap_chain,
-            size,
+            config,
             render_pipeline,
             //camera,
             // projection,
@@ -346,104 +386,14 @@ impl Renderer {
             uniform_buffer,
             uniform_bind_group,
             //model_state,
+        };
+        
+        let models = world.query::<&Model>().iter().map(|(_id, model)| bundles::ModelBundle::load(&model, &mut renderer)).collect::<Vec<ModelBundle>>();
+        for model in models {
+            world.spawn((model, ""));
         }
+        
+        renderer
     }
 
-    pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
-        //self.projection.resize(new_size.width, new_size.height);
-        self.size = new_size;
-        //self.sc_desc.width = new_size.width;
-        //self.sc_desc.height = new_size.height;
-        //self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
-    }
-
-    // fn input(&mut self, event: &DeviceEvent) -> bool {
-    //     match event {
-    //         DeviceEvent::Key(KeyboardInput {
-    //             virtual_keycode: Some(key),
-    //             state,
-    //             ..
-    //         }) => self.camera_controller.process_keyboard(*key, *state),
-    //         DeviceEvent::MouseWheel { delta, .. } => {
-    //             self.camera_controller.process_scroll(delta);
-    //             true
-    //         }
-    //         DeviceEvent::Button {
-    //             button: 1, // Left Mouse Button
-    //             state,
-    //         } => {
-    //             self.mouse_pressed = *state == ElementState::Pressed;
-    //             true
-    //         }
-    //         DeviceEvent::MouseMotion { delta } => {
-    //             if self.mouse_pressed {
-    //                 self.camera_controller.process_mouse(delta.0, delta.1);
-    //             }
-    //             true
-    //         }
-    //         _ => false,
-    //     }
-    // }
-
-    pub fn update(&mut self, world: &mut World, query: &mut PreparedQuery<(&Camera, &Projection)>) {
-        for (_id, (camera, projection)) in query.query_mut(world) {
-        //self.camera_controller.update_camera(&mut self.camera, dt);
-        self.uniforms
-            .update_view_proj(&camera, &projection);
-        self.queue.write_buffer(
-            &self.uniform_buffer,
-            0,
-            bytemuck::cast_slice(&[self.uniforms]),
-        );}
-    }
-
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        let frame = self.surface.get_current_frame()?.output;
-        let view = frame
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Render Encoder"),
-            });
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }),
-                        store: true,
-                    },
-                }],
-                depth_stencil_attachment: None,
-            });
-
-            render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(1, &self.uniform_bind_group, &[]);
-            //self.model_state.render(&mut render_pass);
-            // 2.
-            // for (n, (vertex_buffer, index_buffer)) in self
-            //     .vertices_buffer
-            //     .iter()
-            //     .zip(self.indices_buffer.iter())
-            //     .enumerate()
-            // {
-            //     render_pass.set_vertex_buffer(n as u32, vertex_buffer.slice(..));
-            //     render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-            // }
-            // render_pass.draw_indexed(0..self.num_indices, 0, 0..1); // 3.        // submit will accept anything that implements IntoIter
-        }
-
-        self.queue.submit(std::iter::once(encoder.finish()));
-
-        Ok(())
-    }
 }

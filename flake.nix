@@ -33,7 +33,10 @@
 
     # `nix develop`
     devShell = pkgs.mkShell {
-      nativeBuildInputs = with pkgs; [
+      nativeBuildInputs = with pkgs; with fenix.packages.${system}; [
+        latest.rustc
+        latest.cargo
+        rust-analyzer
         pkgconfig
         vulkan-tools
         vulkan-loader

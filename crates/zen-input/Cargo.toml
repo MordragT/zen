@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-hecs = "0.6.5"
-winit = "0.25"
+hecs = "0.7"
+winit = "0.26"

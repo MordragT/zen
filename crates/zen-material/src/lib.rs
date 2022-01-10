@@ -26,6 +26,29 @@ pub struct Material {
     pub color: Vec3<f32>,
 }
 
+impl Material {
+    pub fn red() -> Self {
+        Self {
+            texture: Texture::red(),
+            color: Vec3::new(255.0, 0.0, 0.0),
+        }
+    }
+
+    pub fn green() -> Self {
+        Self {
+            texture: Texture::green(),
+            color: Vec3::new(0.0, 255.0, 0.0),
+        }
+    }
+
+    pub fn blue() -> Self {
+        Self {
+            texture: Texture::blue(),
+            color: Vec3::new(0.0, 0.0, 255.0),
+        }
+    }
+}
+
 impl TryFrom<&GeneralMaterial> for Material {
     type Error = Error;
     /// Creates a simple Material from Materials used in Gothic 1 and 2

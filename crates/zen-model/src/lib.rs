@@ -30,6 +30,38 @@ pub struct Mesh {
 }
 
 impl Mesh {
+    pub fn plane(size: f32) -> Self {
+        let vertices = vec![
+            Vertex {
+                position: [0.0, 0.0, 0.0],
+                tex_coords: [0.0, 0.0],
+                normal: [0.0, 0.0, 0.0],
+            },
+            Vertex {
+                position: [size, 0.0, 0.0],
+                tex_coords: [1.0, 0.0],
+                normal: [1.0, 0.0, 0.0],
+            },
+            Vertex {
+                position: [0.0, 0.0, size],
+                tex_coords: [0.0, 1.0],
+                normal: [0.0, 0.0, 1.0],
+            },
+            Vertex {
+                position: [size, 0.0, size],
+                tex_coords: [1.0, 1.0],
+                normal: [1.0, 0.0, 1.0],
+            },
+        ];
+
+        let indices = vec![0, 1, 2, 1, 2, 3];
+        Self {
+            vertices,
+            indices,
+            material: 0,
+            num_elements: 6,
+        }
+    }
     pub fn extreme_coordinates(&self) -> (Vec3<f32>, Vec3<f32>) {
         self.vertices.iter().fold(
             (

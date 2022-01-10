@@ -1,5 +1,6 @@
 pub use error::Error;
 use error::Result;
+#[cfg(feature = "wgpu")]
 use serde::Deserialize;
 use std::{
     cmp,
@@ -8,6 +9,7 @@ use std::{
 use zen_parser::prelude::{BinaryDeserializer, BinaryRead};
 
 mod error;
+#[cfg(feature = "wgpu")]
 mod ztex;
 
 #[derive(Clone, Copy, Debug)]
@@ -81,6 +83,36 @@ impl Texture {
             color_type,
             pixels,
             name,
+        }
+    }
+
+    pub fn red() -> Self {
+        Self {
+            width: 1,
+            height: 1,
+            color_type: ColorType::RGBA8,
+            pixels: vec![255, 0, 0, 1],
+            name: "red".to_owned(),
+        }
+    }
+
+    pub fn blue() -> Self {
+        Self {
+            width: 1,
+            height: 1,
+            color_type: ColorType::RGBA8,
+            pixels: vec![0, 0, 255, 1],
+            name: "blue".to_owned(),
+        }
+    }
+
+    pub fn green() -> Self {
+        Self {
+            width: 1,
+            height: 1,
+            color_type: ColorType::RGBA8,
+            pixels: vec![0, 255, 0, 1],
+            name: "green".to_owned(),
         }
     }
 

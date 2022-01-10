@@ -1,46 +1,49 @@
-use hecs::{World, PreparedQuery};
+use hecs::{PreparedQuery, World};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
     window::{Window as WinitWindow, WindowBuilder},
 };
 use zen_app::App;
-use zen_camera::{Projection, Camera};
-use zen_core::EventQueue;
+use zen_camera::{Camera, Projection};
+use zen_core::{EventQueue, Resource, TimeDelta};
 use zen_input::{CursorEntered, CursorLeft, KeyboardInput, MouseInput, MouseMotion, MouseWheel};
-use zen_render::{Renderer, Resized};
+use zen_render::{Renderer, WgpuRenderer};
 
 pub mod error;
 
-pub struct Window {
+pub struct Window<R: Renderer + 'static> {
     event_loop: EventLoop<()>,
     window: WinitWindow,
-    // app: FnMut(&mut World),
-    renderer: Renderer,
+    renderer: R,
     pub world: World,
 }
 
-impl Window {
-    pub fn new(world: World) -> Self {
+impl Window<WgpuRenderer> {
+    pub fn new(mut world: World) -> Self {
         env_logger::init();
 
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new().build(&event_loop).unwrap();
-        let renderer = pollster::block_on(Renderer::new(&window));
+        let renderer = pollster::block_on(WgpuRenderer::new(&window, &mut world));
 
         Self {
             event_loop,
             window,
-            // app,
             renderer,
             world,
         }
     }
+}
+
+impl<R: Renderer + 'static> Window<R> {
+    pub fn size(&self) -> (u32, u32) {
+        self.renderer.size()
+    }
 
     pub fn run(mut self, app: impl Fn(&mut World) + 'static) {
-        let mut camera_projection = PreparedQuery::<(&Camera, &Projection)>::default();
-        
-        // self.app.on_init(&mut self.world);
+        let mut last_render_time = std::time::Instant::now();
+
         self.event_loop
             .run(move |event, _, control_flow: &mut ControlFlow| {
                 match event {
@@ -106,22 +109,39 @@ impl Window {
                                 queue.push(CursorLeft {});
                             }
                         }
-                        WindowEvent::Resized(physical_size) => for (_id, queue) in self.world.query_mut::<&mut EventQueue<Resized>>() {
-                            queue.push(Resized::new(physical_size.width, physical_size.height));
+                        WindowEvent::Resized(physical_size) => {
+                            // for (_id, queue) in self.world.query_mut::<&mut EventQueue<Resized>>() {
+                            //     queue.push(Resized::new(physical_size.width, physical_size.height));
+                            // }
+                            self.renderer.resize(
+                                &mut self.world,
+                                physical_size.width,
+                                physical_size.height,
+                            );
                         }
                         WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                            self.renderer.resize(**new_inner_size);
+                            self.renderer.resize(
+                                &mut self.world,
+                                new_inner_size.width,
+                                new_inner_size.height,
+                            );
                         }
                         _ => {}
                     },
 
                     Event::RedrawRequested(_) => {
-                        // let now = std::time::Instant::now();
-                        // let dt = now - last_render_time;
-                        // last_render_time = now;
-                        self.renderer.update(&mut self.world, &mut camera_projection);
-                        match self.renderer.render() {
-                            Ok(_) => {}
+                        let now = std::time::Instant::now();
+                        let dt = now - last_render_time;
+                        last_render_time = now;
+                        self.renderer.update(&mut self.world);
+                        match self.renderer.render(&mut self.world) {
+                            Ok(_) => {
+                                for (_id, delta) in
+                                    self.world.query_mut::<&mut Resource<TimeDelta>>()
+                                {
+                                    delta.replace(dt);
+                                }
+                            }
                             // // Recreate the swap_chain if lost
                             // Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
                             // // The system is out of memory, we should probably quit
@@ -140,12 +160,6 @@ impl Window {
                     _ => {}
                 };
                 app(&mut self.world);
-                // self.app.on_first(&mut self.world);
-                // self.app.on_pre_update(&mut self.world);
-                // self.app.on_update(&mut self.world);
-                // self.app.on_post_update(&mut self.world);
-                // self.app.on_last(&mut self.world);
-                //  self.world.get_mut(mouse_motion) -> mouse_motion = None
             });
     }
 }

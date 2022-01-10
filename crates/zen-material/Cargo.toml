@@ -11,5 +11,9 @@ zen-types = {  path = "../zen-types" }
 zen-archive = {  path = "../zen-archive" }
 zen-texture = {  path = "../zen-texture" }
 zen-math = { path = "../zen-math" }
+wgpu = { version = "0.12", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_repr = "0.1"
+
+[features]
+default = ["wgpu"]

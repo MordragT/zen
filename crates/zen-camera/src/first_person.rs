@@ -1,12 +1,37 @@
 use hecs::{PreparedQuery, World};
+use std::any::Any;
 use std::f32::consts::FRAC_PI_2;
 use ultraviolet::{Isometry3, Mat4, Rotor3, Vec3};
 
-use crate::Camera;
+use crate::{Camera, Projection};
 use winit::{dpi::PhysicalPosition, event::*};
-use zen_core::{EventQueue, TimeDelta};
+use zen_core::{EventQueue, Resource, TimeDelta};
 use zen_input::{KeyboardInput, MouseMotion, MouseWheel};
 
+// TODO: impl Bundle if generics are fixed in hecs
+pub struct FirstPersonCameraBundle {
+    pub camera: Camera,
+    pub controller: FirstPersonController,
+    pub projection: Projection,
+    pub time: Resource<TimeDelta>,
+    pub keyboard_input: EventQueue<KeyboardInput>,
+    pub mouse_motion: EventQueue<MouseMotion>,
+}
+
+impl FirstPersonCameraBundle {
+    pub fn new(width: u32, height: u32) -> Self {
+        Self {
+            camera: Camera::default(),
+            controller: FirstPersonController::new(4.0, 0.4),
+            projection: Projection::new(width, height, 45.0, 0.1, 1000.0),
+            time: Resource::new(std::time::Duration::ZERO),
+            keyboard_input: EventQueue::new(),
+            mouse_motion: EventQueue::new(),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct FirstPersonController {
     pub amount_left: f32,
     pub amount_right: f32,
@@ -45,11 +70,10 @@ impl FirstPersonController {
 
 // fn on_button(&mut self, _button: MouseButton, _state: ElementState, _world: &mut World) {}
 
-fn on_scroll(
-    world: &mut World,
-    query: &mut PreparedQuery<(&mut FirstPersonController, &mut EventQueue<MouseWheel>)>,
-) {
-    for (_id, (controller, mouse_wheel)) in query.query_mut(world) {
+pub fn on_scroll(world: &mut World) {
+    for (_id, (controller, mouse_wheel)) in
+        world.query_mut::<(&mut FirstPersonController, &mut EventQueue<MouseWheel>)>()
+    {
         while let Some(event) = mouse_wheel.pop() {
             controller.scroll = -match event.delta {
                 // I'm assuming a line is about 100 pixels
@@ -60,22 +84,21 @@ fn on_scroll(
     }
 }
 
-fn on_motion(
-    world: &mut World,
-    query: &mut PreparedQuery<(&mut FirstPersonController, &mut EventQueue<MouseMotion>)>,
-) {
-    for (_id, (controller, mouse_motion)) in query.query_mut(world) {
+pub fn on_motion(world: &mut World) {
+    for (_id, (controller, mouse_motion)) in
+        world.query_mut::<(&mut FirstPersonController, &mut EventQueue<MouseMotion>)>()
+    {
         while let Some(MouseMotion { delta: (dx, dy) }) = mouse_motion.pop() {
             controller.rotate_horizontal = dx as f32;
             controller.rotate_vertical = dy as f32;
         }
     }
 }
-fn on_key(
-    world: &mut World,
-    query: &mut PreparedQuery<(&mut FirstPersonController, &mut EventQueue<KeyboardInput>)>,
-) {
-    for (_id, (controller, keyboard_input)) in query.query_mut(world) {
+
+pub fn on_key(world: &mut World) {
+    for (_id, (controller, keyboard_input)) in
+        world.query_mut::<(&mut FirstPersonController, &mut EventQueue<KeyboardInput>)>()
+    {
         while let Some(KeyboardInput { state, code }) = keyboard_input.pop() {
             let amount = if state == ElementState::Pressed {
                 1.0
@@ -95,12 +118,14 @@ fn on_key(
     }
 }
 
-pub fn update_camera(
-    world: &mut World,
-    query: &mut PreparedQuery<(&mut Camera, &mut FirstPersonController, &mut TimeDelta)>,
-) {
-    for (_id, (camera, controller, delta)) in query.query_mut(world) {
-        let delta = delta.as_secs_f32();
+pub fn update_camera(world: &mut World) {
+    for (_id, (camera, controller, delta)) in world.query_mut::<(
+        &mut Camera,
+        &mut FirstPersonController,
+        &mut Resource<TimeDelta>,
+    )>() {
+        println!("{:?}", camera);
+        let delta = delta.inner().as_secs_f32();
 
         // Move forward/backward and left/right
         let up = (controller.amount_up - controller.amount_down) * controller.speed * delta;
@@ -108,6 +133,11 @@ pub fn update_camera(
         let forward =
             (controller.amount_forward - controller.amount_backward) * controller.speed * delta;
         camera.prepend_translation(Vec3::new(right, up, forward));
+        // let (yaw_sin, yaw_cos) = camera.yaw.sin_cos();
+        // let forward = Vec3::new(yaw_cos, 0.0, yaw_sin).normalize() * (controller.amount_forward - controller.amount_backward) * controller.speed * delta;
+        // let right = Vec3::new(-yaw_sin, 0.0, yaw_cos).normalize() * (controller.amount_right - controller.amount_left) * controller.speed * delta;
+        // camera.append_translation(forward);
+        // camera.append_translation(right)
         // let (yaw_sin, yaw_cos) = camera.yaw.sin_cos();
         // let forward = Vec3::new(yaw_cos, 0.0, yaw_sin).normalize();
         // let right = Vec3::new(-yaw_sin, 0.0, yaw_cos).normalize();
@@ -118,6 +148,10 @@ pub fn update_camera(
         // camera.position +=
         //     right * (controller.amount_right - controller.amount_left) * controller.speed * delta;
 
+        // let (pitch_sin, pitch_cos) = camera.pitch.sin_cos();
+        // let scrollward = Vec3::new(pitch_cos * yaw_cos, pitch_sin, pitch_cos * yaw_sin ).normalize() * controller.scroll * controller.speed * controller.sensitivity * delta;
+        // controller.scroll = 0.0;
+        // camera.append_translation(scrollward);
         // Move in/out (aka. "zoom")
         // Note: this isn't an actual zoom. The camera's position
         // changes when zooming. I've added this to make it easier

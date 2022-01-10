@@ -6,9 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-wgpu = "0.10"
-hecs = "0.6.5"
-winit = "0.25"
+wgpu = "0.12"
+hecs = "0.7"
+hecs-macros = "0.7"
+winit = "0.26"
 bytemuck = { version = "1.7.0", features = ["derive"] }
 zen-model = {  path = "../zen-model" }
 zen-texture = { path = "../zen-texture" }

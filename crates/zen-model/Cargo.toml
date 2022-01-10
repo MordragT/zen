@@ -10,6 +10,7 @@ edition = "2021"
 serde = { version = "1.0", features = ["derive"] }
 gltf-json = { version = "0.16", optional = true }
 gltf = { version = "0.16", optional = true }
+wgpu = { version = "0.12", optional = true }
 zen-parser = {  path = "../zen-parser" }
 zen-types = {  path = "../zen-types" }
 zen-material = {  path = "../zen-material" }
@@ -23,5 +24,5 @@ zen-archive = {  path = "../zen-archive" }
 zen-mrm = { path = "../zen-mrm" }
 
 [features]
-default = ["to-gltf"]
+default = ["to-gltf", "wgpu"]
 to-gltf = ["gltf", "gltf-json", "zen-texture"]

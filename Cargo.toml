@@ -31,6 +31,6 @@ zen-types = {  path = "crates/zen-types" }
 zen-daedalus = {  path = "crates/zen-daedalus" }
 zen-math = { path = "crates/zen-math" }
 zen-render = { path = "crates/zen-render" }
-
-
-
+zen-input = { path = "crates/zen-input" }
+hecs = "0.7"
+winit = "0.26"

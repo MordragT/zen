@@ -8,8 +8,8 @@
 let
   toolchain = with fenix.packages.${system};
     combine [
-      minimal.rustc
-      minimal.cargo
+      latest.rustc
+      latest.cargo
     ];
   naersk-lib = naersk.lib.${system}.override {
     cargo = toolchain;
