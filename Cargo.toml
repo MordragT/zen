@@ -18,11 +18,9 @@ members = ["crates/*"]
 [dependencies]
 zen-app = { path = "crates/zen-app" }
 zen-archive = { path = "crates/zen-archive" }
-zen-camera = { path = "crates/zen-camera" }
-zen-core = { path = "crates/zen-core" }
+zen-first-person-camera = { path = "crates/zen-first-person-camera", optional = true }
 zen-mrm = { path = "crates/zen-mrm", optional = true }
 zen-msh = { path = "crates/zen-msh", optional = true }
-zen-window = { path = "crates/zen-window" }
 zen-model = {  path = "crates/zen-model" }
 zen-parser = {  path = "crates/zen-parser" }
 zen-texture = {  path = "crates/zen-texture" }
@@ -34,3 +32,6 @@ zen-render = { path = "crates/zen-render" }
 zen-input = { path = "crates/zen-input" }
 hecs = "0.7"
 winit = "0.26"
+
+[features]
+default = ["zen-mrm", "zen-first-person-camera"]

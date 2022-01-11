@@ -3,10 +3,13 @@ use std::any::Any;
 use std::f32::consts::FRAC_PI_2;
 use ultraviolet::{Isometry3, Mat4, Rotor3, Vec3};
 
-use crate::{Camera, Projection};
-use winit::{dpi::PhysicalPosition, event::*};
-use zen_core::{EventQueue, Resource, TimeDelta};
-use zen_input::{KeyboardInput, MouseMotion, MouseWheel};
+use winit::{dpi::PhysicalPosition, event::*, window::Window};
+use zen_app::{EventQueue, Resource, TimeDelta};
+use zen_input::{KeyboardInput, MouseInput, MouseMotion, MouseWheel};
+use zen_render::{
+    camera::{Camera, Projection},
+    Renderer,
+};
 
 // TODO: impl Bundle if generics are fixed in hecs
 pub struct FirstPersonCameraBundle {
@@ -16,17 +19,19 @@ pub struct FirstPersonCameraBundle {
     pub time: Resource<TimeDelta>,
     pub keyboard_input: EventQueue<KeyboardInput>,
     pub mouse_motion: EventQueue<MouseMotion>,
+    pub mouse_input: EventQueue<MouseInput>,
 }
 
 impl FirstPersonCameraBundle {
     pub fn new(width: u32, height: u32) -> Self {
         Self {
-            camera: Camera::default(),
+            camera: Camera::new(Vec3::new(0.0, 10.0, 0.0), Rotor3::from_rotation_yz(45.0)),
             controller: FirstPersonController::new(4.0, 0.4),
             projection: Projection::new(width, height, 45.0, 0.1, 1000.0),
             time: Resource::new(std::time::Duration::ZERO),
             keyboard_input: EventQueue::new(),
             mouse_motion: EventQueue::new(),
+            mouse_input: EventQueue::new(),
         }
     }
 }
@@ -44,6 +49,7 @@ pub struct FirstPersonController {
     pub scroll: f32,
     pub speed: f32,
     pub sensitivity: f32,
+    pub cursor_grab: bool,
 }
 
 impl FirstPersonController {
@@ -60,15 +66,27 @@ impl FirstPersonController {
             scroll: 0.0,
             speed,
             sensitivity,
+            cursor_grab: false,
         }
     }
 }
 
-// fn on_cursor_entered(&mut self, world: &mut World, query: PreparedQuery<>) {}
-
-// fn on_cursor_left(&mut self, _world: &mut World) {}
-
-// fn on_button(&mut self, _button: MouseButton, _state: ElementState, _world: &mut World) {}
+pub fn on_button(world: &mut World, window: &Window) {
+    for (_id, (controller, mouse_input)) in
+        world.query_mut::<(&mut FirstPersonController, &mut EventQueue<MouseInput>)>()
+    {
+        while let Some(event) = mouse_input.pop() {
+            if event.button == MouseButton::Left && event.state == ElementState::Pressed {
+                controller.cursor_grab = !controller.cursor_grab;
+                let result = window.set_cursor_grab(controller.cursor_grab);
+                if let Err(err) = result {
+                    println!("{:?}", err);
+                }
+                window.set_cursor_visible(!controller.cursor_grab);
+            }
+        }
+    }
+}
 
 pub fn on_scroll(world: &mut World) {
     for (_id, (controller, mouse_wheel)) in
@@ -124,7 +142,7 @@ pub fn update_camera(world: &mut World) {
         &mut FirstPersonController,
         &mut Resource<TimeDelta>,
     )>() {
-        println!("{:?}", camera);
+        // println!("{:?}", camera);
         let delta = delta.inner().as_secs_f32();
 
         // Move forward/backward and left/right
@@ -132,7 +150,10 @@ pub fn update_camera(world: &mut World) {
         let right = (controller.amount_right - controller.amount_left) * controller.speed * delta;
         let forward =
             (controller.amount_forward - controller.amount_backward) * controller.speed * delta;
-        camera.prepend_translation(Vec3::new(right, up, forward));
+        camera.prepend_translation(Vec3::new(right, up, -forward));
+        // camera.prepend_translation(Vec3::new(right, 0.0, 0.0));
+        // camera.prepend_translation(Vec3::new(0.0, up, 0.0));
+        // camera.prepend_translation(Vec3::new(0.0, 0.0, forward));
         // let (yaw_sin, yaw_cos) = camera.yaw.sin_cos();
         // let forward = Vec3::new(yaw_cos, 0.0, yaw_sin).normalize() * (controller.amount_forward - controller.amount_backward) * controller.speed * delta;
         // let right = Vec3::new(-yaw_sin, 0.0, yaw_cos).normalize() * (controller.amount_right - controller.amount_left) * controller.speed * delta;
@@ -167,27 +188,34 @@ pub fn update_camera(world: &mut World) {
         // camera.position.y +=
         //     (controller.amount_up - controller.amount_down) * controller.speed * delta;
 
-        // Rotate
-        let yaw = controller.rotate_horizontal * controller.sensitivity * delta;
-        let pitch = {
-            let pitch = -controller.rotate_vertical * controller.sensitivity * delta;
-            if pitch < -FRAC_PI_2 {
-                -FRAC_PI_2
-            } else if pitch > FRAC_PI_2 {
-                FRAC_PI_2
-            } else {
-                pitch
-            }
-        };
+        if controller.cursor_grab {
+            // Rotate
+            let yaw = controller.rotate_horizontal * controller.sensitivity * delta;
+            let pitch = {
+                let pitch = -controller.rotate_vertical * controller.sensitivity * delta;
+                if pitch < -FRAC_PI_2 {
+                    -FRAC_PI_2
+                } else if pitch > FRAC_PI_2 {
+                    FRAC_PI_2
+                } else {
+                    pitch
+                }
+            };
 
-        camera.append_rotation(Rotor3::from_euler_angles(0.0, pitch, yaw));
+            // let movement = Isometry3::new(
+            //     Vec3::new(right, up, forward),
+            //     Rotor3::from_euler_angles(0.0, pitch, yaw),
+            // );
+            // camera.prepend_isometry(movement);
 
-        // If process_mouse isn't called every frame, these values
-        // will not get set to zero, and the camera will rotate
-        // when moving in a non cardinal direction.
-        controller.rotate_horizontal = 0.0;
-        controller.rotate_vertical = 0.0;
+            camera.append_rotation(Rotor3::from_euler_angles(0.0, pitch, yaw));
 
+            // If process_mouse isn't called every frame, these values
+            // will not get set to zero, and the camera will rotate
+            // when moving in a non cardinal direction.
+            controller.rotate_horizontal = 0.0;
+            controller.rotate_vertical = 0.0;
+        }
         // Keep the camera's angle from going too high/low.
         // if camera.pitch < -FRAC_PI_2 {
         //     camera.pitch = -FRAC_PI_2;

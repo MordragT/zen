@@ -8,9 +8,9 @@ lazy_static! {
     //     GothicTwo::new("/home/tom/Steam/common/Gothic II/");
     /// Holds the information of the instance of the gothic Game
     pub static ref INSTANCE: GameInstance =
-        GameInstance::GothicTwo(GothicTwo::new("/home/tom/Steam/common/Gothic II/"));
+        GameInstance::GothicTwo(GothicTwo::new("/home/tom/Steam/steamapps/common/Gothic II/"));
     /// Holds the information of the instance where to store the exported files
-    pub static ref FILES_INSTANCE: Files = Files::new("/home/tom/Git/zen-loader/files/");
+    pub static ref FILES_INSTANCE: Files = Files::new("/home/tom/Schreibtisch/zen/files/");
 }
 
 pub struct Files {

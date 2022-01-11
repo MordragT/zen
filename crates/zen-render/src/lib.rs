@@ -1,21 +1,19 @@
 use wgpu::util::DeviceExt;
 use winit::window::Window;
-use zen_camera::{Camera, Projection};
+use camera::{Camera, Projection, ProjectionUniform};
 use hecs::{World, PreparedQuery};
 use zen_model::{Mesh, Model, Vertex};
 use zen_texture::Texture;
-use crate::uniforms::Uniforms;
 use bundles::{ModelBundle, MeshBundle};
 use draw::DrawModel;
 
 pub mod draw;
-pub mod uniforms;
+pub mod camera;
 mod bundles;
 
 pub trait Renderer {
     type Error: std::error::Error;
-    // fn add_mesh(&mut self, mesh: &Mesh) -> (usize, usize);
-    // fn add_texture(&mut self) -> usize;    
+    
     fn size(&self) -> (u32, u32);
     fn resize(&mut self, world: &mut World, width: u32, height: u32);
     fn update(&mut self, world: &mut World);
@@ -26,51 +24,22 @@ pub struct WgpuRenderer {
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
-    //sc_desc: wgpu::SwapChainDescriptor,
-    //swap_chain: wgpu::SwapChain,
     render_pipeline: wgpu::RenderPipeline,
     config: wgpu::SurfaceConfiguration,
-    // vertex_buffers: Vec<wgpu::Buffer>,
-    // index_buffers: Vec<wgpu::Buffer>,
-    // texture_bind_groups: Vec<wgpu::BindGroup>,
-    //model_states: Vec<GpuModel>,
-    //camera: Camera,
-    //projection: Projection,
-    //camera_controller: CameraController,
-    mouse_pressed: bool,
-    uniforms: Uniforms,
-    uniform_buffer: wgpu::Buffer,
-    uniform_bind_group: wgpu::BindGroup,
+    projection: ProjectionUniform,
+    projection_buffer: wgpu::Buffer,
+    projection_bind_group: wgpu::BindGroup,
 }
 
 
 impl Renderer for WgpuRenderer {
     type Error = wgpu::SurfaceError;
-    // fn add_mesh(&mut self, mesh: &Mesh) -> (usize, usize) {
-    //     let index_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-    //         label: Some("Index Buffer"),
-    //         contents: bytemuck::cast_slice(mesh.indices.as_slice()),
-    //         usage: wgpu::BufferUsages::INDEX,
-    //     });
-    //     let index_buffer_id = self.index_buffers.push(index_buffer);
 
-    //     let vertex_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-    //         label: Some("Vertex Buffer"),
-    //         contents: bytemuck::cast_slice(mesh.vertices.as_slice()),
-    //         usage: wgpu::BufferUsages::VERTEX,
-    //     });
-    //     let vertex_buffer_id = self.vertex_buffers.push(vertex_buffer);
-        
-    //     (vertex_buffer, index_buffer)
-    // }
-    
-    // fn add_texture(&mut self, )
     fn size(&self) -> (u32, u32) {
         (self.config.width, self.config.height)
     }
     
     fn resize(&mut self, world: &mut World, width: u32, height: u32) {
-        //self.projection.resize(new_size.width, new_size.height);
         for (_id, projection) in world.query_mut::<&mut Projection>() {
             projection.resize(width, height);
         }
@@ -81,14 +50,14 @@ impl Renderer for WgpuRenderer {
 
     fn update(&mut self, world: &mut World) {
         for (_id, (camera, projection)) in world.query_mut::<(&mut Camera, &mut Projection)>() {
-        //self.camera_controller.update_camera(&mut self.camera, dt);
-        self.uniforms
-            .update_view_proj(&camera, &projection);
-        self.queue.write_buffer(
-            &self.uniform_buffer,
-            0,
-            bytemuck::cast_slice(&[self.uniforms]),
-        );}
+            self.projection
+                .update_view_proj(&camera, &projection);
+            self.queue.write_buffer(
+                &self.projection_buffer,
+                0,
+                bytemuck::cast_slice(&[self.projection]),
+            );
+        }
     }
 
     fn render(&mut self, world: &mut World) -> Result<(), wgpu::SurfaceError> {
@@ -121,10 +90,8 @@ impl Renderer for WgpuRenderer {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            // render_pass.set_bind_group(1, &self.uniform_bind_group, &[]);
-            // TODO add DrawModel trait functions            
-            for (id, model) in world.query_mut::<&mut ModelBundle>() {
-                render_pass.draw_model(model, &self.uniform_bind_group);                
+            for (_id, model) in world.query_mut::<&mut ModelBundle>() {
+                render_pass.draw_model(model, &self.projection_bind_group);                
             }
         }
 
@@ -136,45 +103,44 @@ impl Renderer for WgpuRenderer {
 }
 
 pub fn light_bind_group_layout(device: &mut wgpu::Device) -> wgpu::BindGroupLayout {
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-            label: None,
-        })
+    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        entries: &[wgpu::BindGroupLayoutEntry {
+            binding: 0,
+            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        }],
+        label: None,
+    })
 }
 
 pub fn texture_bind_group_layout(device: &mut wgpu::Device) -> wgpu::BindGroupLayout {
-    
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        // Uint due to texture::format
-                        sample_type: wgpu::TextureSampleType::Uint,
-                    },
-                    count: None,
+        entries: &[
+            wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Texture {
+                    multisampled: false,
+                    view_dimension: wgpu::TextureViewDimension::D2,
+                    // Uint due to texture::format
+                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
                 },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-            label: Some("texture_bind_group_layout"),
-        })
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 1,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                count: None,
+            },
+        ],
+        label: Some("texture_bind_group_layout"),
+    })
 }
 
 impl WgpuRenderer {    
@@ -207,15 +173,6 @@ impl WgpuRenderer {
             .await
             .unwrap();
 
-        // let sc_desc = wgpu::SwapChainDescriptor {
-        //     usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-        //     format: adapter.get_swap_chain_preferred_format(&surface).unwrap(),
-        //     width: size.width,
-        //     height: size.height,
-        //     present_mode: wgpu::PresentMode::Fifo,
-        // };
-        // let swap_chain = device.create_swap_chain(&surface, &sc_desc);
-
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface.get_preferred_format(&adapter).unwrap(),
@@ -225,21 +182,13 @@ impl WgpuRenderer {
         };
         surface.configure(&device, &config);
 
-        //let camera = FirstPersonCamera::new((-5.0, 5.0, -1.0), -90.0, -20.0);
-        //let projection = Projection::new(size.width, size.height, 45.0, 0.1, 100.0);
-        //let camera_controller = camera::CameraController::new(4.0, 0.4);
-
-        let mut uniforms = Uniforms::new();
-        // TODO update view projection with hecs world query
-        // uniforms.update_view_proj(&camera, &projection);
-
-        let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Uniform Buffer"),
-            contents: bytemuck::cast_slice(&[uniforms]),
+        let mut projection = ProjectionUniform::new();
+        let projection_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Projection Buffer"),
+            contents: bytemuck::cast_slice(&[projection]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
-
-        let uniform_bind_group_layout =
+        let projection_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[wgpu::BindGroupLayoutEntry {
                     binding: 0,
@@ -251,16 +200,15 @@ impl WgpuRenderer {
                     },
                     count: None,
                 }],
-                label: Some("uniform_bind_group_layout"),
+                label: Some("projection_bind_group_layout"),
             });
-
-        let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &uniform_bind_group_layout,
+        let projection_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &projection_bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
-                resource: uniform_buffer.as_entire_binding(),
+                resource: projection_buffer.as_entire_binding(),
             }],
-            label: Some("uniform_bind_group"),
+            label: Some("projection_bind_group"),
         });
 
             
@@ -271,12 +219,12 @@ impl WgpuRenderer {
         });
         
         let texture_bind_group_layout = 
-texture_bind_group_layout(&mut device);
+            texture_bind_group_layout(&mut device);
         
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&texture_bind_group_layout, &uniform_bind_group_layout],
+                bind_group_layouts: &[&texture_bind_group_layout, &projection_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -340,52 +288,16 @@ texture_bind_group_layout(&mut device);
             },
             multiview: None,
         });
-        
-
-        // let (num_vertices, vertices_buffer, num_indices, indices_buffer) = scene.into_iter().fold(
-        //     (0, Vec::new(), 0, Vec::new()),
-        //     |(mut num_vertices, mut vertices_buffer, mut num_indices, mut indices_buffer),
-        //      general| {
-        //         for mesh in general.meshes {
-        //             num_vertices += (mesh.positions.len() / 3) as u32;
-        //             vertices_buffer.push(device.create_buffer_init(
-        //                 &wgpu::util::BufferInitDescriptor {
-        //                     label: Some(&general.name),
-        //                     contents: bytemuck::cast_slice(mesh.positions.as_slice()),
-        //                     usage: wgpu::BufferUsage::VERTEX,
-        //                 },
-        //             ));
-        //             num_indices += mesh.indices.len() as u32;
-        //             indices_buffer.push(device.create_buffer_init(
-        //                 &wgpu::util::BufferInitDescriptor {
-        //                     label: Some(&general.name),
-        //                     contents: bytemuck::cast_slice(mesh.indices.as_slice()),
-        //                     usage: wgpu::BufferUsage::INDEX,
-        //                 },
-        //             ))
-        //         }
-        //         (num_vertices, vertices_buffer, num_indices, indices_buffer)
-        //     },
-        // );
-
-        //let num_vertices = (mesh.indices.len()) as u32;
 
         let mut renderer = Self {
             surface,
             device,
             queue,
-            //sc_desc,
-            //swap_chain,
             config,
             render_pipeline,
-            //camera,
-            // projection,
-            //camera_controller,
-            mouse_pressed: false,
-            uniforms,
-            uniform_buffer,
-            uniform_bind_group,
-            //model_state,
+            projection,
+            projection_buffer,
+            projection_bind_group,
         };
         
         let models = world.query::<&Model>().iter().map(|(_id, model)| bundles::ModelBundle::load(&model, &mut renderer)).collect::<Vec<ModelBundle>>();

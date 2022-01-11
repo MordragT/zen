@@ -1,25 +1,22 @@
+use crate::{EventQueue, Resource, TimeDelta};
 use hecs::{PreparedQuery, World};
 use winit::{
+    error::ExternalError,
     event::*,
     event_loop::{ControlFlow, EventLoop},
-    window::{Window as WinitWindow, WindowBuilder},
+    window::{Window, WindowBuilder},
 };
-use zen_app::App;
-use zen_camera::{Camera, Projection};
-use zen_core::{EventQueue, Resource, TimeDelta};
 use zen_input::{CursorEntered, CursorLeft, KeyboardInput, MouseInput, MouseMotion, MouseWheel};
 use zen_render::{Renderer, WgpuRenderer};
 
-pub mod error;
-
-pub struct Window<R: Renderer + 'static> {
+pub struct App<R: Renderer + 'static> {
     event_loop: EventLoop<()>,
-    window: WinitWindow,
+    window: Window,
     renderer: R,
     pub world: World,
 }
 
-impl Window<WgpuRenderer> {
+impl App<WgpuRenderer> {
     pub fn new(mut world: World) -> Self {
         env_logger::init();
 
@@ -36,12 +33,12 @@ impl Window<WgpuRenderer> {
     }
 }
 
-impl<R: Renderer + 'static> Window<R> {
+impl<R: Renderer + 'static> App<R> {
     pub fn size(&self) -> (u32, u32) {
         self.renderer.size()
     }
 
-    pub fn run(mut self, app: impl Fn(&mut World) + 'static) {
+    pub fn run(mut self, app: impl Fn(&mut World, &mut Window) + 'static) {
         let mut last_render_time = std::time::Instant::now();
 
         self.event_loop
@@ -159,7 +156,7 @@ impl<R: Renderer + 'static> Window<R> {
                     }
                     _ => {}
                 };
-                app(&mut self.world);
+                app(&mut self.world, &mut self.window);
             });
     }
 }

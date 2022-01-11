@@ -32,8 +32,8 @@ pub struct Texture {
 impl Texture {
     pub fn format(&self) -> wgpu::TextureFormat {
         match self.color_type {
-            ColorType::RGBA8 => wgpu::TextureFormat::Rgba8Uint,
-            ColorType::RGBA16 => wgpu::TextureFormat::Rgba16Uint,
+            ColorType::RGBA8 => wgpu::TextureFormat::Rgba8Unorm,
+            ColorType::RGBA16 => wgpu::TextureFormat::Rgba16Unorm,
             ColorType::BGRA8 => wgpu::TextureFormat::Bgra8Unorm,
         }
     }

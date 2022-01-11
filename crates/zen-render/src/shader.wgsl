@@ -32,16 +32,16 @@ fn vs_main(
 // Fragment shader
 
 [[group(0), binding(0)]]
-var t_diffuse: texture_2d<u32>;
+var t_diffuse: texture_2d<f32>;
 [[group(0), binding(1)]]
 var s_diffuse: sampler;
 
 [[stage(fragment)]]
 // returned before vec4<f32>
 fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
-    //return textureSample(t_diffuse, s_diffuse, in.tex_coords);
-    var tex: vec4<u32> = textureLoad(t_diffuse, vec2<i32>(in.tex_coords), 0);
-    return vec4<f32>(f32(tex.x)/255.0, f32(tex.y)/255.0, f32(tex.z)/255.0, f32(tex.w)/255.0);
+    return textureSample(t_diffuse, s_diffuse, in.tex_coords);
+    // var tex: vec4<u32> = textureLoad(t_diffuse, vec2<i32>(in.tex_coords), 0);
+    // return vec4<f32>(f32(tex.x)/255.0, f32(tex.y)/255.0, f32(tex.z)/255.0, f32(tex.w)/255.0);
     //return vec4<f32>(0.9, 0.5, 0.2, 1.0);
 }
 

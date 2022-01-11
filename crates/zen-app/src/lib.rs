@@ -6,23 +6,25 @@
 //! Init is run only once before all other stages.
 //! The other cycles are self explanatory.
 
+pub use app::*;
 pub use asset::*;
 pub use error::Error;
 use hecs::World;
 
+mod app;
 mod asset;
 mod error;
 
 /// The core trait which holds all the functions that
 /// are run during the execution cycle.
-pub trait App {
-    fn on_init(&mut self, world: &mut World);
-    fn on_first(&mut self, world: &mut World);
-    fn on_pre_update(&mut self, world: &mut World);
-    fn on_update(&mut self, world: &mut World);
-    fn on_post_update(&mut self, world: &mut World);
-    fn on_last(&mut self, world: &mut World);
-}
+// pub trait App {
+//     fn on_init(&mut self, world: &mut World);
+//     fn on_first(&mut self, world: &mut World);
+//     fn on_pre_update(&mut self, world: &mut World);
+//     fn on_update(&mut self, world: &mut World);
+//     fn on_post_update(&mut self, world: &mut World);
+//     fn on_last(&mut self, world: &mut World);
+// }
 
 /// The different stages of the execution cycle
 pub enum Stage {
@@ -32,4 +34,28 @@ pub enum Stage {
     Update,
     PostUpdate,
     Last,
+}
+pub type EventQueue<T> = Vec<T>;
+pub type TimeDelta = std::time::Duration;
+
+pub struct Resource<T> {
+    inner: T,
+}
+
+impl<T> Resource<T> {
+    pub fn new(inner: T) -> Self {
+        Self { inner }
+    }
+
+    pub fn inner(&self) -> &T {
+        &self.inner
+    }
+
+    pub fn inner_mut(&mut self) -> &mut T {
+        &mut self.inner
+    }
+
+    pub fn replace(&mut self, inner: T) {
+        self.inner = inner;
+    }
 }

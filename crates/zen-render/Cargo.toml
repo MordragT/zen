@@ -14,7 +14,6 @@ bytemuck = { version = "1.7.0", features = ["derive"] }
 zen-model = {  path = "../zen-model" }
 zen-texture = { path = "../zen-texture" }
 zen-material = { path = "../zen-material" }
-zen-camera = { path = "../zen-camera" }
 ultraviolet = { version = "0.8", features = ["bytemuck"] }
 
 [dev-dependencies]

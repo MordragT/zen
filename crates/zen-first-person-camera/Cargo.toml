@@ -1,5 +1,5 @@
 [package]
-name = "zen-camera"
+name = "zen-first-person-camera"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 ultraviolet = "0.8"
 zen-input = { path = "../zen-input" }
-zen-core = { path = "../zen-core" }
+zen-app = { path = "../zen-app" }
+zen-render = { path = "../zen-render" }
 hecs = "0.7"
 winit = "0.26"
