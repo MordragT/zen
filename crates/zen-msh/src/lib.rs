@@ -27,7 +27,7 @@ use error::Result;
 use serde::Deserialize;
 use std::convert::TryFrom;
 use std::io::{Cursor, Seek, SeekFrom};
-use zen_app::{Asset, AssetLoader};
+use zen_core::{Asset, AssetLoader};
 use zen_math::Vec3;
 use zen_model::*;
 use zen_parser::prelude::*;

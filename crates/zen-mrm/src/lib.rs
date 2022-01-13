@@ -27,7 +27,7 @@ use error::Result;
 use serde::Deserialize;
 use std::io::{Cursor, Seek, SeekFrom};
 use sub_mesh::*;
-use zen_app::{Asset, AssetLoader};
+use zen_core::{Asset, AssetLoader};
 use zen_material::*;
 use zen_math::{Vec2, Vec3, Vec4};
 use zen_model::*;

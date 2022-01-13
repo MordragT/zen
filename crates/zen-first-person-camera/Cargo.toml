@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 ultraviolet = "0.8"
 zen-input = { path = "../zen-input" }
-zen-app = { path = "../zen-app" }
+zen-core = { path = "../zen-core" }
 zen-render = { path = "../zen-render" }
 hecs = "0.7"
 winit = "0.26"

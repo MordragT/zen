@@ -11,7 +11,8 @@ hecs = "0.7"
 hecs-macros = "0.7"
 winit = "0.26"
 bytemuck = { version = "1.7.0", features = ["derive"] }
-zen-model = {  path = "../zen-model" }
+zen-core = { path = "../zen-core" }
+zen-model = { path = "../zen-model" }
 zen-texture = { path = "../zen-texture" }
 zen-material = { path = "../zen-material" }
 ultraviolet = { version = "0.8", features = ["bytemuck"] }

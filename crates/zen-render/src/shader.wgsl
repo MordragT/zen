@@ -2,7 +2,8 @@
 
 //[[block]] // 1.
 struct Uniforms {
-    view_proj: mat4x4<f32>;
+    projection: mat4x4<f32>;
+    view: mat4x4<f32>;
 };
 [[group(1), binding(0)]] // 2.
 var<uniform> uniforms: Uniforms;
@@ -23,7 +24,7 @@ fn vs_main(
     model: VertexInput,
 ) -> VertexOutput {
     var out: VertexOutput;
-    out.clip_position = uniforms.view_proj * vec4<f32>(model.position, 1.0);
+    out.clip_position = uniforms.projection * uniforms.view * vec4<f32>(model.position, 1.0);
     out.tex_coords = model.tex_coords;
     return out;
 }
@@ -44,7 +45,3 @@ fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
     // return vec4<f32>(f32(tex.x)/255.0, f32(tex.y)/255.0, f32(tex.z)/255.0, f32(tex.w)/255.0);
     //return vec4<f32>(0.9, 0.5, 0.2, 1.0);
 }
-
- 
-
- 

@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-zen-app = { path = "../zen-app" }
+zen-core = { path = "../zen-core" }
 zen-math = { path = "../zen-math" }
 zen-parser = { path = "../zen-parser" }
 zen-material = { path = "../zen-material" }

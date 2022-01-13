@@ -4,7 +4,7 @@ use std::f32::consts::FRAC_PI_2;
 use ultraviolet::{Isometry3, Mat4, Rotor3, Vec3};
 
 use winit::{dpi::PhysicalPosition, event::*, window::Window};
-use zen_app::{EventQueue, Resource, TimeDelta};
+use zen_core::{EventQueue, Resource, TimeDelta};
 use zen_input::{KeyboardInput, MouseInput, MouseMotion, MouseWheel};
 use zen_render::{
     camera::{Camera, Projection},
@@ -20,32 +20,31 @@ pub struct FirstPersonCameraBundle {
     pub keyboard_input: EventQueue<KeyboardInput>,
     pub mouse_motion: EventQueue<MouseMotion>,
     pub mouse_input: EventQueue<MouseInput>,
+    pub mouse_wheel: EventQueue<MouseWheel>,
 }
 
 impl FirstPersonCameraBundle {
     pub fn new(width: u32, height: u32) -> Self {
         Self {
-            camera: Camera::new(Vec3::new(0.0, 10.0, 0.0), Rotor3::from_rotation_yz(45.0)),
+            camera: Camera::new(),
             controller: FirstPersonController::new(4.0, 0.4),
-            projection: Projection::new(width, height, 45.0, 0.1, 1000.0),
+            projection: Projection::new(width, height, 45.0, 0.0, 1.0),
             time: Resource::new(std::time::Duration::ZERO),
             keyboard_input: EventQueue::new(),
             mouse_motion: EventQueue::new(),
             mouse_input: EventQueue::new(),
+            mouse_wheel: EventQueue::new(),
         }
     }
 }
 
 #[derive(Debug)]
 pub struct FirstPersonController {
-    pub amount_left: f32,
-    pub amount_right: f32,
-    pub amount_forward: f32,
-    pub amount_backward: f32,
-    pub amount_up: f32,
-    pub amount_down: f32,
-    pub rotate_horizontal: f32,
-    pub rotate_vertical: f32,
+    pub up: f32,
+    pub right: f32,
+    pub forward: f32,
+    pub pitch: f32,
+    pub yaw: f32,
     pub scroll: f32,
     pub speed: f32,
     pub sensitivity: f32,
@@ -55,14 +54,11 @@ pub struct FirstPersonController {
 impl FirstPersonController {
     pub fn new(speed: f32, sensitivity: f32) -> Self {
         Self {
-            amount_left: 0.0,
-            amount_right: 0.0,
-            amount_forward: 0.0,
-            amount_backward: 0.0,
-            amount_up: 0.0,
-            amount_down: 0.0,
-            rotate_horizontal: 0.0,
-            rotate_vertical: 0.0,
+            up: 0.0,
+            right: 0.0,
+            forward: 0.0,
+            pitch: 0.0,
+            yaw: 0.0,
             scroll: 0.0,
             speed,
             sensitivity,
@@ -77,12 +73,11 @@ pub fn on_button(world: &mut World, window: &Window) {
     {
         while let Some(event) = mouse_input.pop() {
             if event.button == MouseButton::Left && event.state == ElementState::Pressed {
-                controller.cursor_grab = !controller.cursor_grab;
-                let result = window.set_cursor_grab(controller.cursor_grab);
-                if let Err(err) = result {
+                if let Err(err) = window.set_cursor_grab(true) {
                     println!("{:?}", err);
                 }
-                window.set_cursor_visible(!controller.cursor_grab);
+                window.set_cursor_visible(false);
+                controller.cursor_grab = true;
             }
         }
     }
@@ -107,13 +102,13 @@ pub fn on_motion(world: &mut World) {
         world.query_mut::<(&mut FirstPersonController, &mut EventQueue<MouseMotion>)>()
     {
         while let Some(MouseMotion { delta: (dx, dy) }) = mouse_motion.pop() {
-            controller.rotate_horizontal = dx as f32;
-            controller.rotate_vertical = dy as f32;
+            controller.yaw = dx as f32;
+            controller.pitch = dy as f32;
         }
     }
 }
 
-pub fn on_key(world: &mut World) {
+pub fn on_key(world: &mut World, window: &Window) {
     for (_id, (controller, keyboard_input)) in
         world.query_mut::<(&mut FirstPersonController, &mut EventQueue<KeyboardInput>)>()
     {
@@ -124,12 +119,19 @@ pub fn on_key(world: &mut World) {
                 0.0
             };
             match code {
-                VirtualKeyCode::W | VirtualKeyCode::Up => controller.amount_forward = amount,
-                VirtualKeyCode::S | VirtualKeyCode::Down => controller.amount_backward = amount,
-                VirtualKeyCode::A | VirtualKeyCode::Left => controller.amount_left = amount,
-                VirtualKeyCode::D | VirtualKeyCode::Right => controller.amount_right = amount,
-                VirtualKeyCode::Space => controller.amount_up = amount,
-                VirtualKeyCode::LShift => controller.amount_down = amount,
+                VirtualKeyCode::W | VirtualKeyCode::Up => controller.forward = amount,
+                VirtualKeyCode::S | VirtualKeyCode::Down => controller.forward = -amount,
+                VirtualKeyCode::A | VirtualKeyCode::Left => controller.right = -amount,
+                VirtualKeyCode::D | VirtualKeyCode::Right => controller.right = amount,
+                VirtualKeyCode::Space => controller.up = amount,
+                VirtualKeyCode::LShift => controller.up = -amount,
+                VirtualKeyCode::Escape => {
+                    if let Err(err) = window.set_cursor_grab(false) {
+                        println!("{:?}", err);
+                    }
+                    window.set_cursor_visible(true);
+                    controller.cursor_grab = false;
+                }
                 _ => {}
             }
         }
@@ -142,15 +144,36 @@ pub fn update_camera(world: &mut World) {
         &mut FirstPersonController,
         &mut Resource<TimeDelta>,
     )>() {
-        // println!("{:?}", camera);
+        println!("{:?}", camera);
         let delta = delta.inner().as_secs_f32();
+        // let rotor = Rotor3::from_rotation_between(camera.eye, camera.direction);
+        // let movement = controller.speed
+        //     * delta
+        //     * Vec3::new(controller.right, controller.up, controller.forward);
+        // camera.eye += rotor * movement;
+        camera.eye.z -= rotor * (controller.speed * delta * controller.forward);
+        camera.eye.x += rotor * (controller.speed * delta * controller.right);
+        camera.eye.y += rotor * (controller.speed * delta * controller.up);
 
+        // let local_xz_rotor = Rotor3::from_rotation_xz(camera.rotation.bv.xz);
+
+        // let forward = local_xz_rotor * (controller.forward * -Vec3::unit_z());
+        // let right = local_xz_rotor * (controller.right * Vec3::unit_x());
+        // let up = controller.up * Vec3::unit_y();
+
+        // let translation = forward + right + up;
+        // camera.append_translation(delta * controller.speed * translation);
+        // let mut velocity = Vec3::zero();
         // Move forward/backward and left/right
-        let up = (controller.amount_up - controller.amount_down) * controller.speed * delta;
-        let right = (controller.amount_right - controller.amount_left) * controller.speed * delta;
-        let forward =
-            (controller.amount_forward - controller.amount_backward) * controller.speed * delta;
-        camera.prepend_translation(Vec3::new(right, up, -forward));
+        // let up = (controller.amount_up - controller.amount_down) * controller.speed * delta;
+        // let right = (controller.amount_right - controller.amount_left) * controller.speed * delta;
+        // let forward =
+        //     (controller.amount_forward - controller.amount_backward) * controller.speed * delta;
+
+        // velocity += controller.up * Vec3::unit_y();
+        // velocity += controller.right * (camera.rotation * Vec3::unit_x());
+        // velocity -= controller.forward * (camera.rotation * Vec3::unit_z());
+        // camera.prepend_translation((delta * controller.speed) * velocity);
         // camera.prepend_translation(Vec3::new(right, 0.0, 0.0));
         // camera.prepend_translation(Vec3::new(0.0, up, 0.0));
         // camera.prepend_translation(Vec3::new(0.0, 0.0, forward));
@@ -190,9 +213,9 @@ pub fn update_camera(world: &mut World) {
 
         if controller.cursor_grab {
             // Rotate
-            let yaw = controller.rotate_horizontal * controller.sensitivity * delta;
+            let yaw = controller.yaw * controller.sensitivity * delta;
             let pitch = {
-                let pitch = -controller.rotate_vertical * controller.sensitivity * delta;
+                let pitch = -controller.pitch * controller.sensitivity * delta;
                 if pitch < -FRAC_PI_2 {
                     -FRAC_PI_2
                 } else if pitch > FRAC_PI_2 {
@@ -202,19 +225,24 @@ pub fn update_camera(world: &mut World) {
                 }
             };
 
+            camera
+                .direction
+                .rotate_by(Rotor3::from_euler_angles(0.0, pitch, yaw));
+            // camera.direction.y += pitch;
+            // camera.direction.x += yaw;
             // let movement = Isometry3::new(
             //     Vec3::new(right, up, forward),
             //     Rotor3::from_euler_angles(0.0, pitch, yaw),
             // );
             // camera.prepend_isometry(movement);
 
-            camera.append_rotation(Rotor3::from_euler_angles(0.0, pitch, yaw));
+            // camera.append_rotation(yaw_rotor * pitch_rotor);
 
             // If process_mouse isn't called every frame, these values
             // will not get set to zero, and the camera will rotate
             // when moving in a non cardinal direction.
-            controller.rotate_horizontal = 0.0;
-            controller.rotate_vertical = 0.0;
+            controller.yaw = 0.0;
+            controller.pitch = 0.0;
         }
         // Keep the camera's angle from going too high/low.
         // if camera.pitch < -FRAC_PI_2 {

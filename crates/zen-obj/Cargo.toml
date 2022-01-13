@@ -1,20 +1,12 @@
 [package]
-name = "zen-app"
+name = "zen-obj"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-winit = "0.26"
-env_logger = "0.8.4"
-hecs = "0.7"
-ultraviolet = "0.8"
+tobj = "3.2"
 zen-core = { path = "../zen-core" }
-zen-input = { path = "../zen-input" }
-zen-render = { path = "../zen-render" }
-zen-math = { path = "../zen-math" }
 zen-model = { path = "../zen-model" }
-zen-texture = { path = "../zen-texture" }
 zen-material = { path = "../zen-material" }
-pollster = "0.2"

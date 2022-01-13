@@ -1,8 +1,9 @@
 use hecs::{PreparedQuery, RefMut, World};
 use std::{convert::TryFrom, fs::File, io::Cursor};
 use winit::{event::*, window::Window};
-use zen_app::{App, EventQueue, Resource, TimeDelta};
+use zen_app::App;
 use zen_archive::Vdfs;
+use zen_core::{EventQueue, Resource, TimeDelta};
 use zen_first_person_camera::{FirstPersonCameraBundle, FirstPersonController};
 use zen_input::KeyboardInput;
 use zen_material::Material;
@@ -45,6 +46,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         bundle.keyboard_input,
         bundle.mouse_motion,
         bundle.mouse_input,
+        bundle.mouse_wheel,
     ));
     window.run(move |world, window| {
         on_input(world, window);
@@ -55,7 +57,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 pub fn on_input(world: &mut World, window: &Window) {
     zen_first_person_camera::on_button(world, window);
-    zen_first_person_camera::on_key(world);
+    zen_first_person_camera::on_key(world, window);
     zen_first_person_camera::on_motion(world);
     zen_first_person_camera::on_scroll(world);
 }

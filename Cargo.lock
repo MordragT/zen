@@ -1448,6 +1448,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tobj"
+version = "3.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "267a53ebc1139c69d3feedc33a381c382b2e3b0c47f44f48679e90c4a69b8dac"
+dependencies = [
+ "ahash 0.7.4",
+]
+
+[[package]]
 name = "toml"
 version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1844,7 +1853,9 @@ dependencies = [
  "env_logger",
  "hecs",
  "pollster",
+ "ultraviolet",
  "winit",
+ "zen-core",
  "zen-input",
  "zen-material",
  "zen-math",
@@ -1862,6 +1873,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "zen-core"
+version = "0.1.0"
+dependencies = [
+ "hecs",
+ "ultraviolet",
+ "zen-model",
+]
+
+[[package]]
 name = "zen-daedalus"
 version = "0.0.1"
 dependencies = [
@@ -1876,7 +1896,7 @@ dependencies = [
  "hecs",
  "ultraviolet",
  "winit",
- "zen-app",
+ "zen-core",
  "zen-input",
  "zen-render",
 ]
@@ -1897,6 +1917,7 @@ dependencies = [
  "winit",
  "zen-app",
  "zen-archive",
+ "zen-core",
  "zen-daedalus",
  "zen-first-person-camera",
  "zen-input",
@@ -1954,8 +1975,8 @@ name = "zen-mrm"
 version = "0.1.0"
 dependencies = [
  "serde",
- "zen-app",
  "zen-archive",
+ "zen-core",
  "zen-material",
  "zen-math",
  "zen-model",
@@ -1968,13 +1989,23 @@ name = "zen-msh"
 version = "0.1.0"
 dependencies = [
  "serde",
- "zen-app",
  "zen-archive",
+ "zen-core",
  "zen-material",
  "zen-math",
  "zen-model",
  "zen-parser",
  "zen-types",
+]
+
+[[package]]
+name = "zen-obj"
+version = "0.1.0"
+dependencies = [
+ "tobj",
+ "zen-core",
+ "zen-material",
+ "zen-model",
 ]
 
 [[package]]
@@ -1996,6 +2027,7 @@ dependencies = [
  "wgpu",
  "winit",
  "zen-archive",
+ "zen-core",
  "zen-material",
  "zen-model",
  "zen-texture",

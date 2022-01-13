@@ -1,11 +1,12 @@
 use wgpu::util::DeviceExt;
 use winit::window::Window;
-use camera::{Camera, Projection, ProjectionUniform};
+use camera::{Projection, ProjectionViewUniform, Camera};
 use hecs::{World, PreparedQuery};
 use zen_model::{Mesh, Model, Vertex};
 use zen_texture::Texture;
 use bundles::{ModelBundle, MeshBundle};
 use draw::DrawModel;
+use ultraviolet::Isometry3;
 
 pub mod draw;
 pub mod camera;
@@ -26,9 +27,9 @@ pub struct WgpuRenderer {
     queue: wgpu::Queue,
     render_pipeline: wgpu::RenderPipeline,
     config: wgpu::SurfaceConfiguration,
-    projection: ProjectionUniform,
-    projection_buffer: wgpu::Buffer,
-    projection_bind_group: wgpu::BindGroup,
+    proj_view: ProjectionViewUniform,
+    proj_view_buffer: wgpu::Buffer,
+    proj_view_bind_group: wgpu::BindGroup,
 }
 
 
@@ -50,12 +51,12 @@ impl Renderer for WgpuRenderer {
 
     fn update(&mut self, world: &mut World) {
         for (_id, (camera, projection)) in world.query_mut::<(&mut Camera, &mut Projection)>() {
-            self.projection
-                .update_view_proj(&camera, &projection);
+            self.proj_view.projection = projection.mat();
+            self.proj_view.view = camera.mat();
             self.queue.write_buffer(
-                &self.projection_buffer,
+                &self.proj_view_buffer,
                 0,
-                bytemuck::cast_slice(&[self.projection]),
+                bytemuck::cast_slice(&[self.proj_view]),
             );
         }
     }
@@ -91,7 +92,7 @@ impl Renderer for WgpuRenderer {
 
             render_pass.set_pipeline(&self.render_pipeline);
             for (_id, model) in world.query_mut::<&mut ModelBundle>() {
-                render_pass.draw_model(model, &self.projection_bind_group);                
+                render_pass.draw_model(model, &self.proj_view_bind_group);                
             }
         }
 
@@ -182,13 +183,13 @@ impl WgpuRenderer {
         };
         surface.configure(&device, &config);
 
-        let mut projection = ProjectionUniform::new();
-        let projection_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let mut proj_view = ProjectionViewUniform::new();
+        let proj_view_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Projection Buffer"),
-            contents: bytemuck::cast_slice(&[projection]),
+            contents: bytemuck::cast_slice(&[proj_view]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
-        let projection_bind_group_layout =
+        let proj_view_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[wgpu::BindGroupLayoutEntry {
                     binding: 0,
@@ -200,15 +201,15 @@ impl WgpuRenderer {
                     },
                     count: None,
                 }],
-                label: Some("projection_bind_group_layout"),
+                label: Some("proj_view_bind_group_layout"),
             });
-        let projection_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &projection_bind_group_layout,
+        let proj_view_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &proj_view_bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
-                resource: projection_buffer.as_entire_binding(),
+                resource: proj_view_buffer.as_entire_binding(),
             }],
-            label: Some("projection_bind_group"),
+            label: Some("proj_view_bind_group"),
         });
 
             
@@ -224,7 +225,7 @@ impl WgpuRenderer {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&texture_bind_group_layout, &projection_bind_group_layout],
+                bind_group_layouts: &[&texture_bind_group_layout, &proj_view_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -295,9 +296,9 @@ impl WgpuRenderer {
             queue,
             config,
             render_pipeline,
-            projection,
-            projection_buffer,
-            projection_bind_group,
+            proj_view,
+            proj_view_buffer,
+            proj_view_bind_group,
         };
         
         let models = world.query::<&Model>().iter().map(|(_id, model)| bundles::ModelBundle::load(&model, &mut renderer)).collect::<Vec<ModelBundle>>();
