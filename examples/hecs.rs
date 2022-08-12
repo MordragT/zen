@@ -8,7 +8,10 @@ use zen_first_person_camera::{FirstPersonCameraBundle, FirstPersonController};
 use zen_input::KeyboardInput;
 use zen_material::Material;
 use zen_math::Vec3;
-use zen_model::{Mesh, Model};
+use zen_model::{
+    gltf::{to_gltf, Output},
+    Mesh, Model,
+};
 use zen_mrm::Mrm;
 use zen_texture::Texture;
 use zen_types::path::INSTANCE;
@@ -27,12 +30,14 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
     let vdf_file = File::open(INSTANCE.meshes())?;
     let vdf = Vdfs::new(vdf_file)?;
+    vdf.list();
     let mesh_entry = vdf
-        .get_by_name("ORC_MASTERTHRONE.MRM")
+        .get_by_name_slice("ORC_STATUE") // ("CITY_KNIGHT_STATUE")
         .expect("Should be there!");
     let cursor = Cursor::new(mesh_entry.data);
     let throne_mesh = Mrm::new(cursor, "ORC_MASTERTHRONE")?;
     let throne_model = Model::try_from(throne_mesh)?;
+    let _ = to_gltf(throne_model.clone(), Output::Standard);
     let throne = world.spawn((throne_model, "throne"));
 
     let mut window = App::new(world);

@@ -144,16 +144,16 @@ pub fn update_camera(world: &mut World) {
         &mut FirstPersonController,
         &mut Resource<TimeDelta>,
     )>() {
-        println!("{:?}", camera);
+        // println!("{:?}", camera);
         let delta = delta.inner().as_secs_f32();
-        // let rotor = Rotor3::from_rotation_between(camera.eye, camera.direction);
-        // let movement = controller.speed
-        //     * delta
-        //     * Vec3::new(controller.right, controller.up, controller.forward);
-        // camera.eye += rotor * movement;
-        camera.eye.z -= rotor * (controller.speed * delta * controller.forward);
-        camera.eye.x += rotor * (controller.speed * delta * controller.right);
-        camera.eye.y += rotor * (controller.speed * delta * controller.up);
+        let rotor = Rotor3::from_rotation_between(camera.eye, camera.direction);
+        let movement = controller.speed
+            * delta
+            * Vec3::new(controller.right, controller.up, controller.forward);
+        camera.eye += rotor * movement;
+        // camera.eye.z -= rotor * (controller.speed * delta * controller.forward);
+        // camera.eye.x += rotor * (controller.speed * delta * controller.right);
+        // camera.eye.y += rotor * (controller.speed * delta * controller.up);
 
         // let local_xz_rotor = Rotor3::from_rotation_xz(camera.rotation.bv.xz);
 
