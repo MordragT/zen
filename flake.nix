@@ -14,6 +14,7 @@
   in { overlay = overlay; } // utils.lib.eachDefaultSystem (system: let
     pkgs = nixpkgs.legacyPackages."${system}";
     naersk-lib = naersk.lib."${system}";
+    toolchain = fenix.packages.${system}.complete;
   in rec {
     # `nix build`
     packages.zen = import ./default.nix {
@@ -34,11 +35,17 @@
     # `nix develop`
     devShell = pkgs.mkShell {
       nativeBuildInputs = with pkgs; [
+        (toolchain.withComponents [
+          "cargo" "rustc" "rust-src" "rustfmt" "clippy"    
+        ])
+
         pkgconfig
         vulkan-tools
         vulkan-loader
         vulkan-headers
         vulkan-validation-layers
+        alsa-lib
+        udev
           
         xorg.libX11
         xorg.libXcursor

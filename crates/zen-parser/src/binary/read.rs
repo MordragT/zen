@@ -5,13 +5,15 @@ use std::{
     mem,
 };
 
-impl BinaryRead for Cursor<&[u8]> {}
+// impl BinaryRead for Cursor<&[u8]> {}
 
-impl BinaryRead for Cursor<Vec<u8>> {}
+// impl BinaryRead for Cursor<Vec<u8>> {}
 
-impl BinaryRead for File {}
+// impl BinaryRead for File {}
 
-impl<R: BinaryRead> BinaryRead for &mut R {}
+// impl<R: BinaryRead> BinaryRead for &mut R {}
+
+impl<R: Read + Seek> BinaryRead for R {}
 
 /// Provides methods to read a binary archive
 pub trait BinaryRead: Read + Seek {

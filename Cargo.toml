@@ -1,5 +1,5 @@
 [package]
-name = "zen-loader"
+name = "zen"
 version = "0.0.1"
 authors = ["MordragT <scrat_games@gmx.de>"]
 edition = "2021"
@@ -8,7 +8,6 @@ repository = "https://github.com/mordragt/zen-loader.git"
 description = "Open zengine formats and export the data to modern formats"
 readme = "README.md"
 keywords = ["gothic", "zen", "game-engine", "data-formats", "loader"]
-resolver = "2"
 
 [workspace]
 members = ["crates/*"]
@@ -16,21 +15,11 @@ members = ["crates/*"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-zen-app = { path = "crates/zen-app" }
-zen-archive = { path = "crates/zen-archive" }
-zen-camera = { path = "crates/zen-camera" }
 zen-core = { path = "crates/zen-core" }
-zen-mrm = { path = "crates/zen-mrm", optional = true }
-zen-msh = { path = "crates/zen-msh", optional = true }
-zen-window = { path = "crates/zen-window" }
-zen-model = {  path = "crates/zen-model" }
 zen-parser = {  path = "crates/zen-parser" }
-zen-texture = {  path = "crates/zen-texture" }
-zen-material = {  path = "crates/zen-material" }
 zen-types = {  path = "crates/zen-types" }
 zen-daedalus = {  path = "crates/zen-daedalus" }
-zen-math = { path = "crates/zen-math" }
-zen-render = { path = "crates/zen-render" }
-
+bevy = "0.8"
+miette = "5.3"
 
 

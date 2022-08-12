@@ -8,13 +8,9 @@
 //! I am working on the export of Zengin World Meshes (.zen) to gltf
 //! and a [Daedalus](zen_daedalus) (scripting language) virtual machine to execute the bytecode.
 
-pub use zen_archive;
+pub use zen_core;
 pub use zen_daedalus;
-pub use zen_material;
-pub use zen_model;
 pub use zen_parser;
-pub use zen_texture;
-pub use zen_types;
 
 mod prelude {
     // pub use zen_archive::{Entry, Vdfs};
