@@ -7,6 +7,7 @@ use crate::{
     texture::{TextureError, ZenTexture},
 };
 use bevy::prelude::{Assets, Handle, Res, ResMut};
+use miette::Diagnostic;
 use std::{
     fs::File,
     io,
@@ -14,7 +15,7 @@ use std::{
 };
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Diagnostic, Error, Debug)]
 pub enum AssetError {
     #[error("Asset Dir Error: {0}")]
     WalkDir(#[from] walkdir::Error),
@@ -55,7 +56,7 @@ impl ZenAssetLoaderBuilder {
         }
     }
 
-    pub fn archive<P: AsRef<Path>>(mut self, kind: VdfsKind, path: P) -> io::Result<Self> {
+    pub fn archive<P: AsRef<Path>>(mut self, kind: VdfsKind, path: P) -> AssetResult<Self> {
         let file = File::open(path)?;
         match kind {
             VdfsKind::Mesh => self.mesh_archives.push(file),
