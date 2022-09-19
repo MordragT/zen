@@ -4,3 +4,4 @@ crates/*/target
 .metals/
 .vscode/
 /docs
+.direnv
