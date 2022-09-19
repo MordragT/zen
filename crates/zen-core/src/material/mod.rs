@@ -10,8 +10,9 @@ use crate::{
     texture::ZenTexture,
 };
 use bevy::{
-    prelude::{Color, Handle},
+    prelude::{Color, Handle, Image, Material},
     reflect::{TypeUuid, Uuid},
+    render::render_resource::{AsBindGroup, ShaderRef},
 };
 pub use error::MaterialError;
 use error::MaterialResult;
@@ -25,24 +26,24 @@ mod error;
 pub const GOTHIC2: u16 = 39939;
 
 /// Simple Material with texture and color
-//#[cfg_attr(feature = "bevy", derive(Component))]
-#[derive(Clone)]
+#[derive(AsBindGroup, TypeUuid, Clone)]
+#[uuid = "5c5462ea-1986-11ed-9f7c-233969708b10"]
 pub struct ZenMaterial {
-    pub texture: Handle<ZenTexture>,
     // TODO add support for normal map
+    #[uniform(0)]
     pub color: Color,
     pub metallic: f32,
     pub roughness: f32,
     pub reflectance: f32,
+    #[texture(1)]
+    #[sampler(2)]
+    pub texture: Handle<Image>,
 }
 
-impl TypeUuid for ZenMaterial {
-    const TYPE_UUID: Uuid = Uuid::from_fields(
-        0x5c5462ea,
-        0x1986,
-        0x11ed,
-        &[0x8f, 0x7c, 0x23, 0x39, 0x69, 0x70, 0x8b, 0x10],
-    );
+impl Material for ZenMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "zen_material.wgsl".into()
+    }
 }
 
 pub fn to_color(num: u32) -> Color {

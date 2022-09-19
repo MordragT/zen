@@ -5,9 +5,10 @@ use crate::{material::ZenMaterial, math::Vec3};
 use bevy::{
     ecs::system::SystemParamItem,
     prelude::Handle,
-    prelude::Res,
+    prelude::{Bundle, Component, ComputedVisibility, GlobalTransform, Res, Transform, Visibility},
     reflect::{TypeUuid, Uuid},
     render::{
+        extract_component::ExtractComponent,
         mesh::{
             GpuBufferInfo, GpuMesh, InnerMeshVertexBufferLayout, Mesh as BevyMesh,
             MeshVertexBufferLayout, PrimitiveTopology,
@@ -36,20 +37,50 @@ pub struct Vertex {
     pub tex_coords: [f32; 2],
 }
 
-#[derive(Clone, Debug)]
+#[derive(Bundle, Clone, TypeUuid, Default)]
+#[uuid = "2e393245-9977-43a8-97f2-2a0d54700b9d"]
+pub struct ZenModelBundle {
+    pub model: Handle<ZenModel>,
+    pub transform: Transform,
+    pub global_transform: GlobalTransform,
+    pub visibility: Visibility,
+    pub computed_visibility: ComputedVisibility,
+}
+
+/// General Mesh consisting out of one or more sub meshes
+#[derive(Clone, Debug, Component, TypeUuid)]
+#[uuid = "bf78b0e2-3835-11ed-a261-0242ac120002"]
+pub struct ZenModel {
+    pub meshes: Vec<Handle<ZenMesh>>,
+}
+
+// impl ExtractComponent for ZenModel {
+//     type Query = &'static Self;
+//     type Filter = ();
+
+//     fn extract_component(item: bevy::ecs::query::QueryItem<Self::Query>) -> Self {
+//         item.clone()
+//     }
+// }
+
+#[derive(Bundle, Clone, TypeUuid, Default)]
+#[uuid = "4bb17946-383a-11ed-a261-0242ac120002"]
+pub struct ZenMeshBundle {
+    pub mesh: Handle<ZenMesh>,
+    pub transform: Transform,
+    pub global_transform: GlobalTransform,
+    pub visibility: Visibility,
+    pub computed_visibility: ComputedVisibility,
+}
+
 /// Basic Mesh Informations
+#[derive(Clone, Debug, Component, TypeUuid)]
+#[uuid = "88834d9b-44d4-4686-a570-5cfdd66052b5"]
 pub struct ZenMesh {
     pub vertices: Vec<Vertex>,
     pub indices: Vec<u32>,
     pub material: Handle<ZenMaterial>,
     pub num_elements: u32,
-}
-
-impl TypeUuid for ZenMesh {
-    const TYPE_UUID: Uuid = Uuid::from_bytes([
-        0x88, 0x83, 0x4d, 0x9b, 0x44, 0xd4, 0x46, 0x86, 0xa5, 0x70, 0x5c, 0xfd, 0xd6, 0x60, 0x52,
-        0xb5,
-    ]);
 }
 
 // TODO impl Into BevyMesh instead of RenderAsset
@@ -60,6 +91,7 @@ impl RenderAsset for ZenMesh {
     type Param = Res<'static, RenderDevice>;
 
     fn extract_asset(&self) -> Self::ExtractedAsset {
+        log::debug!("Extracting ZenMesh for GPU");
         self.clone()
     }
 
@@ -67,6 +99,7 @@ impl RenderAsset for ZenMesh {
         mesh: Self::ExtractedAsset,
         render_device: &mut SystemParamItem<Self::Param>,
     ) -> Result<Self::PreparedAsset, PrepareAssetError<Self::ExtractedAsset>> {
+        log::debug!("Preparing ZenMesh for GPU");
         let vertex_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             usage: BufferUsages::VERTEX,
             contents: bytemuck::cast_slice(&mesh.vertices),
@@ -115,6 +148,39 @@ impl RenderAsset for ZenMesh {
 }
 
 impl ZenMesh {
+    pub fn plane(size: f32) -> Self {
+        let vertices = vec![
+            Vertex {
+                position: [0.0, 0.0, 0.0],
+                tex_coords: [0.0, 0.0],
+                normal: [0.0, 0.0, 0.0],
+            },
+            Vertex {
+                position: [size, 0.0, 0.0],
+                tex_coords: [1.0, 0.0],
+                normal: [1.0, 0.0, 0.0],
+            },
+            Vertex {
+                position: [0.0, 0.0, size],
+                tex_coords: [0.0, 1.0],
+                normal: [0.0, 0.0, 1.0],
+            },
+            Vertex {
+                position: [size, 0.0, size],
+                tex_coords: [1.0, 1.0],
+                normal: [1.0, 0.0, 1.0],
+            },
+        ];
+
+        let indices = vec![0, 1, 2, 1, 3, 2];
+        Self {
+            vertices,
+            indices,
+            material: Handle::default(),
+            num_elements: 6,
+        }
+    }
+
     pub fn extreme_coordinates(&self) -> (Vec3<f32>, Vec3<f32>) {
         self.vertices.iter().fold(
             (
@@ -177,19 +243,4 @@ impl ZenMesh {
 
         mesh
     }
-}
-
-#[derive(Clone)]
-/// General Mesh consisting out of one or more sub meshes
-pub struct ZenModel {
-    pub name: String,
-    pub meshes: Vec<Handle<ZenMesh>>,
-    //pub materials: Vec<ZenMaterial>,
-}
-
-impl TypeUuid for ZenModel {
-    const TYPE_UUID: Uuid = Uuid::from_bytes([
-        0x2E, 0x39, 0x32, 0x45, 0x99, 0x77, 0x43, 0xA8, 0x97, 0xF2, 0x2A, 0x0D, 0x54, 0x70, 0x0B,
-        0x9D,
-    ]);
 }

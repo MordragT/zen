@@ -1,9 +1,20 @@
-use bevy::reflect::{TypeUuid, Uuid};
+use bevy::{
+    ecs::system::{lifetimeless::SRes, SystemParamItem},
+    prelude::Image,
+    reflect::{TypeUuid, Uuid},
+    render::{
+        render_asset::{PrepareAssetError, RenderAsset},
+        render_resource::{Extent3d, TextureDimension, TextureFormat},
+        renderer::{RenderDevice, RenderQueue},
+        texture::{DefaultImageSampler, GpuImage},
+    },
+};
 pub use error::TextureError;
 use error::TextureResult;
 use serde::Deserialize;
 use std::{
     cmp,
+    fmt::Debug,
     io::{Seek, SeekFrom, Write},
 };
 use zen_parser::prelude::{BinaryDeserializer, BinaryRead};
@@ -13,12 +24,23 @@ mod ztex;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ColorType {
-    RGBA8,
-    BGRA8,
-    RGBA16,
+    Rgba8,
+    Bgra8,
+    Rgba16,
 }
 
-#[derive(Clone)]
+impl From<ColorType> for TextureFormat {
+    fn from(c: ColorType) -> Self {
+        match c {
+            ColorType::Rgba8 => TextureFormat::Rgba8Unorm,
+            ColorType::Bgra8 => TextureFormat::Bgra8Unorm,
+            ColorType::Rgba16 => TextureFormat::Rgba16Unorm,
+        }
+    }
+}
+
+#[derive(TypeUuid, Clone)]
+#[uuid = "8aa0408e-865d-473f-e212-9f07a5da5bce"]
 pub struct ZenTexture {
     width: u32,
     height: u32,
@@ -27,55 +49,34 @@ pub struct ZenTexture {
     pub name: String,
 }
 
-impl TypeUuid for ZenTexture {
-    const TYPE_UUID: Uuid = Uuid::from_fields(
-        0x8aa0408e,
-        0x865d,
-        0x473f,
-        &[0xe2, 0x12, 0x9f, 0x07, 0xa5, 0xda, 0x5b, 0xce],
-    );
+impl Debug for ZenTexture {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Name: {}, Width: {}, Height: {}, Format: {:?}, Data Length: {}",
+            self.name,
+            self.width,
+            self.height,
+            self.color_type,
+            self.pixels.len()
+        )
+    }
 }
 
-// #[cfg(feature = "wgpu")]
-// impl Texture {
-//     pub fn format(&self) -> wgpu::TextureFormat {
-//         match self.color_type {
-//             ColorType::RGBA8 => wgpu::TextureFormat::Rgba8Uint,
-//             ColorType::RGBA16 => wgpu::TextureFormat::Rgba16Uint,
-//             ColorType::BGRA8 => wgpu::TextureFormat::Bgra8Unorm,
-//         }
-//     }
-
-//     pub fn extend_3d(&self) -> wgpu::Extent3d {
-//         wgpu::Extent3d {
-//             width: self.width,
-//             height: self.height,
-//             depth_or_array_layers: 1,
-//         }
-//     }
-
-//     pub fn desc(&self) -> wgpu::TextureDescriptor {
-//         wgpu::TextureDescriptor {
-//             size: self.extend_3d(),
-//             mip_level_count: 1,
-//             sample_count: 1,
-//             dimension: wgpu::TextureDimension::D2,
-//             format: self.format(),
-//             // SAMPLED tells wgpu that we want to use this texture in shaders
-//             // COPY_DST means that we want to copy data to this texture
-//             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-//             label: Some(&self.name),
-//         }
-//     }
-
-//     pub fn layout(&self) -> wgpu::ImageDataLayout {
-//         wgpu::ImageDataLayout {
-//             offset: 0,
-//             bytes_per_row: std::num::NonZeroU32::new(4 * self.width),
-//             rows_per_image: std::num::NonZeroU32::new(self.height),
-//         }
-//     }
-// }
+impl From<ZenTexture> for Image {
+    fn from(tex: ZenTexture) -> Self {
+        Image::new(
+            Extent3d {
+                width: tex.width,
+                height: tex.height,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            tex.pixels,
+            tex.color_type.into(),
+        )
+    }
+}
 
 impl ZenTexture {
     pub fn new(
@@ -118,9 +119,9 @@ impl ZenTexture {
     pub fn to_png<W: Write>(&self, writer: W) -> TextureResult<()> {
         let encoder = image::codecs::png::PngEncoder::new(writer);
         let color_type = match self.color_type {
-            ColorType::BGRA8 => image::ColorType::Bgra8,
-            ColorType::RGBA16 => image::ColorType::Rgba16,
-            ColorType::RGBA8 => image::ColorType::Rgba8,
+            ColorType::Bgra8 => image::ColorType::Bgra8,
+            ColorType::Rgba16 => image::ColorType::Rgba16,
+            ColorType::Rgba8 => image::ColorType::Rgba8,
         };
         Ok(encoder.encode(self.as_bytes(), self.width, self.height, color_type)?)
     }
@@ -149,12 +150,12 @@ impl ZenTexture {
             ztex::ColorType::B8G8R8A8 => {
                 deserializer.len_queue.push(4 * size as usize);
                 let pixels = <Vec<u8>>::deserialize(&mut deserializer)?;
-                ZenTexture::new(width, height, ColorType::BGRA8, pixels, name.to_owned())
+                ZenTexture::new(width, height, ColorType::Bgra8, pixels, name.to_owned())
             }
             ztex::ColorType::R8G8B8A8 => {
                 deserializer.len_queue.push(4 * size as usize);
                 let pixels = <Vec<u8>>::deserialize(&mut deserializer)?;
-                ZenTexture::new(width, height, ColorType::RGBA8, pixels, name.to_owned())
+                ZenTexture::new(width, height, ColorType::Rgba8, pixels, name.to_owned())
             }
             ztex::ColorType::A8B8G8R8 => {
                 let mut pixels = vec![0_u8; 4 * size as usize];
@@ -163,7 +164,7 @@ impl ZenTexture {
                     pixel.reverse();
                     chunk.copy_from_slice(&pixel);
                 }
-                ZenTexture::new(width, height, ColorType::RGBA8, pixels, name.to_owned())
+                ZenTexture::new(width, height, ColorType::Rgba8, pixels, name.to_owned())
             }
             ztex::ColorType::A8R8G8B8 => {
                 let mut pixels = vec![0_u8; 4 * size as usize];
@@ -172,7 +173,7 @@ impl ZenTexture {
                     pixel.reverse();
                     chunk.copy_from_slice(&pixel);
                 }
-                ZenTexture::new(width, height, ColorType::BGRA8, pixels, name.to_owned())
+                ZenTexture::new(width, height, ColorType::Bgra8, pixels, name.to_owned())
             }
             ztex::ColorType::B8G8R8 => {
                 let mut pixels = vec![0_u8; 4 * size as usize];
@@ -180,7 +181,7 @@ impl ZenTexture {
                     let pixel = <[u8; 3]>::deserialize(&mut deserializer)?;
                     chunk.copy_from_slice(&[pixel[0], pixel[1], pixel[2], 0xff]);
                 }
-                ZenTexture::new(width, height, ColorType::BGRA8, pixels, name.to_owned())
+                ZenTexture::new(width, height, ColorType::Bgra8, pixels, name.to_owned())
             }
             ztex::ColorType::R8G8B8 => {
                 let mut pixels = vec![0_u8; 4 * size as usize];
@@ -188,7 +189,7 @@ impl ZenTexture {
                     let pixel = <[u8; 3]>::deserialize(&mut deserializer)?;
                     chunk.copy_from_slice(&[pixel[0], pixel[1], pixel[2], 0xff]);
                 }
-                ZenTexture::new(width, height, ColorType::RGBA8, pixels, name.to_owned())
+                ZenTexture::new(width, height, ColorType::Rgba8, pixels, name.to_owned())
             }
             ztex::ColorType::A4R4G4B4 => {
                 let mut pixels = vec![0_u8; 4 * size as usize];
@@ -201,7 +202,7 @@ impl ZenTexture {
                         ((pixel >> 12) & 0b1111) as u8, // a
                     ]);
                 }
-                ZenTexture::new(width, height, ColorType::RGBA8, pixels, name.to_owned())
+                ZenTexture::new(width, height, ColorType::Rgba8, pixels, name.to_owned())
             }
             ztex::ColorType::A1R5G5B5 => {
                 let mut pixels = vec![0_u8; 4 * size as usize];
@@ -214,7 +215,7 @@ impl ZenTexture {
                         ((pixel >> 15) & 0b1) as u8,      // a
                     ]);
                 }
-                ZenTexture::new(width, height, ColorType::RGBA8, pixels, name.to_owned())
+                ZenTexture::new(width, height, ColorType::Rgba8, pixels, name.to_owned())
             }
             ztex::ColorType::R5G6B5 => {
                 let mut pixels = vec![0_u8; 4 * size as usize];
@@ -227,7 +228,7 @@ impl ZenTexture {
                         0xff,                             // a
                     ]);
                 }
-                ZenTexture::new(width, height, ColorType::RGBA8, pixels, name.to_owned())
+                ZenTexture::new(width, height, ColorType::Rgba8, pixels, name.to_owned())
             }
             ztex::ColorType::P8 => unimplemented!(),
             ztex::ColorType::DXT1 => {
@@ -236,7 +237,7 @@ impl ZenTexture {
                     deserializer.len_queue.push((width / 4 * 8) as usize);
                     decode_dxt1_row(<Vec<u8>>::deserialize(&mut deserializer)?.as_slice(), chunk);
                 }
-                ZenTexture::new(width, height, ColorType::RGBA8, decoded, name.to_owned())
+                ZenTexture::new(width, height, ColorType::Rgba8, decoded, name.to_owned())
             }
             ztex::ColorType::DXT2 => unimplemented!(),
             ztex::ColorType::DXT3 => {
@@ -245,7 +246,7 @@ impl ZenTexture {
                     deserializer.len_queue.push((width / 4 * 16) as usize);
                     decode_dxt3_row(<Vec<u8>>::deserialize(&mut deserializer)?.as_slice(), chunk);
                 }
-                ZenTexture::new(width, height, ColorType::RGBA8, decoded, name.to_owned())
+                ZenTexture::new(width, height, ColorType::Rgba8, decoded, name.to_owned())
             }
             ztex::ColorType::DXT4 => unimplemented!(),
             ztex::ColorType::DXT5 => {
@@ -254,7 +255,7 @@ impl ZenTexture {
                     deserializer.len_queue.push((width / 4 * 16) as usize);
                     decode_dxt5_row(<Vec<u8>>::deserialize(&mut deserializer)?.as_slice(), chunk);
                 }
-                ZenTexture::new(width, height, ColorType::RGBA8, decoded, name.to_owned())
+                ZenTexture::new(width, height, ColorType::Rgba8, decoded, name.to_owned())
             }
         };
         Ok(texture)

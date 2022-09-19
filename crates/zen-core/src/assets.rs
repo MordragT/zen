@@ -1,12 +1,12 @@
 use crate::{
     archive::{ArchiveError, Entry, Vdfs, VdfsKind},
     material::{BasicMaterial, Group, ZenMaterial},
-    model::{Vertex, ZenMesh, ZenModel},
+    model::{Vertex, ZenMesh, ZenModel, ZenModelBundle},
     mrm::{Mrm, MrmError},
     msh::{Msh, MshError},
     texture::{TextureError, ZenTexture},
 };
-use bevy::prelude::{Assets, Handle, Res, ResMut};
+use bevy::prelude::{Assets, Handle, Image, Res, ResMut};
 use miette::Diagnostic;
 use std::{
     fs::File,
@@ -36,6 +36,8 @@ pub enum AssetError {
 }
 
 type AssetResult<T> = Result<T, AssetError>;
+
+// TODO keep Handles in LoadContext
 
 pub struct ZenAssetLoader {
     meshes: Vec<Vdfs<File>>,
@@ -71,11 +73,10 @@ impl ZenAssetLoader {
     fn load_mrm(
         &self,
         mrm: Mrm,
-        model_assets: &mut Assets<ZenModel>,
         mesh_assets: &mut Assets<ZenMesh>,
         material_assets: &mut Assets<ZenMaterial>,
-        texture_assets: &mut Assets<ZenTexture>,
-    ) -> AssetResult<Handle<ZenModel>> {
+        texture_assets: &mut Assets<Image>,
+    ) -> AssetResult<ZenModel> {
         log::debug!("Loading MRM: {}", &mrm.name);
         let (object_sub_meshes, object_vertices) = (mrm.sub_meshes, mrm.vertices);
 
@@ -119,22 +120,18 @@ impl ZenAssetLoader {
             })
             .collect::<AssetResult<Vec<Handle<ZenMesh>>>>()?;
 
-        let model = ZenModel {
-            name: mrm.name,
-            meshes,
-        };
+        let model = ZenModel { meshes };
 
-        Ok(model_assets.add(model))
+        Ok(model)
     }
 
     fn load_msh(
         &self,
         msh: Msh,
-        model_assets: &mut Assets<ZenModel>,
         mesh_assets: &mut Assets<ZenMesh>,
         material_assets: &mut Assets<ZenMaterial>,
-        texture_assets: &mut Assets<ZenTexture>,
-    ) -> AssetResult<Handle<ZenModel>> {
+        texture_assets: &mut Assets<Image>,
+    ) -> AssetResult<ZenModel> {
         log::debug!("Loading MSH: {}", &msh.name);
         let Msh {
             name,
@@ -175,16 +172,16 @@ impl ZenAssetLoader {
             })
             .collect::<AssetResult<Vec<Handle<ZenMesh>>>>()?;
 
-        let model = ZenModel { name, meshes };
+        let model = ZenModel { meshes };
 
-        Ok(model_assets.add(model))
+        Ok(model)
     }
 
     fn load_material(
         &self,
         material: &BasicMaterial,
         material_assets: &mut Assets<ZenMaterial>,
-        texture_assets: &mut Assets<ZenTexture>,
+        texture_assets: &mut Assets<Image>,
     ) -> AssetResult<Handle<ZenMaterial>> {
         log::debug!("Loading material: {}", &material.name());
 
@@ -199,7 +196,7 @@ impl ZenAssetLoader {
         }
         if let Some(entry) = entry {
             let texture = ZenTexture::from_ztex(entry, material.name())?;
-            let texture = texture_assets.add(texture);
+            let texture = texture_assets.add(texture.into());
 
             let color = crate::material::to_color(material.color());
 
@@ -230,10 +227,10 @@ impl ZenAssetLoader {
     pub fn load_model(
         &self,
         name: &str,
-        model_assets: ResMut<Assets<ZenModel>>,
-        mesh_assets: ResMut<Assets<ZenMesh>>,
-        material_assets: ResMut<Assets<ZenMaterial>>,
-        texture_assets: ResMut<Assets<ZenTexture>>,
+        model_assets: &mut Assets<ZenModel>,
+        mesh_assets: &mut Assets<ZenMesh>,
+        material_assets: &mut Assets<ZenMaterial>,
+        texture_assets: &mut Assets<Image>,
     ) -> AssetResult<Handle<ZenModel>> {
         let mut entry = None;
         for archive in &self.meshes {
@@ -247,23 +244,13 @@ impl ZenAssetLoader {
             if entry.name().ends_with(".MRM") {
                 let mrm = Mrm::new(entry, name)?;
                 log::debug!("Entry read into MRM");
-                self.load_mrm(
-                    mrm,
-                    model_assets.into_inner(),
-                    mesh_assets.into_inner(),
-                    material_assets.into_inner(),
-                    texture_assets.into_inner(),
-                )
+                let model = self.load_mrm(mrm, mesh_assets, material_assets, texture_assets)?;
+                Ok(model_assets.add(model))
             } else if entry.name().ends_with(".MSH") {
                 let msh = Msh::new(entry, name)?;
                 log::debug!("Entry read into MSH");
-                self.load_msh(
-                    msh,
-                    model_assets.into_inner(),
-                    mesh_assets.into_inner(),
-                    material_assets.into_inner(),
-                    texture_assets.into_inner(),
-                )
+                let model = self.load_msh(msh, mesh_assets, material_assets, texture_assets)?;
+                Ok(model_assets.add(model))
             } else {
                 unreachable!()
             }
@@ -272,7 +259,7 @@ impl ZenAssetLoader {
         }
     }
 
-    pub fn load_texture(&self, name: &str, textures: Assets<ZenTexture>) -> Handle<ZenTexture> {
+    pub fn load_texture(&self, name: &str, textures: Assets<Image>) -> Handle<Image> {
         todo!()
     }
 }
