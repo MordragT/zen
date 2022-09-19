@@ -4,7 +4,7 @@ use error::TextureResult;
 use serde::Deserialize;
 use std::{
     cmp,
-    io::{SeekFrom, Write},
+    io::{Seek, SeekFrom, Write},
 };
 use zen_parser::prelude::{BinaryDeserializer, BinaryRead};
 
@@ -143,9 +143,7 @@ impl ZenTexture {
         }
         let size_of_biggest_mip_map = get_mip_map_size(header.color_type(), width, height, 0);
         let pos_of_biggest_mip_map = size_of_all_mip_maps - size_of_biggest_mip_map;
-        deserializer
-            .parser
-            .seek(SeekFrom::Current(pos_of_biggest_mip_map as i64))?;
+        deserializer.seek(SeekFrom::Current(pos_of_biggest_mip_map as i64))?;
 
         let texture = match header.color_type() {
             ztex::ColorType::B8G8R8A8 => {

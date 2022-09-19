@@ -29,7 +29,7 @@ use crate::{
 pub use error::MrmError;
 use error::MrmResult;
 use serde::Deserialize;
-use std::io::{Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom};
 use sub_mesh::*;
 use zen_parser::prelude::*;
 
@@ -88,12 +88,14 @@ impl Mrm {
             )));
         }
 
+        // let mut buf = vec![0; 54616];
+        // deserializer.read(&mut buf).unwrap();
+        // dbg!(String::from_utf8_lossy(&buf));
+
         let _version = u16::deserialize(&mut deserializer)?;
         let data_size = u32::deserialize(&mut deserializer)?;
         let data_seek = deserializer.seek(SeekFrom::Current(0))?;
-        deserializer
-            .parser
-            .seek(SeekFrom::Current(data_size as i64))?;
+        deserializer.seek(SeekFrom::Current(data_size as i64))?;
 
         let num_sub_meshes = u8::deserialize(&mut deserializer)?;
         let main_offsets = <Offset>::deserialize(&mut deserializer)?;
@@ -104,7 +106,7 @@ impl Mrm {
         // let mut ascii_de = AsciiDeserializer::from(deserializer);
         // ascii_de.read_header()?;
         // deserializer = ascii_de.into();
-        let _header = Reader::from(&mut deserializer.parser).read_header()?;
+        let _header = read_header(&mut deserializer)?;
 
         let mut materials = (0..num_sub_meshes)
             .map(|_| {
@@ -153,21 +155,15 @@ impl Mrm {
         let sub_meshes = sub_mesh_offsets
             .into_iter()
             .map(|offset| {
-                deserializer
-                    .parser
-                    .seek(SeekFrom::Start(data_seek + offset.triangles.offset as u64))?;
+                deserializer.seek(SeekFrom::Start(data_seek + offset.triangles.offset as u64))?;
                 deserializer.len_queue.push(offset.triangles.size as usize);
                 let triangles = <Vec<Vec3<u16>>>::deserialize(&mut deserializer)?;
 
-                deserializer
-                    .parser
-                    .seek(SeekFrom::Start(data_seek + offset.wedges.offset as u64))?;
+                deserializer.seek(SeekFrom::Start(data_seek + offset.wedges.offset as u64))?;
                 deserializer.len_queue.push(offset.wedges.size as usize);
                 let wedges = <Vec<Wedge>>::deserialize(&mut deserializer)?;
 
-                deserializer
-                    .parser
-                    .seek(SeekFrom::Start(data_seek + offset.colors.offset as u64))?;
+                deserializer.seek(SeekFrom::Start(data_seek + offset.colors.offset as u64))?;
                 deserializer.len_queue.push(offset.colors.size as usize);
                 let colors = <Vec<f32>>::deserialize(&mut deserializer)?;
 
@@ -195,9 +191,7 @@ impl Mrm {
                     .push(offset.triangle_edges.size as usize);
                 let triangle_edges = <Vec<Vec3<u16>>>::deserialize(&mut deserializer)?;
 
-                deserializer
-                    .parser
-                    .seek(SeekFrom::Start(data_seek + offset.edges.offset as u64))?;
+                deserializer.seek(SeekFrom::Start(data_seek + offset.edges.offset as u64))?;
                 deserializer.len_queue.push(offset.edges.size as usize);
                 let edges = <Vec<Vec2<u16>>>::deserialize(&mut deserializer)?;
 
@@ -209,9 +203,7 @@ impl Mrm {
                     .push(offset.edge_scores.size as usize);
                 let edge_scores = <Vec<f32>>::deserialize(&mut deserializer)?;
 
-                deserializer
-                    .parser
-                    .seek(SeekFrom::Start(data_seek + offset.wedge_map.offset as u64))?;
+                deserializer.seek(SeekFrom::Start(data_seek + offset.wedge_map.offset as u64))?;
                 deserializer.len_queue.push(offset.wedge_map.size as usize);
                 let wedge_map = <Vec<u16>>::deserialize(&mut deserializer)?;
 

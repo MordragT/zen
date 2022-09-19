@@ -60,7 +60,6 @@ const GOTHIC1_08K: u32 = 9;
 //         &["msh"]
 //     }
 // }
-
 pub struct Msh {
     pub name: String,
     pub materials: Vec<BasicMaterial>,
@@ -142,7 +141,7 @@ fn deserialize_materials<R: BinaryRead + AsciiRead>(
     chunk_end: u64,
 ) -> MshResult<Vec<BasicMaterial>> {
     let mut deserializer = BinaryDeserializer::from(reader);
-    let _header = Reader::from(&mut deserializer.parser).read_header()?;
+    let _header = read_header(&mut deserializer)?;
 
     let material_num = u32::deserialize(&mut deserializer)?;
     let materials = (0..material_num)

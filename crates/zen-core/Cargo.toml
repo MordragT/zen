@@ -19,6 +19,7 @@ image = "0.24"
 gltf = { version = "1.0", optional = true }
 gltf-json = { version = "1.0", optional = true }
 walkdir = "2"
+log = "0.4"
 
 [dev-dependencies]
 gltf = "1.0"

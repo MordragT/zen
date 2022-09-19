@@ -1,4 +1,5 @@
 #![feature(half_open_range_patterns)]
+#![feature(mixed_integer_ops)]
 
 pub mod archive;
 //pub mod context;

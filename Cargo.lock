@@ -3535,6 +3535,7 @@ name = "zen"
 version = "0.0.1"
 dependencies = [
  "bevy",
+ "log",
  "miette",
  "zen-core",
  "zen-daedalus",
@@ -3551,6 +3552,7 @@ dependencies = [
  "gltf",
  "gltf-json",
  "image 0.24.3",
+ "log",
  "miette",
  "serde",
  "serde_repr",
@@ -3572,6 +3574,7 @@ dependencies = [
 name = "zen-parser"
 version = "0.0.1"
 dependencies = [
+ "log",
  "serde",
  "zen-types",
 ]

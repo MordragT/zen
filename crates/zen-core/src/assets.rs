@@ -37,95 +37,46 @@ pub enum AssetError {
 
 type AssetResult<T> = Result<T, AssetError>;
 
-pub struct ZenAssetLoaderBuilder {
-    mesh_archives: Vec<File>,
-    animation_archives: Vec<File>,
-    texture_archives: Vec<File>,
-    sound_archives: Vec<File>,
-    scene_archives: Vec<File>,
+pub struct ZenAssetLoader {
+    meshes: Vec<Vdfs<File>>,
+    animations: Vec<Vdfs<File>>,
+    textures: Vec<Vdfs<File>>,
+    sounds: Vec<Vdfs<File>>,
+    scenes: Vec<Vdfs<File>>,
 }
 
-impl ZenAssetLoaderBuilder {
+impl ZenAssetLoader {
     pub fn new() -> Self {
         Self {
-            mesh_archives: Vec::with_capacity(5),
-            animation_archives: Vec::with_capacity(5),
-            texture_archives: Vec::with_capacity(5),
-            sound_archives: Vec::with_capacity(10),
-            scene_archives: Vec::with_capacity(5),
+            meshes: Vec::with_capacity(5),
+            animations: Vec::with_capacity(5),
+            textures: Vec::with_capacity(5),
+            sounds: Vec::with_capacity(10),
+            scenes: Vec::with_capacity(5),
         }
     }
 
     pub fn archive<P: AsRef<Path>>(mut self, kind: VdfsKind, path: P) -> AssetResult<Self> {
-        let file = File::open(path)?;
+        let archive = Vdfs::new(File::open(path)?)?;
         match kind {
-            VdfsKind::Mesh => self.mesh_archives.push(file),
-            VdfsKind::Animation => self.animation_archives.push(file),
-            VdfsKind::Texture => self.texture_archives.push(file),
-            VdfsKind::Sound => self.sound_archives.push(file),
-            VdfsKind::World => self.scene_archives.push(file),
+            VdfsKind::Mesh => self.meshes.push(archive),
+            VdfsKind::Animation => self.animations.push(archive),
+            VdfsKind::Texture => self.textures.push(archive),
+            VdfsKind::Sound => self.sounds.push(archive),
+            VdfsKind::World => self.scenes.push(archive),
         }
         Ok(self)
     }
 
-    pub fn build(self) -> AssetResult<ZenAssetLoader> {
-        let mut meshes = Vec::new();
-        for file in self.mesh_archives {
-            let vdfs = Vdfs::new(file)?;
-            meshes.extend(vdfs.entries()?);
-        }
-
-        let mut animations = Vec::new();
-        for file in self.animation_archives {
-            let vdfs = Vdfs::new(file)?;
-            animations.extend(vdfs.entries()?);
-        }
-
-        let mut textures = Vec::new();
-        for file in self.texture_archives {
-            let vdfs = Vdfs::new(file)?;
-            textures.extend(vdfs.entries()?);
-        }
-
-        let mut sounds = Vec::new();
-        for file in self.sound_archives {
-            let vdfs = Vdfs::new(file)?;
-            sounds.extend(vdfs.entries()?);
-        }
-
-        let mut scenes = Vec::new();
-        for file in self.scene_archives {
-            let vdfs = Vdfs::new(file)?;
-            scenes.extend(vdfs.entries()?);
-        }
-
-        Ok(ZenAssetLoader {
-            meshes,
-            animations,
-            textures,
-            sounds,
-            scenes,
-        })
-    }
-}
-
-pub struct ZenAssetLoader {
-    meshes: Vec<Entry<File>>,
-    animations: Vec<Entry<File>>,
-    textures: Vec<Entry<File>>,
-    sounds: Vec<Entry<File>>,
-    scenes: Vec<Entry<File>>,
-}
-
-impl ZenAssetLoader {
     fn load_mrm(
-        &mut self,
+        &self,
         mrm: Mrm,
         model_assets: &mut Assets<ZenModel>,
         mesh_assets: &mut Assets<ZenMesh>,
         material_assets: &mut Assets<ZenMaterial>,
         texture_assets: &mut Assets<ZenTexture>,
     ) -> AssetResult<Handle<ZenModel>> {
+        log::debug!("Loading MRM: {}", &mrm.name);
         let (object_sub_meshes, object_vertices) = (mrm.sub_meshes, mrm.vertices);
 
         let meshes = object_sub_meshes
@@ -177,13 +128,14 @@ impl ZenAssetLoader {
     }
 
     fn load_msh(
-        &mut self,
+        &self,
         msh: Msh,
         model_assets: &mut Assets<ZenModel>,
         mesh_assets: &mut Assets<ZenMesh>,
         material_assets: &mut Assets<ZenMaterial>,
         texture_assets: &mut Assets<ZenTexture>,
     ) -> AssetResult<Handle<ZenModel>> {
+        log::debug!("Loading MSH: {}", &msh.name);
         let Msh {
             name,
             materials,
@@ -229,77 +181,94 @@ impl ZenAssetLoader {
     }
 
     fn load_material(
-        &mut self,
+        &self,
         material: &BasicMaterial,
         material_assets: &mut Assets<ZenMaterial>,
         texture_assets: &mut Assets<ZenTexture>,
     ) -> AssetResult<Handle<ZenMaterial>> {
-        let entry = self
-            .textures
-            .iter_mut()
-            .find(|entry| entry.name() == material.name())
-            .ok_or(AssetError::NotFound(material.name().clone()))?;
+        log::debug!("Loading material: {}", &material.name());
 
-        let texture = ZenTexture::from_ztex(entry, material.name())?;
-        let texture = texture_assets.add(texture);
+        let c_tex_name = material.compiled_texture();
+        log::debug!("Finding texture: {c_tex_name}");
 
-        let color = crate::material::to_color(material.color());
+        let mut entry = None;
+        for archive in &self.textures {
+            if let Some(e) = archive.entries()?.find(|e| e.name() == &c_tex_name) {
+                entry = Some(e);
+            }
+        }
+        if let Some(entry) = entry {
+            let texture = ZenTexture::from_ztex(entry, material.name())?;
+            let texture = texture_assets.add(texture);
 
-        let (metallic, roughness, reflectance) = match material.group() {
-            // TODO check if values are fine
-            &Group::Undef => (0.0, 0.5, 0.5),
-            &Group::Metal => (1.0, 0.25, 0.85),
-            &Group::Stone => (0.5, 0.5, 0.6),
-            &Group::Wood => (0.0, 0.7, 0.5),
-            &Group::Earth => (0.0, 0.9, 0.5),
-            &Group::Water => (0.0, 0.5, 0.75),
-            &Group::Snow => (0.0, 0.8, 0.5),
-        };
+            let color = crate::material::to_color(material.color());
 
-        let material = ZenMaterial {
-            texture,
-            color,
-            metallic,
-            reflectance,
-            roughness,
-        };
-        Ok(material_assets.add(material))
+            let (metallic, roughness, reflectance) = match material.group() {
+                // TODO check if values are fine
+                &Group::Undef => (0.0, 0.5, 0.5),
+                &Group::Metal => (1.0, 0.25, 0.85),
+                &Group::Stone => (0.5, 0.5, 0.6),
+                &Group::Wood => (0.0, 0.7, 0.5),
+                &Group::Earth => (0.0, 0.9, 0.5),
+                &Group::Water => (0.0, 0.5, 0.75),
+                &Group::Snow => (0.0, 0.8, 0.5),
+            };
+
+            let material = ZenMaterial {
+                texture,
+                color,
+                metallic,
+                reflectance,
+                roughness,
+            };
+            Ok(material_assets.add(material))
+        } else {
+            Err(AssetError::NotFound(material.name().to_owned()))
+        }
     }
 
     pub fn load_model(
-        &mut self,
+        &self,
         name: &str,
         model_assets: ResMut<Assets<ZenModel>>,
         mesh_assets: ResMut<Assets<ZenMesh>>,
         material_assets: ResMut<Assets<ZenMaterial>>,
         texture_assets: ResMut<Assets<ZenTexture>>,
     ) -> AssetResult<Handle<ZenModel>> {
-        let entry = self
-            .meshes
-            .iter_mut()
-            .find(|entry| entry.name() == name)
-            .ok_or(AssetError::NotFound(name.to_string()))?;
-
-        if entry.name().ends_with(".MRM") {
-            let mrm = Mrm::new(entry, name)?;
-            self.load_mrm(
-                mrm,
-                model_assets.into_inner(),
-                mesh_assets.into_inner(),
-                material_assets.into_inner(),
-                texture_assets.into_inner(),
-            )
-        } else if entry.name().ends_with(".MSH") {
-            let msh = Msh::new(entry, name)?;
-            self.load_msh(
-                msh,
-                model_assets.into_inner(),
-                mesh_assets.into_inner(),
-                material_assets.into_inner(),
-                texture_assets.into_inner(),
-            )
+        let mut entry = None;
+        for archive in &self.meshes {
+            log::debug!("Searching {archive}\nfor model {name}");
+            if let Some(e) = archive.entries()?.find(|e| e.name() == name) {
+                entry = Some(e);
+            }
+        }
+        if let Some(entry) = entry {
+            log::debug!("Entry found: {entry}");
+            if entry.name().ends_with(".MRM") {
+                let mrm = Mrm::new(entry, name)?;
+                log::debug!("Entry read into MRM");
+                self.load_mrm(
+                    mrm,
+                    model_assets.into_inner(),
+                    mesh_assets.into_inner(),
+                    material_assets.into_inner(),
+                    texture_assets.into_inner(),
+                )
+            } else if entry.name().ends_with(".MSH") {
+                let msh = Msh::new(entry, name)?;
+                log::debug!("Entry read into MSH");
+                self.load_msh(
+                    msh,
+                    model_assets.into_inner(),
+                    mesh_assets.into_inner(),
+                    material_assets.into_inner(),
+                    texture_assets.into_inner(),
+                )
+            } else {
+                unreachable!()
+            }
         } else {
-            unreachable!()
+            Err(AssetError::NotFound(name.to_string()))
         }
     }
 

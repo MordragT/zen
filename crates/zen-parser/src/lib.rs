@@ -49,106 +49,91 @@ impl Header {
     }
 }
 
-/// Reader that can read binary aswell as ascii archives
-pub struct Reader<R: BinaryRead + AsciiRead> {
-    reader: R,
-}
-
-impl<R: BinaryRead + AsciiRead> From<AsciiDeserializer<R>> for Reader<R> {
-    fn from(ascii: AsciiDeserializer<R>) -> Self {
-        Self {
-            reader: ascii.parser,
-        }
+/// Reads the header and returns it
+pub fn read_header<R: BinaryRead + AsciiRead>(mut reader: R) -> Result<Header> {
+    if !reader.consume("ZenGin Archive\n")? {
+        return Err(reader.error(ErrorCode::InvalidHeader).into());
     }
-}
 
-impl<R: BinaryRead + AsciiRead> From<BinaryDeserializer<R>> for Reader<R> {
-    fn from(binary: BinaryDeserializer<R>) -> Self {
-        Self {
-            reader: binary.parser,
-        }
+    if !reader.consume("ver ")? {
+        return Err(reader.error(ErrorCode::InvalidHeader).into());
     }
-}
+    // Version should always be 1
+    let version = reader.unchecked_int()?;
 
-impl<R: BinaryRead + AsciiRead> From<R> for Reader<R> {
-    fn from(reader: R) -> Self {
-        Self { reader }
+    // Skip optional Archiver type
+    if !reader.consume("zCArchiverGeneric")? && !reader.consume("zCArchiverBinSafe")? {
+        println!("Optional archiver type not declared, maybe non default archiver type ?");
     }
-}
+    <R as AsciiRead>::consume_whitespaces(&mut reader)?;
+    // File type
+    let kind = reader.string_until(b'\n')?;
+    let kind = match kind.as_str() {
+        "ASCII" => Kind::Ascii,
+        "BINARY" => Kind::Binary,
+        "BIN_SAFE" => Kind::BinSafe,
+        _ => Kind::Unknown,
+    };
+    log::debug!("Header Kind: {kind:?}");
 
-impl<R: BinaryRead + AsciiRead> Reader<R> {
-    /// Reads the header and returns it
-    pub fn read_header<'a>(&mut self) -> Result<Header> {
-        let mut ascii = AsciiDeserializer::from(&mut self.reader);
+    let save_game = match reader.consume("saveGame ")? {
+        true => reader.unchecked_bool()?,
+        false => {
+            let e = reader.string_until_whitespace()?;
+            return Err(reader
+                .error(ErrorCode::Expected(format!("'saveGame ', got: '{}'", e)))
+                .into());
+        }
+    };
+    let date = match reader.consume("date ")? {
+        true => Some(reader.string_until(b'\n')?),
+        false => None,
+    };
+    let user = match reader.consume("user ")? {
+        true => Some(reader.string_until(b'\n')?),
+        false => None,
+    };
+    // Skip optional END
+    reader.consume("END\n")?;
 
-        if !ascii.parser.consume("ZenGin Archive\n")? {
-            return Err(ascii.parser.error(ErrorCode::InvalidHeader).into());
-        }
-        if !ascii.parser.consume("ver ")? {
-            return Err(ascii.parser.error(ErrorCode::InvalidHeader).into());
-        }
-        // Version should always be 1
-        let version = ascii.parser.unchecked_int()?;
-        // Skip optional Archiver type
-        if !ascii.parser.consume("zCArchiverGeneric")?
-            && !ascii.parser.consume("zCArchiverBinSafe")?
-        {
-            println!("Optional archiver type not declared, maybe non default archiver type ?");
-        }
-        <R as AsciiRead>::consume_whitespaces(&mut ascii.parser)?;
-        // File type
-        let kind = ascii.parser.string_until(b'\n')?;
-        let kind = match kind.as_str() {
-            "ASCII" => Kind::Ascii,
-            "BINARY" => Kind::Binary,
-            "BIN_SAFE" => Kind::BinSafe,
-            _ => Kind::Unknown,
-        };
-        let save_game = match ascii.parser.consume("saveGame ")? {
-            true => ascii.parser.unchecked_bool()?,
+    let object_count = if kind != Kind::BinSafe {
+        let count = match reader.consume("objects ")? {
+            true => reader.unchecked_int()?,
             false => {
-                let e = ascii.parser.string_until_whitespace()?;
-                return Err(ascii
-                    .parser
-                    .error(ErrorCode::Expected(format!("'saveGame ', got: '{}'", e)))
+                let e = reader.string_until_whitespace()?;
+                return Err(reader
+                    .error(ErrorCode::Expected(format!("'objects ', got: '{}'", e)))
                     .into());
             }
         };
-        let date = match ascii.parser.consume("date ")? {
-            true => Some(ascii.parser.string_until(b'\n')?),
-            false => None,
-        };
-        let user = match ascii.parser.consume("user ")? {
-            true => Some(ascii.parser.string_until(b'\n')?),
-            false => None,
-        };
-        // Skip optional END
-        ascii.parser.consume("END\n")?;
+        <R as AsciiRead>::consume_whitespaces(&mut reader)?;
+        if !reader.consume("END\n")? {
+            return Err(reader.error(ErrorCode::ExpectedAsciiHeaderEnd).into());
+        }
+        <R as AsciiRead>::consume_whitespaces(&mut reader)?;
+        count
+    } else {
+        let mut deserializer = BinaryDeserializer::from(&mut reader);
+        let binsafe = dbg!(<binsafe::BinSafeHeader>::deserialize(&mut deserializer)?);
+        binsafe.object_count as i32
+    };
 
-        let object_count = if kind != Kind::BinSafe {
-            let count = match ascii.parser.consume("objects ")? {
-                true => ascii.parser.unchecked_int()?,
-                false => {
-                    let e = ascii.parser.string_until_whitespace()?;
-                    return Err(ascii
-                        .parser
-                        .error(ErrorCode::Expected(format!("'objects ', got: '{}'", e)))
-                        .into());
-                }
-            };
-            <R as AsciiRead>::consume_whitespaces(&mut ascii.parser)?;
-            if !ascii.parser.consume("END\n")? {
-                return Err(ascii.parser.error(ErrorCode::ExpectedAsciiHeaderEnd).into());
-            }
-            <R as AsciiRead>::consume_whitespaces(&mut ascii.parser)?;
-            count
-        } else {
-            let mut binary: BinaryDeserializer<&mut R> = BinaryDeserializer::from(ascii);
-            let binsafe = dbg!(<binsafe::BinSafeHeader>::deserialize(&mut binary)?);
-            binsafe.object_count as i32
-        };
+    let header = Header::new(version, kind, save_game, date, user, object_count);
+    Ok(header)
+}
 
-        let header = Header::new(version, kind, save_game, date, user, object_count);
-        Ok(header)
+#[cfg(test)]
+mod test {
+    use std::io::Cursor;
+
+    use crate::read_header;
+
+    #[test]
+    fn test_read_header() {
+        let header = "ZenGin Archive\nver 1\nzCArchiverGeneric\nBINARY\nsaveGame 0\nEND\nobjects 4        \nEND\n  ";
+        let cursor = Cursor::new(header.as_bytes());
+
+        let header = read_header(cursor).unwrap();
+        println!("Header: {header:?}");
     }
 }

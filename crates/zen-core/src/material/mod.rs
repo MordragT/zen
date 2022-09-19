@@ -99,6 +99,18 @@ impl BasicMaterial {
     pub fn color(&self) -> u32 {
         self.color
     }
+
+    pub fn texture(&self) -> &String {
+        &self.texture
+    }
+
+    pub fn compiled_texture(&self) -> String {
+        let (name, end) = self
+            .texture
+            .split_once('.')
+            .expect("Every texture has an ending");
+        format!("{name}-C.TEX")
+    }
 }
 
 impl From<AdvancedMaterial> for BasicMaterial {

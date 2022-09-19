@@ -7,7 +7,7 @@ use std::io::{Read, Seek, SeekFrom};
 
 /// Deserialize Zengin Ascii Archives
 pub struct AsciiDeserializer<R> {
-    pub parser: R,
+    pub(crate) parser: R,
 }
 
 impl<R: AsciiRead> From<R> for AsciiDeserializer<R> {

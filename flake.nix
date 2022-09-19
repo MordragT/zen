@@ -61,7 +61,7 @@
             xorg.libXi
           ];
 
-          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath nativeBuildInputs;
+          LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${pkgs.lib.makeLibraryPath nativeBuildInputs}";
         };
       });
 }

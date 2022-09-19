@@ -6,14 +6,6 @@ use std::{
     mem,
 };
 
-// impl AsciiRead for Cursor<&[u8]> {}
-
-// impl AsciiRead for Cursor<Vec<u8>> {}
-
-// impl AsciiRead for File {}
-
-// impl<R: AsciiRead> AsciiRead for &mut R {}
-
 impl<R: Read + Seek> AsciiRead for R {}
 
 /// Provides methods to read an Ascii archive
