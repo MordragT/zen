@@ -101,9 +101,11 @@ fn load(
     let model = zen_loader
         .load_model("ORC_MASTERTHRONE.MRM", &mut context)
         .unwrap();
-    let out_path = model.to_gltf(&mut context, Output::Binary);
 
-    println!("Model exported to {out_path:?}");
+    let path = "files/meshes/throne.glb";
+    model.to_gltf(&mut context, Output::binary(path)).unwrap();
+
+    println!("Model exported to {path}");
 
     // let entity = zen_loader
     //     .spawn_model(

@@ -134,7 +134,10 @@ impl From<ZenMesh> for Mesh {
 
         for vertex in mesh.vertices {
             positions.push(vertex.position);
+            // flip normals ?
+            //normals.push(vertex.normal.map(|x| -x));
             normals.push(vertex.normal);
+            // flip uvs ?
             uvs.push(vertex.tex_coords);
         }
 

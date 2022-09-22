@@ -116,14 +116,25 @@ impl ZenTexture {
     }
 
     pub fn to_png<W: Write>(&self, writer: W) -> TextureResult<()> {
-        dbg!(&self);
         let encoder = image::codecs::png::PngEncoder::new(writer);
         let color_type = match self.color_type {
             ColorType::Bgra8 => todo!(),
             ColorType::Rgba16 => image::ColorType::Rgba16,
             ColorType::Rgba8 => image::ColorType::Rgba8,
         };
-        Ok(encoder.encode(self.as_bytes(), self.width, self.height, color_type)?)
+        encoder.encode(self.as_bytes(), self.width, self.height, color_type)?;
+        Ok(())
+    }
+
+    pub fn to_jpeg<W: Write>(&self, writer: W) -> TextureResult<()> {
+        let mut encoder = image::codecs::jpeg::JpegEncoder::new(writer);
+        let color_type = match self.color_type {
+            ColorType::Bgra8 => todo!(),
+            ColorType::Rgba16 => image::ColorType::Rgba16,
+            ColorType::Rgba8 => image::ColorType::Rgba8,
+        };
+        encoder.encode(self.as_bytes(), self.width, self.height, color_type)?;
+        Ok(())
     }
 
     /// Convert ZTEX to Texture

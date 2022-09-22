@@ -49,9 +49,9 @@ type AssetResult<T> = Result<T, AssetError>;
 // TODO keep Handles in LoadContext
 
 pub struct ZenLoadContext<'a> {
-    meshes: &'a mut Assets<ZenMesh>,
-    materials: &'a mut Assets<ZenMaterial>,
-    textures: &'a mut Assets<ZenTexture>,
+    pub meshes: &'a mut Assets<ZenMesh>,
+    pub materials: &'a mut Assets<ZenMaterial>,
+    pub textures: &'a mut Assets<ZenTexture>,
 }
 
 impl<'a> ZenLoadContext<'a> {
@@ -166,8 +166,10 @@ impl ZenAssetLoader {
                     |mut mesh, wedge| {
                         let vertex = Vertex {
                             position: vertices[wedge.vertex_index as usize].to_array(),
-                            tex_coords: wedge.tex_coord.to_array(),
-                            normal: wedge.normal.to_array(),
+                            // flip uvs ?
+                            tex_coords: wedge.tex_coord.to_array(), //.map(|x| -x),
+                            // flip normals ?
+                            normal: wedge.normal.to_array(), //.map(|x| -x),
                         };
                         mesh.vertices.push(vertex);
                         mesh

@@ -15,6 +15,7 @@ pub mod math;
 pub mod model;
 pub mod mrm;
 pub mod msh;
+pub mod scene;
 pub mod texture;
 
 #[derive(Default)]

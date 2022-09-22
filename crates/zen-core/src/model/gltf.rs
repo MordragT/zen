@@ -1,25 +1,40 @@
 use crate::assets::ZenLoadContext;
+use crate::material::ZenMaterial;
+use crate::scene::ZenScene;
+use crate::texture::{TextureError, ZenTexture};
 
 use super::ZenModel;
 use super::{Vertex, ZenMesh};
+use bevy::prelude::Assets;
 use gltf_json as json;
 use json::validation::Checked::Valid;
 use std::borrow::Cow;
 use std::{
-    fs,
-    io::Write,
+    fs::File,
+    io::{self, Write},
     mem,
     path::{Path, PathBuf},
 };
+use thiserror::Error;
 use zen_types::path::FILES_INSTANCE;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Output {
     /// Output standard glTF.
-    Standard,
+    Standard(PathBuf),
 
     /// Output binary glTF.
-    Binary,
+    Binary(PathBuf),
+}
+
+impl Output {
+    pub fn standard<P: AsRef<Path>>(path: P) -> Self {
+        Self::Standard(path.as_ref().to_owned())
+    }
+
+    pub fn binary<P: AsRef<Path>>(path: P) -> Self {
+        Self::Binary(path.as_ref().to_owned())
+    }
 }
 
 fn align_to_multiple_of_four(n: &mut u32) {
@@ -38,346 +53,282 @@ fn to_padded_byte_vector<T>(vec: Vec<T>) -> Vec<u8> {
     new_vec
 }
 
-/// There are 2 buffers: vertices and indices
-const BUFFER_NUM: usize = 2;
-const BUFFER_VIEW_NUM: usize = 2;
+#[derive(Debug, Error)]
+pub enum GltfError {
+    #[error("Io: {0}")]
+    Io(#[from] io::Error),
+    #[error("Texture: {0}")]
+    Texture(#[from] TextureError),
+    #[error("Serialization: {0}")]
+    Serialization(#[from] serde_json::Error),
+    #[error("Gltf: {0}")]
+    Gltf(#[from] gltf::Error),
+}
 
-// TODO fix Output::Biary
+type GltfResult<T> = Result<T, GltfError>;
 
-impl ZenModel {
-    pub fn to_gltf(self, context: &mut ZenLoadContext, output: Output) -> PathBuf {
-        struct RootInformation {
-            bin: Vec<u8>,
-            buffers: Vec<json::Buffer>,
-            buffer_views: Vec<json::buffer::View>,
-            primitives: Vec<json::mesh::Primitive>,
-            accessors: Vec<json::Accessor>,
-            textures: Vec<json::Texture>,
-            images: Vec<json::Image>,
-            materials: Vec<json::Material>,
+#[derive(Debug)]
+pub struct GltfBuilder {
+    root: json::Root,
+    buffer: Vec<u8>,
+}
+
+impl GltfBuilder {
+    pub fn new() -> Self {
+        let mut root = json::Root::default();
+
+        root.buffers.push(json::Buffer {
+            byte_length: 0,
+            extensions: Default::default(),
+            extras: Default::default(),
+            name: None,
+            uri: None,
+        });
+
+        let buffer = Vec::new();
+
+        Self { root, buffer }
+    }
+
+    pub fn create_texture(
+        &mut self,
+        texture: ZenTexture,
+    ) -> GltfResult<json::Index<json::Texture>> {
+        let mut image_buffer = Vec::new();
+        texture.to_jpeg(&mut image_buffer)?;
+
+        let image_buffer_len = image_buffer.len();
+        let image_view = json::buffer::View {
+            buffer: json::Index::new(0),
+            byte_length: (self.buffer.len() + image_buffer_len) as u32,
+            byte_offset: Some(self.buffer.len() as u32),
+            byte_stride: None,
+            extensions: Default::default(),
+            extras: Default::default(),
+            name: None,
+            target: Some(Valid(json::buffer::Target::ArrayBuffer)),
+        };
+        let image_view_index = json::Index::new(self.root.buffer_views.len() as u32);
+        self.root.buffer_views.push(image_view);
+        self.root.buffers[0].byte_length += image_buffer_len as u32;
+        self.buffer.append(&mut to_padded_byte_vector(image_buffer));
+
+        // let mut image_name = match texture.name.split_once(".") {
+        //     Some((name, _ext)) => {
+        //         format!("{name}.png")
+        //     }
+        //     None => {
+        //         let mut name = texture.name.clone();
+        //         name.push_str(".png");
+        //         name
+        //     }
+        // };
+
+        // let image_file = File::create(at)?;
+        // texture.to_png(image_file)?;
+
+        let image = json::Image {
+            name: None,
+            buffer_view: Some(image_view_index),
+            mime_type: Some(json::image::MimeType("image/jpeg".to_owned())),
+            uri: None,
+            // uri: Some(
+            //     Path::new("../")
+            //         .join(
+            //             image_path.strip_prefix(&FILES_INSTANCE.base_path).unwrap(),
+            //         )
+            //         .to_str()
+            //         .unwrap()
+            //         .to_string(),
+            // ),
+            extensions: None,
+            extras: Default::default(),
+        };
+        let image_index = json::Index::new(self.root.images.len() as u32);
+        self.root.images.push(image);
+
+        let texture = json::Texture {
+            name: None,
+            sampler: None,
+            source: image_index,
+            extensions: None,
+            extras: Default::default(),
+        };
+        let texture_index = json::Index::new(self.root.textures.len() as u32);
+        self.root.textures.push(texture);
+
+        Ok(texture_index)
+    }
+
+    pub fn build_primitive(&mut self, mesh: ZenMesh) -> PrimitiveBuilder<'_> {
+        let (min, max) = mesh.extreme_coordinates();
+        let ZenMesh { vertices, indices } = mesh;
+        let num_elements = vertices.len() as u32;
+
+        let vertices_buffer_len = vertices.len() * mem::size_of::<Vertex>();
+        let vertices_view = json::buffer::View {
+            buffer: json::Index::new(0),
+            byte_length: (self.buffer.len() + vertices_buffer_len) as u32,
+            byte_offset: Some(self.buffer.len() as u32),
+            byte_stride: Some(mem::size_of::<Vertex>() as u32),
+            extensions: Default::default(),
+            extras: Default::default(),
+            name: None,
+            target: Some(Valid(json::buffer::Target::ArrayBuffer)),
+        };
+        let vertices_view_index = json::Index::new(self.root.buffer_views.len() as u32);
+        self.root.buffer_views.push(vertices_view);
+        self.root.buffers[0].byte_length += vertices_buffer_len as u32;
+        self.buffer.append(&mut to_padded_byte_vector(vertices));
+
+        let indices_len = indices.len();
+        let indices_buffer_len = (indices.len() * mem::size_of::<u32>());
+        let indices_view = json::buffer::View {
+            buffer: json::Index::new(0),
+            byte_length: (self.buffer.len() + indices_buffer_len) as u32,
+            byte_offset: Some(self.buffer.len() as u32),
+            byte_stride: None,
+            extensions: Default::default(),
+            extras: Default::default(),
+            name: None,
+            target: Some(Valid(json::buffer::Target::ElementArrayBuffer)),
+        };
+        let indices_view_index = json::Index::new(self.root.buffer_views.len() as u32);
+        self.root.buffer_views.push(indices_view);
+        self.root.buffers[0].byte_length += indices_buffer_len as u32;
+        self.buffer.append(&mut to_padded_byte_vector(indices));
+
+        let positions = json::Accessor {
+            buffer_view: Some(vertices_view_index),
+            byte_offset: 0,
+            count: num_elements,
+            component_type: Valid(json::accessor::GenericComponentType(
+                json::accessor::ComponentType::F32,
+            )),
+            extensions: Default::default(),
+            extras: Default::default(),
+            type_: Valid(json::accessor::Type::Vec3),
+            min: Some(json::Value::from(min.to_vec())),
+            max: Some(json::Value::from(max.to_vec())),
+            name: None,
+            normalized: false,
+            sparse: None,
+        };
+        let positions_index = json::Index::new(self.root.accessors.len() as u32);
+        self.root.accessors.push(positions);
+
+        let normals = json::Accessor {
+            buffer_view: Some(vertices_view_index),
+            byte_offset: (3 * mem::size_of::<f32>()) as u32,
+            count: num_elements,
+            component_type: Valid(json::accessor::GenericComponentType(
+                json::accessor::ComponentType::F32,
+            )),
+            extensions: Default::default(),
+            extras: Default::default(),
+            type_: Valid(json::accessor::Type::Vec3),
+            min: None,
+            max: None,
+            name: None,
+            normalized: false,
+            sparse: None,
+        };
+        let normals_index = json::Index::new(self.root.accessors.len() as u32);
+        self.root.accessors.push(normals);
+
+        let tex_coords = json::Accessor {
+            buffer_view: Some(vertices_view_index),
+            byte_offset: (6 * mem::size_of::<f32>()) as u32,
+            count: num_elements,
+            component_type: Valid(json::accessor::GenericComponentType(
+                json::accessor::ComponentType::F32,
+            )),
+            extensions: Default::default(),
+            extras: Default::default(),
+            type_: Valid(json::accessor::Type::Vec2),
+            min: None,
+            max: None,
+            name: None,
+            normalized: false,
+            sparse: None,
+        };
+        let tex_coords_index = json::Index::new(self.root.accessors.len() as u32);
+        self.root.accessors.push(tex_coords);
+
+        let indices_accessor = json::Accessor {
+            buffer_view: Some(indices_view_index),
+            byte_offset: 0,
+            count: indices_len as u32,
+            component_type: Valid(json::accessor::GenericComponentType(
+                json::accessor::ComponentType::U32,
+            )),
+            extensions: Default::default(),
+            extras: Default::default(),
+            type_: Valid(json::accessor::Type::Scalar),
+            min: None,
+            max: None,
+            name: None,
+            normalized: false,
+            sparse: None,
+        };
+        let indices_index = json::Index::new(self.root.accessors.len() as u32);
+        self.root.accessors.push(indices_accessor);
+
+        let primitive = json::mesh::Primitive {
+            attributes: {
+                let mut map = std::collections::HashMap::new();
+                map.insert(Valid(json::mesh::Semantic::Positions), positions_index);
+                map.insert(Valid(json::mesh::Semantic::Normals), normals_index);
+                map.insert(Valid(json::mesh::Semantic::TexCoords(0)), tex_coords_index);
+                map
+            },
+            extensions: Default::default(),
+            extras: Default::default(),
+            indices: Some(indices_index),
+            material: None,
+            mode: Valid(json::mesh::Mode::Triangles),
+            targets: None,
+        };
+
+        PrimitiveBuilder {
+            builder: self,
+            primitive,
         }
+    }
 
-        impl RootInformation {
-            pub fn new() -> Self {
-                Self {
-                    bin: Vec::new(),
-                    buffers: Vec::new(),
-                    buffer_views: Vec::new(),
-                    primitives: Vec::new(),
-                    accessors: Vec::new(),
-                    textures: Vec::new(),
-                    images: Vec::new(),
-                    materials: Vec::new(),
-                }
-            }
-        }
-
-        let name = self.name.clone();
-
-        let info =
-            self.into_iter()
-                .enumerate()
-                .fold(RootInformation::new(), |mut info, (num, model)| {
-                    let ZenModel {
-                        name,
-                        children,
-                        mesh,
-                        material,
-                        transform,
-                    } = model;
-
-                    if let Some(mesh_handle) = mesh && let Some(material_handle) = material {
-                        let mesh = context.remove_mesh(&mesh_handle);
-                        let material = context.remove_material(&material_handle);
-                        let texture = context.remove_texture(&material.texture);
-
-                        let (min, max) = mesh.extreme_coordinates();
-
-                        let ZenMesh {
-                            vertices, indices
-                        } = mesh;
-
-                        let num_elements = vertices.len() as u32;
-
-                        let vertices_buffer_len =
-                            num_elements * mem::size_of::<Vertex>() as u32;
-                        let indices_buffer_len = (indices.len() * mem::size_of::<u32>()) as u32;
-
-                        let vertices_view = json::buffer::View {
-                            buffer: json::Index::new((BUFFER_NUM * num) as u32),
-                            byte_length: vertices_buffer_len,
-                            byte_offset: None,
-                            byte_stride: Some(mem::size_of::<Vertex>() as u32),
-                            extensions: Default::default(),
-                            extras: Default::default(),
-                            name: None,
-                            target: Some(Valid(json::buffer::Target::ArrayBuffer)),
-                        };
-                        info.buffer_views.push(vertices_view);
-
-                        let positions = json::Accessor {
-                            buffer_view: Some(json::Index::new((BUFFER_VIEW_NUM * num) as u32)),
-                            byte_offset: 0,
-                            count: num_elements,
-                            component_type: Valid(json::accessor::GenericComponentType(
-                                json::accessor::ComponentType::F32,
-                            )),
-                            extensions: Default::default(),
-                            extras: Default::default(),
-                            type_: Valid(json::accessor::Type::Vec3),
-                            min: Some(json::Value::from(min.to_array().to_vec())),
-                            max: Some(json::Value::from(max.to_array().to_vec())),
-                            name: None,
-                            normalized: false,
-                            sparse: None,
-                        };
-                        info.accessors.push(positions);
-
-                        let normals = json::Accessor {
-                            buffer_view: Some(json::Index::new((BUFFER_VIEW_NUM * num) as u32)),
-                            byte_offset: (3 * mem::size_of::<f32>()) as u32,
-                            count: num_elements,
-                            component_type: Valid(json::accessor::GenericComponentType(
-                                json::accessor::ComponentType::F32,
-                            )),
-                            extensions: Default::default(),
-                            extras: Default::default(),
-                            type_: Valid(json::accessor::Type::Vec3),
-                            min: None,
-                            max: None,
-                            name: None,
-                            normalized: false,
-                            sparse: None,
-                        };
-                        info.accessors.push(normals);
-
-                        let tex_coords = json::Accessor {
-                            buffer_view: Some(json::Index::new((BUFFER_VIEW_NUM * num) as u32)),
-                            byte_offset: (6 * mem::size_of::<f32>()) as u32,
-                            count: num_elements,
-                            component_type: Valid(json::accessor::GenericComponentType(
-                                json::accessor::ComponentType::F32,
-                            )),
-                            extensions: Default::default(),
-                            extras: Default::default(),
-                            type_: Valid(json::accessor::Type::Vec2),
-                            min: None,
-                            max: None,
-                            name: None,
-                            normalized: false,
-                            sparse: None,
-                        };
-                        info.accessors.push(tex_coords);
-
-                        let indices_view = json::buffer::View {
-                            buffer: json::Index::new(((BUFFER_NUM * num) + 1) as u32),
-                            byte_length: indices_buffer_len,
-                            byte_offset: None,
-                            byte_stride: None,
-                            extensions: Default::default(),
-                            extras: Default::default(),
-                            name: None,
-                            target: Some(Valid(json::buffer::Target::ElementArrayBuffer)),
-                        };
-                        info.buffer_views.push(indices_view);
-
-                        let indices_accessor = json::Accessor {
-                            buffer_view: Some(json::Index::new(
-                                ((BUFFER_VIEW_NUM * num) + 1) as u32,
-                            )),
-                            byte_offset: 0,
-                            count: indices.len() as u32,
-                            component_type: Valid(json::accessor::GenericComponentType(
-                                json::accessor::ComponentType::U32,
-                            )),
-                            extensions: Default::default(),
-                            extras: Default::default(),
-                            type_: Valid(json::accessor::Type::Scalar),
-                            min: None,
-                            max: None,
-                            name: None,
-                            normalized: false,
-                            sparse: None,
-                        };
-                        info.accessors.push(indices_accessor);
-
-                        let mut image_name = texture
-                            .name
-                            .split('.')
-                            .next()
-                            .expect("Name should have been validated before in zen-material!")
-                            .to_owned();
-                        image_name.push_str(".png");
-                        let image_path = FILES_INSTANCE.textures.join(&image_name);
-                        // TODO: remove unwrap
-                        let image_output = fs::File::create(&image_path).unwrap();
-                        texture.to_png(image_output).unwrap();
-
-                        let image = json::Image {
-                            name: None,
-                            buffer_view: None, //Some(json::Index::new(i as u32 * NUM + 4)),
-                            mime_type: Some(json::image::MimeType("image/png".to_owned())),
-                            uri: Some(
-                                Path::new("../")
-                                    .join(
-                                        image_path.strip_prefix(&FILES_INSTANCE.base_path).unwrap(),
-                                    )
-                                    .to_str()
-                                    .unwrap()
-                                    .to_string(),
-                            ),
-                            extensions: None,
-                            extras: Default::default(),
-                        };
-                        info.images.push(image);
-
-                        let texture = json::Texture {
-                            name: None,
-                            sampler: None,
-                            source: json::Index::new(num as u32),
-                            extensions: None,
-                            extras: Default::default(),
-                        };
-                        info.textures.push(texture);
-
-                        let material = json::Material {
-                            alpha_cutoff: Some(json::material::AlphaCutoff(0.0)),
-                            alpha_mode: Valid(json::material::AlphaMode::Mask),
-                            pbr_metallic_roughness: json::material::PbrMetallicRoughness {
-                                base_color_texture: Some(json::texture::Info {
-                                    index: json::Index::new(num as u32),
-                                    tex_coord: 0,
-                                    extensions: None,
-                                    extras: Default::default(),
-                                }),
-                                metallic_factor: json::material::StrengthFactor(material.metallic),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        };
-                        info.materials.push(material);
-
-                        let primitive = json::mesh::Primitive {
-                            attributes: {
-                                let mut map = std::collections::HashMap::new();
-                                map.insert(
-                                    Valid(json::mesh::Semantic::Positions),
-                                    json::Index::new((num * 4) as u32),
-                                );
-                                map.insert(
-                                    Valid(json::mesh::Semantic::Normals),
-                                    json::Index::new((num as u32 * 4) + 1),
-                                );
-                                map.insert(
-                                    Valid(json::mesh::Semantic::TexCoords(0)),
-                                    json::Index::new((num as u32 * 4) + 2),
-                                );
-                                map
-                            },
-                            extensions: Default::default(),
-                            extras: Default::default(),
-                            indices: Some(json::Index::new((num as u32 * 4) + 3)),
-                            material: Some(json::Index::new(num as u32)),
-                            mode: Valid(json::mesh::Mode::Triangles),
-                            targets: None,
-                        };
-                        info.primitives.push(primitive);
-
-                        // let padded_vertices_buffer_len = {
-                        //     let mut padded = vertices_buffer_len;
-                        //     while padded % 4 != 0 {
-                        //         padded += 1;
-                        //     }
-                        //     padded
-                        // };
-
-                        let vertices_buffer = json::Buffer {
-                            byte_length: vertices_buffer_len,
-                            extensions: Default::default(),
-                            extras: Default::default(),
-                            name: None,
-                            uri: match output {
-                                Output::Binary => None,
-                                Output::Standard => Some(format!("{}-vertices-{}.bin", name, num)),
-                            },
-                        };
-                        info.buffers.push(vertices_buffer);
-
-                        // let padded_indices_buffer_len = {
-                        //     let mut padded = indices_buffer_len;
-                        //     while padded % 4 != 0 {
-                        //         padded += 1;
-                        //     }
-                        //     padded
-                        // };
-
-                        let indices_buffer = json::Buffer {
-                            byte_length: indices_buffer_len,
-                            extensions: Default::default(),
-                            extras: Default::default(),
-                            name: None,
-                            uri: match output {
-                                Output::Binary => None,
-                                Output::Standard => Some(format!("{}-indices-{}.bin", name, num)),
-                            },
-                        };
-                        info.buffers.push(indices_buffer);
-
-                        match output {
-                            Output::Binary => {
-                                info.bin.append(&mut to_padded_byte_vector(vertices));
-                                info.bin.append(&mut to_padded_byte_vector(indices));
-                            }
-                            Output::Standard => {
-                                let vertices = to_padded_byte_vector(vertices);
-                                let mut writer = fs::File::create(
-                                    FILES_INSTANCE
-                                        .meshes
-                                        .join(format!("{}-vertices-{}.bin", name, num)),
-                                )
-                                .expect("I/O error");
-                                writer.write_all(&vertices).expect("I/O error");
-
-                                let indices = to_padded_byte_vector(indices);
-                                let mut writer = fs::File::create(
-                                    FILES_INSTANCE
-                                        .meshes
-                                        .join(format!("{}-indices-{}.bin", name, num)),
-                                )
-                                .expect("I/O error");
-                                writer.write_all(&indices).expect("I/O error");
-                            }
-                        };
-                    }
-                    info
-                });
-
-        let RootInformation {
-            bin,
-            buffers,
-            buffer_views,
-            primitives,
-            accessors,
-            textures,
-            images,
-            materials,
-        } = info;
-
+    pub fn build_mesh(&mut self) -> MeshBuilder<'_> {
         let mesh = json::Mesh {
             extensions: Default::default(),
             extras: Default::default(),
             name: None,
-            primitives,
+            primitives: Vec::new(),
             weights: None,
         };
 
-        let node = json::Node {
+        MeshBuilder {
+            builder: self,
+            mesh,
+        }
+    }
+
+    pub fn build_model(
+        &mut self,
+        model: ZenModel,
+        context: &mut ZenLoadContext,
+    ) -> GltfResult<NodeBuilder<'_>> {
+        let ZenLoadContext {
+            meshes,
+            materials,
+            textures,
+        } = context;
+
+        let mut empty = json::Node {
             camera: None,
             children: None,
             extensions: Default::default(),
             extras: Default::default(),
             matrix: None,
-            mesh: Some(json::Index::new(0)),
+            mesh: None,
             name: None,
             rotation: None,
             scale: None,
@@ -386,49 +337,284 @@ impl ZenModel {
             weights: None,
         };
 
-        let root = json::Root {
-            accessors,
-            buffers,
-            buffer_views,
-            meshes: vec![mesh],
-            nodes: vec![node],
-            scenes: vec![json::Scene {
-                extensions: Default::default(),
-                extras: Default::default(),
-                name: None,
-                nodes: vec![json::Index::new(0)],
-            }],
-            images,
-            textures,
-            materials,
+        let children = model
+            .into_iter()
+            .filter_map(|model| {
+                let ZenModel {
+                    name,
+                    mesh,
+                    material,
+                    transform,
+                    ..
+                } = model;
+
+                if let Some(mesh_handle) = mesh {
+                    let mesh = meshes.remove(&mesh_handle).expect("Mesh was not loaded");
+                    Some((name, mesh, material, transform))
+                } else {
+                    None
+                }
+            })
+            .map(|(name, mesh, material, transform)| {
+                let mut material_index = None;
+                if let Some(material_handle) = material {
+                    let material = materials
+                        .remove(&material_handle)
+                        .expect("Material was not loaded");
+                    material_index = Some(self.build_material(material, *textures)?.build());
+                }
+
+                let mut primitive = self.build_primitive(mesh);
+
+                primitive = if let Some(index) = material_index {
+                    primitive.set_material(index)
+                } else {
+                    primitive
+                };
+
+                let primitive = primitive.create();
+                let mesh = self.build_mesh().add_primitive(primitive).build();
+                let mut node = empty.clone();
+                node.mesh = Some(mesh);
+                node.name = Some(name);
+                node.translation = Some(transform.translation.to_array());
+                node.rotation = Some(json::scene::UnitQuaternion(transform.rotation.to_array()));
+
+                let index = json::Index::new(self.root.nodes.len() as u32);
+                self.root.nodes.push(node);
+
+                Ok(index)
+            })
+            .collect::<GltfResult<_>>()?;
+
+        empty.children = Some(children);
+
+        Ok(NodeBuilder {
+            builder: self,
+            node: empty,
+        })
+    }
+
+    pub fn build_material(
+        &mut self,
+        material: ZenMaterial,
+        textures: &mut Assets<ZenTexture>,
+    ) -> GltfResult<MaterialBuilder<'_>> {
+        let texture = textures
+            .remove(&material.texture)
+            .expect("Texture was not loaded");
+        let texture_index = self.create_texture(texture)?;
+
+        let material = json::Material {
+            alpha_cutoff: Some(json::material::AlphaCutoff(0.0)),
+            alpha_mode: Valid(json::material::AlphaMode::Mask),
+            pbr_metallic_roughness: json::material::PbrMetallicRoughness {
+                base_color_texture: Some(json::texture::Info {
+                    index: texture_index,
+                    tex_coord: 0,
+                    extensions: None,
+                    extras: Default::default(),
+                }),
+                metallic_factor: json::material::StrengthFactor(material.metallic),
+                ..Default::default()
+            },
             ..Default::default()
         };
 
+        Ok(MaterialBuilder {
+            builder: self,
+            material,
+        })
+    }
+
+    pub fn build_scene(&mut self) -> SceneBuilder<'_> {
+        let scene = json::Scene {
+            extensions: Default::default(),
+            extras: Default::default(),
+            name: None,
+            nodes: Vec::new(),
+        };
+
+        SceneBuilder {
+            builder: self,
+            scene,
+        }
+    }
+
+    pub fn build(mut self, scene: json::Index<json::Scene>, output: Output) -> GltfResult<()> {
+        self.root.scene = Some(scene);
+
         match output {
-            Output::Standard => {
-                let path = PathBuf::from(FILES_INSTANCE.meshes.join(format!("{name}.gltf")));
-                let writer = fs::File::create(&path).expect("I/O error");
-                json::serialize::to_writer_pretty(writer, &root).expect("Serialization error");
-                path
-            }
-            Output::Binary => {
-                let path = PathBuf::from(FILES_INSTANCE.meshes.join(format!("{name}.glb")));
-                let json_string = json::serialize::to_string(&root).expect("Serialization error");
+            Output::Binary(at) => {
+                let json_string = json::serialize::to_string(&self.root)?;
                 let mut json_offset = json_string.len() as u32;
                 align_to_multiple_of_four(&mut json_offset);
                 let glb = gltf::binary::Glb {
                     header: gltf::binary::Header {
                         magic: b"glTF".clone(),
                         version: 2,
-                        length: json_offset + bin.len() as u32,
+                        length: json_offset + self.buffer.len() as u32,
                     },
-                    bin: Some(Cow::Owned(bin)),
+                    bin: Some(Cow::Owned(self.buffer)),
                     json: Cow::Owned(json_string.into_bytes()),
                 };
-                let writer = std::fs::File::create(&path).expect("I/O error");
-                glb.to_writer(writer).expect("glTF binary output error");
-                path
+                let mut writer = File::create(at)?;
+                glb.to_writer(writer)?;
+            }
+            Output::Standard(at) => {
+                let mut buffer_writer = File::create(format!("{at:?}.bin"))?;
+                buffer_writer.write_all(&mut self.buffer)?;
+
+                let mut writer = File::create(at)?;
+                json::serialize::to_writer_pretty(writer, &self.root)?;
             }
         }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct PrimitiveBuilder<'a> {
+    builder: &'a mut GltfBuilder,
+    primitive: json::mesh::Primitive,
+}
+
+impl<'a> PrimitiveBuilder<'a> {
+    pub fn set_material(mut self, material: json::Index<json::Material>) -> Self {
+        self.primitive.material = Some(material);
+        self
+    }
+
+    pub fn create(self) -> json::mesh::Primitive {
+        self.primitive
+    }
+}
+
+#[derive(Debug)]
+pub struct MeshBuilder<'a> {
+    builder: &'a mut GltfBuilder,
+    mesh: json::Mesh,
+}
+
+impl<'a> MeshBuilder<'a> {
+    pub fn add_primitive(mut self, primitive: json::mesh::Primitive) -> Self {
+        self.mesh.primitives.push(primitive);
+        self
+    }
+
+    pub fn build(self) -> json::Index<json::Mesh> {
+        let index = json::Index::new(self.builder.root.meshes.len() as u32);
+        self.builder.root.meshes.push(self.mesh);
+        index
+    }
+}
+
+#[derive(Debug)]
+pub struct NodeBuilder<'a> {
+    builder: &'a mut GltfBuilder,
+    node: json::Node,
+}
+
+impl<'a> NodeBuilder<'a> {
+    pub fn add_mesh(mut self, mesh: json::Index<json::Mesh>) -> Self {
+        let node = json::Node {
+            camera: None,
+            children: None,
+            extensions: Default::default(),
+            extras: Default::default(),
+            matrix: None,
+            mesh: Some(mesh),
+            name: None,
+            rotation: None,
+            scale: None,
+            translation: None,
+            skin: None,
+            weights: None,
+        };
+        let index = json::Index::new(self.builder.root.nodes.len() as u32);
+        self.builder.root.nodes.push(node);
+
+        self.add_node(index)
+    }
+
+    pub fn add_node(mut self, node: json::Index<json::Node>) -> Self {
+        match self.node.children {
+            Some(ref mut children) => children.push(node),
+            None => unreachable!(),
+        }
+
+        self
+    }
+
+    pub fn build(self) -> json::Index<json::Node> {
+        let index = json::Index::new(self.builder.root.nodes.len() as u32);
+        self.builder.root.nodes.push(self.node);
+        index
+    }
+}
+
+#[derive(Debug)]
+pub struct MaterialBuilder<'a> {
+    builder: &'a mut GltfBuilder,
+    material: json::Material,
+}
+
+impl<'a> MaterialBuilder<'a> {
+    pub fn set_texture(mut self, texture: json::Index<json::Texture>) -> Self {
+        match self.material.pbr_metallic_roughness.base_color_texture {
+            Some(ref mut info) => info.index = texture,
+            None => unreachable!(),
+        }
+        self
+    }
+
+    pub fn set_normal_texture(&mut self, texture: json::Index<json::Texture>) -> &mut Self {
+        todo!()
+    }
+
+    pub fn set_occlusion_texture(&mut self, texture: json::Index<json::Texture>) -> &mut Self {
+        todo!()
+    }
+
+    pub fn set_emissive_texture(&mut self, texture: json::Index<json::Texture>) -> &mut Self {
+        todo!()
+    }
+
+    pub fn build(self) -> json::Index<json::Material> {
+        let index = json::Index::new(self.builder.root.materials.len() as u32);
+        self.builder.root.materials.push(self.material);
+        index
+    }
+}
+
+#[derive(Debug)]
+pub struct SceneBuilder<'a> {
+    builder: &'a mut GltfBuilder,
+    scene: json::Scene,
+}
+
+impl<'a> SceneBuilder<'a> {
+    pub fn add_node(mut self, node: json::Index<json::Node>) -> Self {
+        self.scene.nodes.push(node);
+        self
+    }
+
+    pub fn build(self) -> json::Index<json::Scene> {
+        let index = json::Index::new(self.builder.root.scenes.len() as u32);
+        self.builder.root.scenes.push(self.scene);
+        index
+    }
+}
+
+// TODO fix Output::Biary
+
+impl ZenModel {
+    pub fn to_gltf(self, context: &mut ZenLoadContext, output: Output) -> GltfResult<()> {
+        let mut builder = GltfBuilder::new();
+        let node = builder.build_model(self, context)?.build();
+        let scene = builder.build_scene().add_node(node).build();
+
+        builder.build(scene, output)
     }
 }
