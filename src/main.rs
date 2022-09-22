@@ -5,16 +5,18 @@ use bevy::{
     prelude::*,
     render::{
         render_asset::RenderAssetPlugin, render_resource::WgpuFeatures, settings::WgpuSettings,
+        view::NoFrustumCulling,
     },
     DefaultPlugins,
 };
 use bevy_flycam::{FlyCam, NoCameraPlayerPlugin};
 use zen_core::{
     archive::VdfsKind,
-    assets::ZenAssetLoader,
+    assets::{ZenAssetLoader, ZenLoadContext},
     material::ZenMaterial,
-    model::{ZenMesh, ZenMeshBundle, ZenModel, ZenModelBundle},
+    model::{gltf::Output, ZenMesh, ZenModel},
     texture::ZenTexture,
+    ZenPlugin,
 };
 
 pub const GAME_PATH: &'static str = "/home/tom/Steam/common/Gothic II";
@@ -28,12 +30,7 @@ fn main() -> miette::Result<()> {
         .add_plugins(DefaultPlugins)
         .add_plugin(WireframePlugin)
         .add_plugin(NoCameraPlayerPlugin)
-        .add_plugin(RenderAssetPlugin::<ZenMesh>::default())
-        .add_plugin(MaterialPlugin::<ZenMaterial>::default())
-        .add_asset::<ZenModel>()
-        .add_asset::<ZenMesh>()
-        .add_asset::<ZenMaterial>()
-        .add_asset::<ZenTexture>()
+        .add_plugin(ZenPlugin)
         .insert_non_send_resource(loader) // TODO fix: make vdfs send
         .insert_resource(WgpuSettings {
             features: WgpuFeatures::POLYGON_MODE_LINE,
@@ -92,20 +89,34 @@ fn load(
     mut models: ResMut<Assets<ZenModel>>,
     mut meshes: ResMut<Assets<ZenMesh>>,
     mut materials: ResMut<Assets<ZenMaterial>>,
-    mut textures: ResMut<Assets<Image>>,
-    mut meshas: ResMut<Assets<Mesh>>,
+    mut textures: ResMut<Assets<ZenTexture>>,
+    mut bevy_meshes: ResMut<Assets<Mesh>>,
+    mut bevy_materials: ResMut<Assets<StandardMaterial>>,
+    mut bevy_textures: ResMut<Assets<Image>>,
 ) {
     log::info!("Starting to load Assets...");
 
+    let mut context = ZenLoadContext::new(meshes.as_mut(), materials.as_mut(), textures.as_mut());
+
     let model = zen_loader
-        .load_model(
-            "ORC_MASTERTHRONE.MRM",
-            models.as_mut(),
-            meshes.as_mut(),
-            materials.as_mut(),
-            textures.as_mut(),
-        )
-        .expect("Expect to be loaded");
+        .load_model("ORC_MASTERTHRONE.MRM", &mut context)
+        .unwrap();
+    let out_path = model.to_gltf(&mut context, Output::Binary);
+
+    println!("Model exported to {out_path:?}");
+
+    // let entity = zen_loader
+    //     .spawn_model(
+    //         model,
+    //         bevy_meshes.as_mut(),
+    //         bevy_materials.as_mut(),
+    //         bevy_textures.as_mut(),
+    //         &mut context,
+    //         &mut commands,
+    //     )
+    //     .expect("Expect to be loaded");
+
+    // println!("Throne loaded: {model:?}");
 
     // let model = model_assets.as_mut().get(&model).unwrap();
     // commands.spawn_bundle(ZenMeshBundle {
@@ -113,14 +124,19 @@ fn load(
     //     ..default()
     // });
 
-    commands
-        .spawn_bundle(ZenModelBundle { model, ..default() })
-        .insert(meshas.as_mut().add(Mesh::from(shape::Cube { size: 0.2 })));
+    // commands
+    //     .spawn_bundle(ZenModelBundle { model, ..default() })
+    //     .insert(NoFrustumCulling)
+    //     .insert(
+    //         bevy_meshes
+    //             .as_mut()
+    //             .add(Mesh::from(shape::Cube { size: 0.2 })),
+    //     );
 
-    commands.spawn_bundle(ZenMeshBundle {
-        mesh: meshes.as_mut().add(ZenMesh::plane(50.0)),
-        ..default()
-    });
+    // commands.spawn_bundle(ZenMeshBundle {
+    //     mesh: meshes.as_mut().add(ZenMesh::plane(50.0)),
+    //     ..default()
+    //});
 
     log::info!("Finished loading assets!");
 }

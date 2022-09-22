@@ -1,14 +1,23 @@
 use crate::{
     archive::{ArchiveError, Entry, Vdfs, VdfsKind},
     material::{BasicMaterial, Group, ZenMaterial},
-    model::{Vertex, ZenMesh, ZenModel, ZenModelBundle},
+    model::{Vertex, ZenMesh, ZenModel},
     mrm::{Mrm, MrmError},
     msh::{Msh, MshError},
     texture::{TextureError, ZenTexture},
 };
-use bevy::prelude::{Assets, Handle, Image, Res, ResMut};
+use bevy::{
+    ecs::{system::EntityCommands, world::EntityMut},
+    prelude::{
+        Assets, BuildChildren, BuildWorldChildren, Bundle, Commands, ComputedVisibility, Entity,
+        Handle, Image, Mesh, PbrBundle, Res, ResMut, StandardMaterial, Transform, World,
+        WorldChildBuilder,
+    },
+    render::view::NoFrustumCulling,
+};
 use miette::Diagnostic;
 use std::{
+    default,
     fs::File,
     io,
     path::{Path, PathBuf},
@@ -38,6 +47,62 @@ pub enum AssetError {
 type AssetResult<T> = Result<T, AssetError>;
 
 // TODO keep Handles in LoadContext
+
+pub struct ZenLoadContext<'a> {
+    meshes: &'a mut Assets<ZenMesh>,
+    materials: &'a mut Assets<ZenMaterial>,
+    textures: &'a mut Assets<ZenTexture>,
+}
+
+impl<'a> ZenLoadContext<'a> {
+    pub fn new(
+        meshes: &'a mut Assets<ZenMesh>,
+        materials: &'a mut Assets<ZenMaterial>,
+        textures: &'a mut Assets<ZenTexture>,
+    ) -> Self {
+        Self {
+            meshes,
+            materials,
+            textures,
+        }
+    }
+
+    pub fn add_mesh(&mut self, mesh: ZenMesh) -> Handle<ZenMesh> {
+        self.meshes.add(mesh)
+    }
+
+    pub fn get_mesh(&self, handle: &Handle<ZenMesh>) -> &ZenMesh {
+        self.meshes.get(handle).expect("Should be present")
+    }
+
+    pub fn remove_mesh(&mut self, handle: &Handle<ZenMesh>) -> ZenMesh {
+        self.meshes.remove(handle).expect("Should be present")
+    }
+
+    pub fn add_material(&mut self, material: ZenMaterial) -> Handle<ZenMaterial> {
+        self.materials.add(material)
+    }
+
+    pub fn get_material(&self, handle: &Handle<ZenMaterial>) -> &ZenMaterial {
+        self.materials.get(handle).expect("Should be present")
+    }
+
+    pub fn remove_material(&mut self, handle: &Handle<ZenMaterial>) -> ZenMaterial {
+        self.materials.remove(handle).expect("Should be present")
+    }
+
+    pub fn add_texture(&mut self, texture: ZenTexture) -> Handle<ZenTexture> {
+        self.textures.add(texture)
+    }
+
+    pub fn get_texture(&self, handle: &Handle<ZenTexture>) -> &ZenTexture {
+        self.textures.get(handle).expect("Should be present")
+    }
+
+    pub fn remove_texture(&mut self, handle: &Handle<ZenTexture>) -> ZenTexture {
+        self.textures.remove(handle).expect("Should be present")
+    }
+}
 
 pub struct ZenAssetLoader {
     meshes: Vec<Vdfs<File>>,
@@ -70,19 +135,19 @@ impl ZenAssetLoader {
         Ok(self)
     }
 
-    fn load_mrm(
-        &self,
-        mrm: Mrm,
-        mesh_assets: &mut Assets<ZenMesh>,
-        material_assets: &mut Assets<ZenMaterial>,
-        texture_assets: &mut Assets<Image>,
-    ) -> AssetResult<ZenModel> {
-        log::debug!("Loading MRM: {}", &mrm.name);
-        let (object_sub_meshes, object_vertices) = (mrm.sub_meshes, mrm.vertices);
+    fn load_mrm(&self, mrm: Mrm, context: &mut ZenLoadContext<'_>) -> AssetResult<ZenModel> {
+        let Mrm {
+            name,
+            vertices,
+            sub_meshes,
+            ..
+        } = mrm;
+        log::debug!("Loading MRM: {name}");
 
-        let meshes = object_sub_meshes
+        let children = sub_meshes
             .into_iter()
-            .map(|sub_mesh| {
+            .enumerate()
+            .map(|(index, sub_mesh)| {
                 let indices = sub_mesh
                     .triangles
                     .into_iter()
@@ -91,19 +156,16 @@ impl ZenAssetLoader {
                     .map(|pos| pos as u32)
                     .collect::<Vec<u32>>();
 
-                let material =
-                    self.load_material(&sub_mesh.material, material_assets, texture_assets)?;
+                let material = Some(self.load_material(&sub_mesh.material, context)?);
 
                 let mut mesh = sub_mesh.wedges.into_iter().fold(
                     ZenMesh {
                         vertices: Vec::new(),
-                        num_elements: indices.len() as u32,
                         indices,
-                        material,
                     },
                     |mut mesh, wedge| {
                         let vertex = Vertex {
-                            position: object_vertices[wedge.vertex_index as usize].to_array(),
+                            position: vertices[wedge.vertex_index as usize].to_array(),
                             tex_coords: wedge.tex_coord.to_array(),
                             normal: wedge.normal.to_array(),
                         };
@@ -115,23 +177,30 @@ impl ZenAssetLoader {
                 mesh.scale(0.02);
 
                 //let mesh = mesh.pack();
+                let mesh = Some(context.add_mesh(mesh));
 
-                Ok(mesh_assets.add(mesh))
+                Ok(ZenModel {
+                    name: format!("{name}-{index}"),
+                    children: vec![],
+                    mesh,
+                    material,
+                    transform: Transform::default(),
+                })
             })
-            .collect::<AssetResult<Vec<Handle<ZenMesh>>>>()?;
+            .collect::<AssetResult<Vec<ZenModel>>>()?;
 
-        let model = ZenModel { meshes };
+        let model = ZenModel {
+            name,
+            children,
+            mesh: None,
+            material: None,
+            transform: Transform::default(),
+        };
 
         Ok(model)
     }
 
-    fn load_msh(
-        &self,
-        msh: Msh,
-        mesh_assets: &mut Assets<ZenMesh>,
-        material_assets: &mut Assets<ZenMaterial>,
-        texture_assets: &mut Assets<Image>,
-    ) -> AssetResult<ZenModel> {
+    fn load_msh(&self, msh: Msh, context: &mut ZenLoadContext<'_>) -> AssetResult<ZenModel> {
         log::debug!("Loading MSH: {}", &msh.name);
         let Msh {
             name,
@@ -141,9 +210,10 @@ impl ZenAssetLoader {
             polygons,
         } = msh;
 
-        let meshes = polygons
+        let children = polygons
             .into_iter()
-            .map(|polygon| {
+            .enumerate()
+            .map(|(index, polygon)| {
                 let vertices = polygon
                     .indices
                     .iter()
@@ -159,29 +229,38 @@ impl ZenAssetLoader {
                     .collect::<Vec<u32>>();
 
                 let material = &materials[polygon.material_index as usize];
-                let material = self.load_material(material, material_assets, texture_assets)?;
+                let material = Some(self.load_material(material, context)?);
 
                 let num_elements = (vertices.len() / 3) as u32;
-                let mesh = ZenMesh {
-                    vertices,
-                    indices,
+                let mesh = ZenMesh { vertices, indices };
+
+                let mesh = Some(context.add_mesh(mesh));
+                let model = ZenModel {
+                    name: format!("{name}-{index}"),
+                    children: vec![],
+                    mesh,
                     material,
-                    num_elements,
+                    transform: Transform::default(),
                 };
-                Ok(mesh_assets.add(mesh))
+
+                Ok(model)
             })
-            .collect::<AssetResult<Vec<Handle<ZenMesh>>>>()?;
+            .collect::<AssetResult<Vec<ZenModel>>>()?;
 
-        let model = ZenModel { meshes };
-
+        let model = ZenModel {
+            name,
+            children,
+            mesh: None,
+            material: None,
+            transform: Transform::default(),
+        };
         Ok(model)
     }
 
     fn load_material(
         &self,
         material: &BasicMaterial,
-        material_assets: &mut Assets<ZenMaterial>,
-        texture_assets: &mut Assets<Image>,
+        context: &mut ZenLoadContext<'_>,
     ) -> AssetResult<Handle<ZenMaterial>> {
         log::debug!("Loading material: {}", &material.name());
 
@@ -196,7 +275,7 @@ impl ZenAssetLoader {
         }
         if let Some(entry) = entry {
             let texture = ZenTexture::from_ztex(entry, material.name())?;
-            let texture = texture_assets.add(texture.into());
+            let texture = context.add_texture(texture);
 
             let color = crate::material::to_color(material.color());
 
@@ -218,7 +297,7 @@ impl ZenAssetLoader {
                 reflectance,
                 roughness,
             };
-            Ok(material_assets.add(material))
+            Ok(context.add_material(material))
         } else {
             Err(AssetError::NotFound(material.name().to_owned()))
         }
@@ -227,11 +306,8 @@ impl ZenAssetLoader {
     pub fn load_model(
         &self,
         name: &str,
-        model_assets: &mut Assets<ZenModel>,
-        mesh_assets: &mut Assets<ZenMesh>,
-        material_assets: &mut Assets<ZenMaterial>,
-        texture_assets: &mut Assets<Image>,
-    ) -> AssetResult<Handle<ZenModel>> {
+        context: &mut ZenLoadContext<'_>,
+    ) -> AssetResult<ZenModel> {
         let mut entry = None;
         for archive in &self.meshes {
             log::debug!("Searching {archive}\nfor model {name}");
@@ -244,13 +320,11 @@ impl ZenAssetLoader {
             if entry.name().ends_with(".MRM") {
                 let mrm = Mrm::new(entry, name)?;
                 log::debug!("Entry read into MRM");
-                let model = self.load_mrm(mrm, mesh_assets, material_assets, texture_assets)?;
-                Ok(model_assets.add(model))
+                self.load_mrm(mrm, context)
             } else if entry.name().ends_with(".MSH") {
                 let msh = Msh::new(entry, name)?;
                 log::debug!("Entry read into MSH");
-                let model = self.load_msh(msh, mesh_assets, material_assets, texture_assets)?;
-                Ok(model_assets.add(model))
+                self.load_msh(msh, context)
             } else {
                 unreachable!()
             }
@@ -259,7 +333,107 @@ impl ZenAssetLoader {
         }
     }
 
-    pub fn load_texture(&self, name: &str, textures: Assets<Image>) -> Handle<Image> {
-        todo!()
+    fn spawn_model_with(
+        &self,
+        entity: &mut EntityCommands,
+        model: ZenModel,
+        meshes: &mut Assets<Mesh>,
+        materials: &mut Assets<StandardMaterial>,
+        textures: &mut Assets<Image>,
+        context: &mut ZenLoadContext<'_>,
+    ) {
+        let ZenModel {
+            children,
+            mesh,
+            material,
+            transform,
+            ..
+        } = model;
+
+        entity.with_children(|parent| {
+            let mesh = meshes.add(context.get_mesh(&mesh.unwrap()).clone().into());
+            parent
+                .spawn()
+                .insert_bundle(PbrBundle {
+                    mesh,
+                    material: materials.add(StandardMaterial {
+                        double_sided: true,
+                        cull_mode: None,
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .insert(NoFrustumCulling);
+
+            // let mut entity = parent.spawn();
+            // entity.insert(transform);
+
+            // if let Some(handle) = mesh {
+            //     let mesh = context.remove_mesh(&handle).into();
+            //     let handle = meshes.add(mesh);
+            //     entity.insert(handle);
+            // }
+
+            // if let Some(handle) = material {
+            // let material = context.remove_material(&handle);
+            // let texture = context.remove_texture(&material.texture).into();
+            // let texture_handle = textures.add(texture);
+
+            // let material = StandardMaterial {
+            //     double_sided: true,
+            //     cull_mode: None,
+            //     base_color: material.color,
+            //     base_color_texture: Some(texture_handle),
+            //     metallic: material.metallic,
+            //     perceptual_roughness: material.roughness,
+            //     reflectance: material.reflectance,
+            //     ....Default::default()
+            // };
+            // let material_handle = materials.add(material);
+
+            //     entity.insert(material_handle);
+            // }
+
+            // for child in children {
+            //     self.spawn_model_with(&mut entity, child, meshes, context);
+            // }
+        });
+    }
+
+    pub fn spawn_model(
+        &self,
+        model: ZenModel,
+        meshes: &mut Assets<Mesh>,
+        materials: &mut Assets<StandardMaterial>,
+        textures: &mut Assets<Image>,
+        context: &mut ZenLoadContext<'_>,
+        commands: &mut Commands,
+    ) -> AssetResult<Entity> {
+        let ZenModel {
+            children,
+            mesh,
+            material,
+            transform,
+            ..
+        } = model;
+
+        let mut entity = commands.spawn();
+        entity.insert(transform);
+
+        if let Some(handle) = mesh {
+            let mesh = context.get_mesh(&handle).clone().into();
+            let handle = meshes.add(mesh);
+            entity.insert(handle);
+        }
+
+        if let Some(handle) = material {
+            entity.insert(handle);
+        }
+
+        for child in children {
+            self.spawn_model_with(&mut entity, child, meshes, materials, textures, context);
+        }
+
+        Ok(entity.id())
     }
 }

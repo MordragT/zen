@@ -3581,6 +3581,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "zen-inventory"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "zen-parser"
 version = "0.0.1"
 dependencies = [

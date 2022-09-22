@@ -115,11 +115,11 @@ impl ZenTexture {
         self.pixels.as_slice()
     }
 
-    #[cfg(feature = "image")]
     pub fn to_png<W: Write>(&self, writer: W) -> TextureResult<()> {
+        dbg!(&self);
         let encoder = image::codecs::png::PngEncoder::new(writer);
         let color_type = match self.color_type {
-            ColorType::Bgra8 => image::ColorType::Bgra8,
+            ColorType::Bgra8 => todo!(),
             ColorType::Rgba16 => image::ColorType::Rgba16,
             ColorType::Rgba8 => image::ColorType::Rgba8,
         };

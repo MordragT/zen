@@ -25,4 +25,4 @@ log = "0.4"
 gltf = "1.0"
 
 [features]
-#default = ["gltf", "gltf-json"]
+default = ["gltf", "gltf-json"]

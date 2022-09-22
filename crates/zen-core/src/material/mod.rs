@@ -26,25 +26,25 @@ mod error;
 pub const GOTHIC2: u16 = 39939;
 
 /// Simple Material with texture and color
-#[derive(AsBindGroup, TypeUuid, Clone)]
+#[derive(TypeUuid, Clone)]
 #[uuid = "5c5462ea-1986-11ed-9f7c-233969708b10"]
 pub struct ZenMaterial {
     // TODO add support for normal map
-    #[uniform(0)]
+    // #[uniform(0)]
     pub color: Color,
     pub metallic: f32,
     pub roughness: f32,
     pub reflectance: f32,
-    #[texture(1)]
-    #[sampler(2)]
-    pub texture: Handle<Image>,
+    // #[texture(1)]
+    // #[sampler(2)]
+    pub texture: Handle<ZenTexture>,
 }
 
-impl Material for ZenMaterial {
-    fn fragment_shader() -> ShaderRef {
-        "zen_material.wgsl".into()
-    }
-}
+// impl Material for ZenMaterial {
+//     fn fragment_shader() -> ShaderRef {
+//         "zen_material.wgsl".into()
+//     }
+// }
 
 pub fn to_color(num: u32) -> Color {
     let layer = |i| {
