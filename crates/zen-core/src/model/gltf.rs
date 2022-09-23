@@ -1,12 +1,12 @@
 use crate::assets::ZenLoadContext;
 use crate::material::ZenMaterial;
-use crate::scene::ZenScene;
 use crate::texture::{TextureError, ZenTexture};
 
 use super::ZenModel;
 use super::{Vertex, ZenMesh};
 use bevy::prelude::Assets;
 use gltf_json as json;
+use image::codecs::jpeg::JpegEncoder;
 use json::validation::Checked::Valid;
 use std::borrow::Cow;
 use std::{
@@ -16,7 +16,6 @@ use std::{
     path::{Path, PathBuf},
 };
 use thiserror::Error;
-use zen_types::path::FILES_INSTANCE;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Output {
@@ -95,7 +94,8 @@ impl GltfBuilder {
         texture: ZenTexture,
     ) -> GltfResult<json::Index<json::Texture>> {
         let mut image_buffer = Vec::new();
-        texture.to_jpeg(&mut image_buffer)?;
+        let encoder = JpegEncoder::new(&mut image_buffer);
+        texture.encode(encoder)?;
 
         let image_buffer_len = image_buffer.len();
         let image_view = json::buffer::View {
@@ -160,7 +160,7 @@ impl GltfBuilder {
         Ok(texture_index)
     }
 
-    pub fn build_primitive(&mut self, mesh: ZenMesh) -> PrimitiveBuilder<'_> {
+    pub fn build_primitive(&mut self, mesh: ZenMesh) -> PrimitiveBuilder {
         let (min, max) = mesh.extreme_coordinates();
         let ZenMesh { vertices, indices } = mesh;
         let num_elements = vertices.len() as u32;
@@ -182,7 +182,7 @@ impl GltfBuilder {
         self.buffer.append(&mut to_padded_byte_vector(vertices));
 
         let indices_len = indices.len();
-        let indices_buffer_len = (indices.len() * mem::size_of::<u32>());
+        let indices_buffer_len = indices.len() * mem::size_of::<u32>();
         let indices_view = json::buffer::View {
             buffer: json::Index::new(0),
             byte_length: (self.buffer.len() + indices_buffer_len) as u32,
@@ -290,10 +290,7 @@ impl GltfBuilder {
             targets: None,
         };
 
-        PrimitiveBuilder {
-            builder: self,
-            primitive,
-        }
+        PrimitiveBuilder { primitive }
     }
 
     pub fn build_mesh(&mut self) -> MeshBuilder<'_> {
@@ -458,14 +455,14 @@ impl GltfBuilder {
                     bin: Some(Cow::Owned(self.buffer)),
                     json: Cow::Owned(json_string.into_bytes()),
                 };
-                let mut writer = File::create(at)?;
+                let writer = File::create(at)?;
                 glb.to_writer(writer)?;
             }
             Output::Standard(at) => {
                 let mut buffer_writer = File::create(format!("{at:?}.bin"))?;
                 buffer_writer.write_all(&mut self.buffer)?;
 
-                let mut writer = File::create(at)?;
+                let writer = File::create(at)?;
                 json::serialize::to_writer_pretty(writer, &self.root)?;
             }
         }
@@ -475,12 +472,11 @@ impl GltfBuilder {
 }
 
 #[derive(Debug)]
-pub struct PrimitiveBuilder<'a> {
-    builder: &'a mut GltfBuilder,
+pub struct PrimitiveBuilder {
     primitive: json::mesh::Primitive,
 }
 
-impl<'a> PrimitiveBuilder<'a> {
+impl PrimitiveBuilder {
     pub fn set_material(mut self, material: json::Index<json::Material>) -> Self {
         self.primitive.material = Some(material);
         self
@@ -517,7 +513,7 @@ pub struct NodeBuilder<'a> {
 }
 
 impl<'a> NodeBuilder<'a> {
-    pub fn add_mesh(mut self, mesh: json::Index<json::Mesh>) -> Self {
+    pub fn add_mesh(self, mesh: json::Index<json::Mesh>) -> Self {
         let node = json::Node {
             camera: None,
             children: None,
@@ -569,16 +565,36 @@ impl<'a> MaterialBuilder<'a> {
         self
     }
 
-    pub fn set_normal_texture(&mut self, texture: json::Index<json::Texture>) -> &mut Self {
-        todo!()
+    pub fn set_normal_texture(mut self, texture: json::Index<json::Texture>) -> Self {
+        self.material.normal_texture = Some(json::material::NormalTexture {
+            index: texture,
+            scale: 1.0,
+            tex_coord: 0,
+            extensions: None,
+            extras: None,
+        });
+        self
     }
 
-    pub fn set_occlusion_texture(&mut self, texture: json::Index<json::Texture>) -> &mut Self {
-        todo!()
+    pub fn set_occlusion_texture(mut self, texture: json::Index<json::Texture>) -> Self {
+        self.material.occlusion_texture = Some(json::material::OcclusionTexture {
+            index: texture,
+            tex_coord: 0,
+            strength: json::material::StrengthFactor::default(),
+            extensions: None,
+            extras: None,
+        });
+        self
     }
 
-    pub fn set_emissive_texture(&mut self, texture: json::Index<json::Texture>) -> &mut Self {
-        todo!()
+    pub fn set_emissive_texture(mut self, texture: json::Index<json::Texture>) -> Self {
+        self.material.emissive_texture = Some(json::texture::Info {
+            index: texture,
+            tex_coord: 0,
+            extensions: None,
+            extras: None,
+        });
+        self
     }
 
     pub fn build(self) -> json::Index<json::Material> {

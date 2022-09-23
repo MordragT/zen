@@ -18,8 +18,6 @@ pub enum MshError {
     UnknownGameVersion(u32),
     #[error("Expected value: {0}")]
     ExpectedValue(String),
-    #[error("MSH Material Error: {0}")]
-    Material(#[from] crate::material::MaterialError),
 }
 
 impl de::Error for MshError {

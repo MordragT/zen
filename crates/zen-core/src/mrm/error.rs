@@ -16,8 +16,6 @@ pub enum MrmError {
     Ascii(#[from] ascii::Error),
     #[error("Expected Identifier: {0}")]
     ExpectedIdentifier(String),
-    #[error("MRM Material Error: {0}")]
-    Material(#[from] crate::material::MaterialError),
 }
 
 impl de::Error for MrmError {

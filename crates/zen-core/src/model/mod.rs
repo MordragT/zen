@@ -3,29 +3,11 @@
 
 use crate::{material::ZenMaterial, math::Vec3};
 use bevy::{
-    ecs::system::SystemParamItem,
-    prelude::Handle,
-    prelude::{
-        Bundle, Component, ComputedVisibility, GlobalTransform, MaterialMeshBundle, Res, Transform,
-        Visibility,
-    },
-    reflect::{TypeUuid, Uuid},
-    render::{
-        extract_component::ExtractComponent,
-        mesh::{
-            GpuBufferInfo, GpuMesh, Indices, InnerMeshVertexBufferLayout, Mesh,
-            MeshVertexBufferLayout, PrimitiveTopology,
-        },
-        render_asset::{PrepareAssetError, RenderAsset},
-        render_resource::{
-            BufferInitDescriptor, BufferUsages, IndexFormat, VertexAttribute, VertexBufferLayout,
-            VertexStepMode,
-        },
-        renderer::RenderDevice,
-    },
+    prelude::{Handle, Transform},
+    reflect::TypeUuid,
+    render::mesh::{Indices, Mesh, PrimitiveTopology},
 };
 use std::collections::{HashMap, VecDeque};
-use std::mem;
 
 #[cfg(feature = "gltf")]
 #[cfg(feature = "gltf-json")]

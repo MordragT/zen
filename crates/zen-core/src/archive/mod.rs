@@ -18,13 +18,11 @@
 //! ```
 
 use error::ArchiveResult;
-use serde::{Deserialize, __private::de::IdentifierDeserializer};
+use serde::Deserialize;
 use std::{
-    cell::{Cell, RefCell},
-    fmt, io,
-    io::{prelude::*, Take},
-    io::{Read, SeekFrom},
-    sync::{Arc, Mutex, RwLock},
+    cell::RefCell,
+    fmt,
+    io::{Read, Seek, SeekFrom},
 };
 use zen_parser::prelude::*;
 

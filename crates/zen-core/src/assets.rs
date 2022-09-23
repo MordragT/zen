@@ -9,8 +9,8 @@ use crate::{
 use bevy::{
     ecs::{system::EntityCommands, world::EntityMut},
     prelude::{
-        Assets, BuildChildren, BuildWorldChildren, Bundle, Commands, ComputedVisibility, Entity,
-        Handle, Image, Mesh, PbrBundle, Res, ResMut, StandardMaterial, Transform, World,
+        Assets, BuildChildren, BuildWorldChildren, Bundle, Color, Commands, ComputedVisibility,
+        Entity, Handle, Image, Mesh, PbrBundle, Res, ResMut, StandardMaterial, Transform, World,
         WorldChildBuilder,
     },
     render::view::NoFrustumCulling,
@@ -176,7 +176,7 @@ impl ZenAssetLoader {
                     },
                 );
 
-                mesh.scale(0.02);
+                //mesh.scale(0.02);
 
                 //let mesh = mesh.pack();
                 let mesh = Some(context.add_mesh(mesh));
@@ -276,7 +276,7 @@ impl ZenAssetLoader {
             }
         }
         if let Some(entry) = entry {
-            let texture = ZenTexture::from_ztex(entry, material.name())?;
+            let texture = entry.try_into()?;
             let texture = context.add_texture(texture);
 
             let color = crate::material::to_color(material.color());
@@ -361,6 +361,7 @@ impl ZenAssetLoader {
                     material: materials.add(StandardMaterial {
                         double_sided: true,
                         cull_mode: None,
+                        base_color: Color::ORANGE_RED,
                         ..Default::default()
                     }),
                     ..Default::default()

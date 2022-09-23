@@ -4,24 +4,14 @@
 //! You first have to deserialize [BasicMaterial] or [AdvancedMaterial],
 //! to use the [TryFrom] implementation.
 
-use crate::{
-    archive::Vdfs,
-    math::{Vec2, Vec3},
-    texture::ZenTexture,
-};
+use crate::{math::Vec2, texture::ZenTexture};
 use bevy::{
-    prelude::{Color, Handle, Image, Material},
-    reflect::{TypeUuid, Uuid},
-    render::render_resource::{AsBindGroup, ShaderRef},
+    prelude::{Color, Handle},
+    reflect::TypeUuid,
 };
-pub use error::MaterialError;
-use error::MaterialResult;
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
-use std::{cmp, convert::TryFrom, fs::File, io::Cursor};
-use zen_types::path::INSTANCE;
-
-mod error;
+use std::cmp;
 
 pub const GOTHIC2: u16 = 39939;
 
@@ -71,6 +61,7 @@ fn tex_scale_to_vec(scale_str: &str) -> Vec2<u32> {
 
 /// Materials that are used in Gothic 1
 #[derive(Deserialize, Debug, Clone)]
+#[allow(unused)]
 pub struct BasicMaterial {
     name: String,
     group: Group,
@@ -106,7 +97,7 @@ impl BasicMaterial {
     }
 
     pub fn compiled_texture(&self) -> String {
-        let (name, end) = self
+        let (name, _end) = self
             .texture
             .split_once('.')
             .expect("Every texture has an ending");
@@ -137,6 +128,7 @@ impl From<AdvancedMaterial> for BasicMaterial {
 
 /// Materials used in Gothic 2
 #[derive(Deserialize, Debug, Clone)]
+#[allow(unused)]
 pub struct AdvancedMaterial {
     name: String,
     group: Group,

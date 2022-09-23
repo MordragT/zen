@@ -1,12 +1,7 @@
-use std::fmt::format;
-
 use bevy::{
     pbr::wireframe::{WireframeConfig, WireframePlugin},
     prelude::*,
-    render::{
-        render_asset::RenderAssetPlugin, render_resource::WgpuFeatures, settings::WgpuSettings,
-        view::NoFrustumCulling,
-    },
+    render::{render_resource::WgpuFeatures, settings::WgpuSettings},
     DefaultPlugins,
 };
 use bevy_flycam::{FlyCam, NoCameraPlayerPlugin};
@@ -85,14 +80,14 @@ fn setup(
 
 fn load(
     mut commands: Commands,
-    mut zen_loader: NonSend<ZenAssetLoader>,
-    mut models: ResMut<Assets<ZenModel>>,
+    zen_loader: NonSend<ZenAssetLoader>,
     mut meshes: ResMut<Assets<ZenMesh>>,
     mut materials: ResMut<Assets<ZenMaterial>>,
     mut textures: ResMut<Assets<ZenTexture>>,
     mut bevy_meshes: ResMut<Assets<Mesh>>,
     mut bevy_materials: ResMut<Assets<StandardMaterial>>,
     mut bevy_textures: ResMut<Assets<Image>>,
+    asset_server: Res<AssetServer>,
 ) {
     log::info!("Starting to load Assets...");
 
@@ -102,10 +97,10 @@ fn load(
         .load_model("ORC_MASTERTHRONE.MRM", &mut context)
         .unwrap();
 
-    let path = "files/meshes/throne.glb";
+    let path = "assets/orig/throne.glb";
     model.to_gltf(&mut context, Output::binary(path)).unwrap();
-
     println!("Model exported to {path}");
+    panic!();
 
     // let entity = zen_loader
     //     .spawn_model(
@@ -117,8 +112,12 @@ fn load(
     //         &mut commands,
     //     )
     //     .expect("Expect to be loaded");
+    // println!("Throne loaded: {entity:?}");
 
-    // println!("Throne loaded: {model:?}");
+    // commands.spawn_bundle(SceneBundle {
+    //     scene: asset_server.load("files/meshes/throne_flipped.glb#Scene0"),
+    //     ..default()
+    // });
 
     // let model = model_assets.as_mut().get(&model).unwrap();
     // commands.spawn_bundle(ZenMeshBundle {

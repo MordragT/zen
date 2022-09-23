@@ -8,7 +8,6 @@ edition = "2021"
 
 [dependencies]
 zen-parser = { path = "../zen-parser" }
-zen-types = { path = "../zen-types" }
 bytemuck = "1.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -17,6 +16,7 @@ thiserror = "1.0"
 miette = "5.3"
 bevy = "0.8"
 image = "0.24"
+texpresso = "2.0"
 gltf = { version = "1.0", optional = true }
 gltf-json = { version = "1.0", optional = true }
 walkdir = "2"

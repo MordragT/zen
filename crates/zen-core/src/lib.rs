@@ -1,6 +1,7 @@
 #![feature(half_open_range_patterns)]
 #![feature(mixed_integer_ops)]
 #![feature(let_chains)]
+#![feature(slice_flatten)]
 
 use bevy::prelude::{AddAsset, App, MaterialPlugin, Plugin};
 use material::ZenMaterial;

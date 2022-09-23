@@ -17,7 +17,6 @@ members = ["crates/*"]
 [dependencies]
 zen-core = { path = "crates/zen-core" }
 zen-parser = {  path = "crates/zen-parser" }
-zen-types = {  path = "crates/zen-types" }
 zen-daedalus = {  path = "crates/zen-daedalus" }
 bevy = "0.8"
 bevy_flycam = "0.8"

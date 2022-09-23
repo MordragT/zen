@@ -1,13 +1,9 @@
 use std::{
     cell::RefMut,
     fmt,
-    io::{self, BufRead, Read, Seek, SeekFrom, Take},
-    sync::{Arc, Mutex},
+    io::{self, Read, Seek, SeekFrom},
 };
-
-use zen_parser::prelude::{BinaryDeserializer, BinaryRead};
-
-use super::ArchiveError;
+use zen_parser::prelude::BinaryRead;
 
 /// Vdfs Entry
 pub struct Entry<'a> {
@@ -43,6 +39,10 @@ impl<'a> Entry<'a> {
     pub fn name(&self) -> &String {
         &self.name
     }
+
+    pub fn size(&self) -> u64 {
+        self.size
+    }
 }
 
 impl<'a> fmt::Display for Entry<'a> {
@@ -64,6 +64,7 @@ impl<'a> Read for Entry<'a> {
                 self.offset,
                 self.size
             );
+            return Ok(0);
         }
 
         self.io.seek(SeekFrom::Start(self.pos))?;

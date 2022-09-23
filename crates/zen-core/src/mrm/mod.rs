@@ -29,7 +29,7 @@ use crate::{
 pub use error::MrmError;
 use error::MrmResult;
 use serde::Deserialize;
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Seek, SeekFrom};
 use sub_mesh::*;
 use zen_parser::prelude::*;
 

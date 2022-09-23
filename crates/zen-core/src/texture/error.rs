@@ -1,4 +1,4 @@
-use std::{fmt, io};
+use std::io;
 use thiserror::Error;
 use zen_parser::ascii;
 use zen_parser::binary;

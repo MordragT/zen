@@ -1,4 +1,6 @@
-use std::num::NonZeroU8;
+#![feature(return_position_impl_trait_in_trait)]
+
+use std::{fmt::Debug, hash::Hash, num::NonZeroU8};
 
 use bevy::{
     prelude::{Component, Entity, Handle, Image},
@@ -28,7 +30,7 @@ impl<K: ItemKind> InventoryBuilder<K> {
 }
 
 pub struct Inventory<K: ItemKind> {
-    items: HashMap<K, HashMap<Entity, Option<NonZeroUsize>>>,
+    items: HashMap<K, HashMap<Entity, Option<NonZeroU8>>>,
 }
 
 impl<K: ItemKind> Inventory<K> {}

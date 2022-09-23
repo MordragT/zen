@@ -1,7 +1,7 @@
 /target
 crates/*/target
-/files
 .metals/
 .vscode/
 /docs
 .direnv
+/assets/orig/
