@@ -66,11 +66,11 @@ pub struct Mrm {
     pub bounding_box: (Vec3<f32>, Vec3<f32>),
 }
 
-impl Mrm {
-    /// Creates a new mutli resolution mesh from a reader
-    pub fn new<R: BinaryRead + AsciiRead>(reader: R, name: &str) -> MrmResult<Mrm> {
-        let mut deserializer = BinaryDeserializer::from(reader);
-
+impl<'de> Deserialize<'de> for Mrm {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de, Error = MrmError>,
+    {
         #[derive(Deserialize)]
         #[repr(C, packed(4))]
         struct Chunk {
@@ -230,5 +230,12 @@ impl Mrm {
             alpha_test,
             bounding_box,
         })
+    }
+}
+
+impl Mrm {
+    /// Creates a new mutli resolution mesh from a reader
+    pub fn new<R: BinaryRead + AsciiRead>(reader: R, name: &str) -> MrmResult<Mrm> {
+        let mut deserializer = BinaryDeserializer::from(reader);
     }
 }

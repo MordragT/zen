@@ -122,40 +122,50 @@ impl<R: BinaryRead> Vdfs<R> {
         deserializer.seek(SeekFrom::Start(self.header.offset as u64))?;
 
         Ok((0..self.header.count)
-            .map(|_| -> ArchiveResult<(String, u32, u32, u32, u32)> {
-                let mut deserializer = self.obj.borrow_mut();
+            .map(
+                |index| -> ArchiveResult<(u32, String, u32, u32, u32, u32)> {
+                    let mut deserializer = self.obj.borrow_mut();
 
-                let mut name_buf = [0_u8; ENTRY_NAME_LENGTH];
-                deserializer.read_exact(&mut name_buf)?;
-                let name = name_buf
-                    .iter()
-                    .filter_map(|c| {
-                        if *c >= 'A' as u8 && *c <= 'Z' as u8
-                            || *c == '_' as u8
-                            || *c == '.' as u8
-                            || *c == '-' as u8
-                            || *c >= '0' as u8 && *c <= '9' as u8
-                        {
-                            Some(*c as char)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<String>();
+                    let mut name_buf = [0_u8; ENTRY_NAME_LENGTH];
+                    deserializer.read_exact(&mut name_buf)?;
+                    let name = name_buf
+                        .iter()
+                        .filter_map(|c| {
+                            if *c >= 'A' as u8 && *c <= 'Z' as u8
+                                || *c == '_' as u8
+                                || *c == '.' as u8
+                                || *c == '-' as u8
+                                || *c >= '0' as u8 && *c <= '9' as u8
+                            {
+                                Some(*c as char)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<String>();
 
-                let offset = u32::deserialize(deserializer.by_ref())?;
-                let size = u32::deserialize(deserializer.by_ref())?;
-                let kind = u32::deserialize(deserializer.by_ref())?;
-                let attr = u32::deserialize(deserializer.by_ref())?;
+                    let offset = u32::deserialize(deserializer.by_ref())?;
+                    let size = u32::deserialize(deserializer.by_ref())?;
+                    let kind = u32::deserialize(deserializer.by_ref())?;
+                    let attr = u32::deserialize(deserializer.by_ref())?;
 
-                Ok((name, offset, size, kind, attr))
-            })
+                    Ok((index, name, offset, size, kind, attr))
+                },
+            )
             .filter_map(|res| match res {
-                Ok((name, offset, size, kind, attr)) => {
+                Ok((index, name, offset, size, kind, attr)) => {
                     let io = self.obj.borrow_mut();
 
                     if kind & ENTRY_DIR == 0 {
-                        Some(Entry::new(name, offset as u64, size as u64, kind, attr, io))
+                        Some(Entry::new(
+                            index,
+                            name,
+                            offset as u64,
+                            size as u64,
+                            kind,
+                            attr,
+                            io,
+                        ))
                     } else {
                         None
                     }

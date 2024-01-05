@@ -6,7 +6,7 @@ use super::ZenModel;
 use super::{Vertex, ZenMesh};
 use bevy::prelude::Assets;
 use gltf_json as json;
-use image::codecs::jpeg::JpegEncoder;
+use image::codecs::png::PngEncoder;
 use json::validation::Checked::Valid;
 use std::borrow::Cow;
 use std::{
@@ -93,8 +93,10 @@ impl GltfBuilder {
         &mut self,
         texture: ZenTexture,
     ) -> GltfResult<json::Index<json::Texture>> {
+        dbg!(&texture);
+
         let mut image_buffer = Vec::new();
-        let encoder = JpegEncoder::new(&mut image_buffer);
+        let encoder = PngEncoder::new(&mut image_buffer);
         texture.encode(encoder)?;
 
         let image_buffer_len = image_buffer.len();

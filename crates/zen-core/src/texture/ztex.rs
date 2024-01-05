@@ -45,13 +45,11 @@ pub enum ZenTextureFormat {
     P8 = 9,
     /// RGB + optional 1 bit alpha: 0.5 byte/px
     DXT1 = 10,
-    /// RGB + 4 bit alpha: 1 byte/px
     DXT2 = 11,
-    /// RGBA: 1 byte/px
+    /// RGB + 4 bit alpha: 1 byte/px
     DXT3 = 12,
-    /// Grayscale: 0.5 byte/px
     DXT4 = 13,
-    /// 2 * grayscale: 1 byte/px
+    /// RGBA: 1 byte/px
     DXT5 = 14,
 }
 

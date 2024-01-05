@@ -7,6 +7,8 @@ use zen_parser::prelude::BinaryRead;
 
 /// Vdfs Entry
 pub struct Entry<'a> {
+    // The index in the archive it was read from
+    index: u32,
     name: String,
     pos: u64,
     offset: u64,
@@ -18,6 +20,7 @@ pub struct Entry<'a> {
 
 impl<'a> Entry<'a> {
     pub(super) fn new(
+        index: u32,
         name: String,
         offset: u64,
         size: u64,
@@ -26,6 +29,7 @@ impl<'a> Entry<'a> {
         io: RefMut<'a, dyn BinaryRead>,
     ) -> Self {
         Self {
+            index,
             name,
             pos: offset,
             offset,

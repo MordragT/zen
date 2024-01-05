@@ -10,7 +10,7 @@ pub mod binsafe;
 mod error;
 pub mod prelude;
 
-/// Possible filetypes this zen-file can have
+/// Possible filetypes this vdfs-file can have
 #[derive(Debug, PartialEq)]
 pub enum Kind {
     Unknown,
@@ -18,6 +18,7 @@ pub enum Kind {
     Binary,
     BinSafe,
 }
+
 /// File Header for zen-files
 #[derive(Debug)]
 pub struct Header {
@@ -48,6 +49,8 @@ impl Header {
         }
     }
 }
+
+// TODO move to archive
 
 /// Reads the header and returns it
 pub fn read_header<R: BinaryRead + AsciiRead>(mut reader: R) -> Result<Header> {
