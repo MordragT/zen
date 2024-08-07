@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Quaternion","Quaternions are a convenient representation for rotations in 3D spaces."]]});

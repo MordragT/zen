@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Extent3","Vector type suited for 3D extents (width, height and depth)."],["IntoIter","Consuming iterator over this module’s vector type."]]});

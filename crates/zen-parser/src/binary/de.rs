@@ -38,98 +38,98 @@ impl<R: BinaryRead> Seek for BinaryDeserializer<R> {
 }
 
 impl<'de, R: BinaryRead + 'de> Deserializer<'de> for &mut BinaryDeserializer<R> {
-    type Error = Error;
-    fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value>
+    type Error = BinaryError;
+    fn deserialize_any<V>(self, _visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_bool<V>(self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_bool(self.parser.bool()?)
     }
-    fn deserialize_char<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_char<V>(self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_char(self.parser.char()?)
     }
-    fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_u8<V>(self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_u8(self.parser.u8()?)
     }
-    fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_u16<V>(self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_u16(self.parser.u16()?)
     }
-    fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_u32<V>(self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_u32(self.parser.u32()?)
     }
-    fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_u64<V>(self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_u64(self.parser.u64()?)
     }
-    fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_i8<V>(self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_i8(self.parser.i8()?)
     }
-    fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_i16<V>(self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_i16(self.parser.i16()?)
     }
-    fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_i32<V>(self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_i32(self.parser.i32()?)
     }
-    fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_i64<V>(self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_i64(self.parser.i64()?)
     }
-    fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_f32<V>(self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_f32(self.parser.f32()?)
     }
-    fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_f64<V>(self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_f64(self.parser.f64()?)
     }
-    fn deserialize_str<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_str<V>(self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_str(self.parser.string()?.as_str())
     }
-    fn deserialize_string<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_string<V>(self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_string(self.parser.string()?)
     }
-    fn deserialize_tuple<V>(mut self, len: usize, visitor: V) -> Result<V::Value>
+    fn deserialize_tuple<V>(mut self, len: usize, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -138,7 +138,11 @@ impl<'de, R: BinaryRead + 'de> Deserializer<'de> for &mut BinaryDeserializer<R> 
             len,
         })
     }
-    fn deserialize_newtype_struct<V>(self, _name: &'static str, visitor: V) -> Result<V::Value>
+    fn deserialize_newtype_struct<V>(
+        self,
+        _name: &'static str,
+        visitor: V,
+    ) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -149,7 +153,7 @@ impl<'de, R: BinaryRead + 'de> Deserializer<'de> for &mut BinaryDeserializer<R> 
         _name: &'static str,
         len: usize,
         visitor: V,
-    ) -> Result<V::Value>
+    ) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -163,7 +167,7 @@ impl<'de, R: BinaryRead + 'de> Deserializer<'de> for &mut BinaryDeserializer<R> 
         _name: &'static str,
         fields: &'static [&'static str],
         visitor: V,
-    ) -> Result<V::Value>
+    ) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -172,7 +176,7 @@ impl<'de, R: BinaryRead + 'de> Deserializer<'de> for &mut BinaryDeserializer<R> 
             len: fields.len(),
         })
     }
-    fn deserialize_byte_buf<V>(mut self, visitor: V) -> Result<V::Value>
+    fn deserialize_byte_buf<V>(mut self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -185,7 +189,7 @@ impl<'de, R: BinaryRead + 'de> Deserializer<'de> for &mut BinaryDeserializer<R> 
             len,
         })
     }
-    fn deserialize_bytes<V>(mut self, visitor: V) -> Result<V::Value>
+    fn deserialize_bytes<V>(mut self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -198,7 +202,7 @@ impl<'de, R: BinaryRead + 'de> Deserializer<'de> for &mut BinaryDeserializer<R> 
             len,
         })
     }
-    fn deserialize_seq<V>(mut self, visitor: V) -> Result<V::Value>
+    fn deserialize_seq<V>(mut self, visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -216,43 +220,43 @@ impl<'de, R: BinaryRead + 'de> Deserializer<'de> for &mut BinaryDeserializer<R> 
         _name: &'static str,
         _variants: &'static [&'static str],
         _visitor: V,
-    ) -> Result<V::Value>
+    ) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_identifier<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_identifier<V>(self, _visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_ignored_any<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_ignored_any<V>(self, _visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_map<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_map<V>(self, _visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_option<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_option<V>(self, _visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_unit<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_unit<V>(self, _visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_unit_struct<V>(self, _name: &'static str, _visitor: V) -> Result<V::Value>
+    fn deserialize_unit_struct<V>(self, _name: &'static str, _visitor: V) -> BinaryResult<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -266,9 +270,9 @@ struct Access<'a, R: BinaryRead + 'a> {
 }
 
 impl<'a, 'de, R: BinaryRead + 'de> serde::de::SeqAccess<'de> for Access<'a, R> {
-    type Error = Error;
+    type Error = BinaryError;
 
-    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
+    fn next_element_seed<T>(&mut self, seed: T) -> BinaryResult<Option<T::Value>>
     where
         T: serde::de::DeserializeSeed<'de>,
     {

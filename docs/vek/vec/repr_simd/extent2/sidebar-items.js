@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Extent2","Vector type suited for 2D extents (width and height)."],["IntoIter","Consuming iterator over this module’s vector type."]]});

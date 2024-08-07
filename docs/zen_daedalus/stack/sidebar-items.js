@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Value","The Values that are used on the stack for the machine"]],"struct":[["Stack","This is the stack which is used by the machine"]]});

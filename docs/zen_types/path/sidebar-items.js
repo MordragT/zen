@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["GameInstance","Gothic 1 or 2 game instance"]],"struct":[["FILES_INSTANCE","Holds the information of the instance where to store the exported files"],["Files",""],["GothicOne","Gothic 1 path informations"],["GothicTwo","Gothic 2 path informations"],["INSTANCE","Holds the information of the instance of the gothic Game"]]});

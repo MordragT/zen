@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Error","Error Type for all Deserializers"],["Kind","Possible filetypes this zen-file can have"]],"mod":[["ascii",""],["binary",""],["binsafe",""],["prelude",""]],"struct":[["Header","File Header for zen-files"],["Reader","Reader that can read binary aswell as ascii archives"]]});

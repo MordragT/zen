@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["repr_c","Bézier curve structs that use `#[repr(C)]` vectors."],["repr_simd","Bézier curve structs that use `#[repr(simd)]` vectors."]]});

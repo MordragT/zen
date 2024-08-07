@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["column_major","Matrices stored in column-major layout."],["row_major","Matrices stored in row-major layout."]]});

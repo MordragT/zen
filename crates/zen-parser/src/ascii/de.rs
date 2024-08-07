@@ -35,25 +35,25 @@ impl<R: AsciiRead> Seek for AsciiDeserializer<R> {
 }
 
 impl<R: AsciiRead> AsciiDeserializer<R> {
-    fn has_element(&mut self) -> Result<bool> {
+    fn has_element(&mut self) -> AsciiResult<bool> {
         self.parser.consume_whitespaces()?;
         match self.parser.peek_tuple() {
             Ok(val) if val.0 == b'[' && val.1 == b']' => Ok(false),
-            Err(_) => Err(self.parser.error(ErrorCode::EndOfFile)),
+            Err(_) => Err(self.parser.error(AsciiErrorCode::EndOfFile)),
             _ => Ok(true),
         }
     }
 }
 
 impl<'de, 'a, R: AsciiRead> Deserializer<'de> for &'a mut AsciiDeserializer<R> {
-    type Error = Error;
-    fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value>
+    type Error = AsciiError;
+    fn deserialize_any<V>(self, _visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_bool<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -63,122 +63,122 @@ impl<'de, 'a, R: AsciiRead> Deserializer<'de> for &'a mut AsciiDeserializer<R> {
             false => visitor.visit_bool(false),
         }
     }
-    fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_i8<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         let int = self.parser.int()?;
         match i8::try_from(int) {
             Ok(i) => visitor.visit_i8(i),
-            Err(e) => Err(self.parser.error(ErrorCode::TryFromInt(e))),
+            Err(e) => Err(self.parser.error(AsciiErrorCode::TryFromInt(e))),
         }
     }
-    fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_i16<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         let int = self.parser.int()?;
         match i16::try_from(int) {
             Ok(i) => visitor.visit_i16(i),
-            Err(e) => Err(self.parser.error(ErrorCode::TryFromInt(e))),
+            Err(e) => Err(self.parser.error(AsciiErrorCode::TryFromInt(e))),
         }
     }
-    fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_i32<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         let int = self.parser.int()?;
         visitor.visit_i32(int)
     }
-    fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_i64<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         let int = self.parser.int()?;
         visitor.visit_i64(int as i64)
     }
-    fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_u8<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         let int = self.parser.int()?;
         match u8::try_from(int) {
             Ok(i) => visitor.visit_u8(i),
-            Err(e) => Err(self.parser.error(ErrorCode::TryFromInt(e))),
+            Err(e) => Err(self.parser.error(AsciiErrorCode::TryFromInt(e))),
         }
     }
-    fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_u16<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         let int = self.parser.int()?;
         match u16::try_from(int) {
             Ok(i) => visitor.visit_u16(i),
-            Err(e) => Err(self.parser.error(ErrorCode::TryFromInt(e))),
+            Err(e) => Err(self.parser.error(AsciiErrorCode::TryFromInt(e))),
         }
     }
-    fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_u32<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         let int = self.parser.int()?;
         match u32::try_from(int) {
             Ok(i) => visitor.visit_u32(i),
-            Err(e) => Err(self.parser.error(ErrorCode::TryFromInt(e))),
+            Err(e) => Err(self.parser.error(AsciiErrorCode::TryFromInt(e))),
         }
     }
-    fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_u64<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         let int = self.parser.int()?;
         match u64::try_from(int) {
             Ok(i) => visitor.visit_u64(i),
-            Err(e) => Err(self.parser.error(ErrorCode::TryFromInt(e))),
+            Err(e) => Err(self.parser.error(AsciiErrorCode::TryFromInt(e))),
         }
     }
-    fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_f32<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         let float = self.parser.float()?;
         visitor.visit_f32(float)
     }
-    fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_f64<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         let float = self.parser.float()?;
         visitor.visit_f64(float as f64)
     }
-    fn deserialize_char<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_char<V>(self, _visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_str<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_str<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         let string = self.parser.string()?;
         visitor.visit_str(string.as_str())
     }
-    fn deserialize_string<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_string<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         let string = self.parser.string()?;
         visitor.visit_string(string)
     }
-    fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_bytes<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         let bytes = self.parser.raw()?;
         visitor.visit_bytes(bytes.as_slice())
     }
-    fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_byte_buf<V>(self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -190,17 +190,17 @@ impl<'de, 'a, R: AsciiRead> Deserializer<'de> for &'a mut AsciiDeserializer<R> {
         _name: &'static str,
         _fields: &'static [&'static str],
         visitor: V,
-    ) -> Result<V::Value>
+    ) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         self.parser.consume_whitespaces()?;
         if !self.parser.consume("[")? {
-            return Err(self.parser.error(ErrorCode::ExpectedStructHeader));
+            return Err(self.parser.error(AsciiErrorCode::ExpectedStructHeader));
         }
         // Expected header not footer
         if self.parser.peek()? == b']' {
-            return Err(self.parser.error(ErrorCode::ExpectedStructHeader));
+            return Err(self.parser.error(AsciiErrorCode::ExpectedStructHeader));
         }
         // ignore object name
         self.parser.consume_until(b' ')?;
@@ -225,11 +225,11 @@ impl<'de, 'a, R: AsciiRead> Deserializer<'de> for &'a mut AsciiDeserializer<R> {
                 self.parser.seek(SeekFrom::Current(1))?;
                 val
             }
-            None => return Err(self.parser.error(ErrorCode::InvalidStructHeader)),
+            None => return Err(self.parser.error(AsciiErrorCode::InvalidStructHeader)),
         };
 
         if !self.parser.consume("]\n")? {
-            return Err(self.parser.error(ErrorCode::InvalidStructHeader));
+            return Err(self.parser.error(AsciiErrorCode::InvalidStructHeader));
         }
 
         let value = visitor.visit_seq(&mut self)?;
@@ -238,10 +238,10 @@ impl<'de, 'a, R: AsciiRead> Deserializer<'de> for &'a mut AsciiDeserializer<R> {
         if self.parser.consume("[]")? {
             Ok(value)
         } else {
-            Err(self.parser.error(ErrorCode::ExpectedStructEnd))
+            Err(self.parser.error(AsciiErrorCode::ExpectedStructEnd))
         }
     }
-    fn deserialize_seq<V>(mut self, visitor: V) -> Result<V::Value>
+    fn deserialize_seq<V>(mut self, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -250,16 +250,16 @@ impl<'de, 'a, R: AsciiRead> Deserializer<'de> for &'a mut AsciiDeserializer<R> {
         if self.parser.peek_tuple()? == (b'[', b']') {
             Ok(value)
         } else {
-            Err(self.parser.error(ErrorCode::ExpectedStructEnd))
+            Err(self.parser.error(AsciiErrorCode::ExpectedStructEnd))
         }
     }
-    fn deserialize_newtype_struct<V>(self, _name: &'static str, visitor: V) -> Result<V::Value>
+    fn deserialize_newtype_struct<V>(self, _name: &'static str, visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         visitor.visit_newtype_struct(self)
     }
-    fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value>
+    fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> AsciiResult<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
@@ -270,31 +270,31 @@ impl<'de, 'a, R: AsciiRead> Deserializer<'de> for &'a mut AsciiDeserializer<R> {
         _name: &'static str,
         _variants: &'static [&'static str],
         _visitor: V,
-    ) -> Result<V::Value>
+    ) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_identifier<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_identifier<V>(self, _visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_ignored_any<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_ignored_any<V>(self, _visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_map<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_map<V>(self, _visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_option<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_option<V>(self, _visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -305,19 +305,19 @@ impl<'de, 'a, R: AsciiRead> Deserializer<'de> for &'a mut AsciiDeserializer<R> {
         _name: &'static str,
         _len: usize,
         _visitor: V,
-    ) -> Result<V::Value>
+    ) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_unit<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_unit<V>(self, _visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
-    fn deserialize_unit_struct<V>(self, _name: &'static str, _visitor: V) -> Result<V::Value>
+    fn deserialize_unit_struct<V>(self, _name: &'static str, _visitor: V) -> AsciiResult<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -326,9 +326,9 @@ impl<'de, 'a, R: AsciiRead> Deserializer<'de> for &'a mut AsciiDeserializer<R> {
 }
 
 impl<'de, 'a, R: AsciiRead> de::SeqAccess<'de> for AsciiDeserializer<R> {
-    type Error = Error;
+    type Error = AsciiError;
 
-    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
+    fn next_element_seed<T>(&mut self, seed: T) -> AsciiResult<Option<T::Value>>
     where
         T: de::DeserializeSeed<'de>,
     {

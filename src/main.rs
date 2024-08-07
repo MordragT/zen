@@ -14,7 +14,7 @@ use zen_core::{
     ZenPlugin,
 };
 
-pub const GAME_PATH: &'static str = "/home/tom/Steam/common/Gothic II";
+pub const GAME_PATH: &'static str = "/run/media/Media/Programs/Steam/steamapps/common/Gothic II";
 
 fn main() -> miette::Result<()> {
     let loader = ZenAssetLoader::new()
@@ -97,22 +97,21 @@ fn load(
         .load_model("ORC_MASTERTHRONE.MRM", &mut context)
         .unwrap();
 
-    let path = "assets/orig/throne.glb";
-    model.to_gltf(&mut context, Output::binary(path)).unwrap();
-    println!("Model exported to {path}");
-    panic!();
+    // let path = "assets/orig/throne.glb";
+    // model.to_gltf(&mut context, Output::binary(path)).unwrap();
+    // println!("Model exported to {path}");
 
-    // let entity = zen_loader
-    //     .spawn_model(
-    //         model,
-    //         bevy_meshes.as_mut(),
-    //         bevy_materials.as_mut(),
-    //         bevy_textures.as_mut(),
-    //         &mut context,
-    //         &mut commands,
-    //     )
-    //     .expect("Expect to be loaded");
-    // println!("Throne loaded: {entity:?}");
+    let entity = zen_loader
+        .spawn_model(
+            model,
+            bevy_meshes.as_mut(),
+            bevy_materials.as_mut(),
+            bevy_textures.as_mut(),
+            &mut context,
+            &mut commands,
+        )
+        .expect("Expect to be loaded");
+    println!("Throne loaded: {entity:?}");
 
     // commands.spawn_bundle(SceneBundle {
     //     scene: asset_server.load("files/meshes/throne_flipped.glb#Scene0"),

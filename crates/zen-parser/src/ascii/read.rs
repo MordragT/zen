@@ -1,8 +1,7 @@
 use super::error::*;
 use super::Position;
 use std::{
-    fs::File,
-    io::{Cursor, Read, Seek, SeekFrom},
+    io::{Read, Seek, SeekFrom},
     mem,
 };
 
@@ -11,7 +10,7 @@ impl<R: Read + Seek> AsciiRead for R {}
 /// Provides methods to read an Ascii archive
 pub trait AsciiRead: Read + Seek {
     /// Return an Error with the given code
-    fn error(&mut self, kind: ErrorCode) -> Error {
+    fn error(&mut self, kind: AsciiErrorCode) -> AsciiError {
         let bak_seek = self.seek(SeekFrom::Current(0)).unwrap();
         self.seek(SeekFrom::Start(0)).unwrap();
         let mut line = 1;
@@ -22,25 +21,25 @@ pub trait AsciiRead: Read + Seek {
         }
         line -= 1;
         column -= (self.seek(SeekFrom::Current(0)).unwrap() - bak_seek) as usize;
-        Error {
+        AsciiError {
             code: kind,
             position: Position { line, column },
         }
     }
     /// Consume a byte
-    fn byte(&mut self) -> Result<u8> {
+    fn byte(&mut self) -> AsciiResult<u8> {
         let mut buf = [0_u8; mem::size_of::<u8>()];
         self.read_exact(&mut buf)?;
         Ok(u8::from_le_bytes(buf))
     }
     /// Peek for the next byte, the own position does not change
-    fn peek(&mut self) -> Result<u8> {
+    fn peek(&mut self) -> AsciiResult<u8> {
         let b = self.byte()?;
         self.seek(SeekFrom::Current(-(mem::size_of::<u8>() as i64)))?;
         Ok(b)
     }
     /// Peek for the next two bytes, the own position does not change
-    fn peek_tuple(&mut self) -> Result<(u8, u8)> {
+    fn peek_tuple(&mut self) -> AsciiResult<(u8, u8)> {
         let mut buf = [0_u8; mem::size_of::<u8>()];
         self.read_exact(&mut buf)?;
         let first = u8::from_le_bytes(buf);
@@ -50,7 +49,7 @@ pub trait AsciiRead: Read + Seek {
         Ok((first, second))
     }
     /// Test if the given string matches the following string in the ascii archive
-    fn test_for(&mut self, s: &str) -> Result<bool> {
+    fn test_for(&mut self, s: &str) -> AsciiResult<bool> {
         let seek_bak = self.seek(SeekFrom::Current(0))?;
         for c in s.bytes() {
             let b = self.peek()?;
@@ -64,7 +63,7 @@ pub trait AsciiRead: Read + Seek {
         Ok(true)
     }
     /// Consume the given string, returns false if the following string does not match
-    fn consume(&mut self, s: &str) -> Result<bool> {
+    fn consume(&mut self, s: &str) -> AsciiResult<bool> {
         if self.test_for(s)? {
             let _ = self.seek(SeekFrom::Current(s.len() as i64));
             Ok(true)
@@ -73,7 +72,7 @@ pub trait AsciiRead: Read + Seek {
         }
     }
     /// Consume until the given byte occurs, returns number of bytes consumed
-    fn consume_until(&mut self, byte: u8) -> Result<u32> {
+    fn consume_until(&mut self, byte: u8) -> AsciiResult<u32> {
         let mut res = 0;
         loop {
             res += 1;
@@ -84,7 +83,7 @@ pub trait AsciiRead: Read + Seek {
         }
     }
     /// Consumes all whitespaces until the next non whitespace char
-    fn consume_whitespaces(&mut self) -> Result<()> {
+    fn consume_whitespaces(&mut self) -> AsciiResult<()> {
         loop {
             let p = self.peek()?;
             if p == b' ' || p == b'\r' || p == b'\t' || p == b'\n' || p == 0 {
@@ -96,7 +95,7 @@ pub trait AsciiRead: Read + Seek {
         Ok(())
     }
     /// Returns the string until the given byte
-    fn string_until(&mut self, byte: u8) -> Result<String> {
+    fn string_until(&mut self, byte: u8) -> AsciiResult<String> {
         let mut res = String::new();
         loop {
             let b = self.byte()?;
@@ -107,7 +106,7 @@ pub trait AsciiRead: Read + Seek {
         }
     }
     /// Returns the string until a whitespace occurs
-    fn string_until_whitespace(&mut self) -> Result<String> {
+    fn string_until_whitespace(&mut self) -> AsciiResult<String> {
         let mut res = String::new();
         loop {
             let b = self.byte()?;
@@ -118,23 +117,23 @@ pub trait AsciiRead: Read + Seek {
         }
     }
     /// Consumes a bool string with name and kind specified and returns its value
-    fn bool(&mut self) -> Result<bool> {
+    fn bool(&mut self) -> AsciiResult<bool> {
         let _name = self.consume_until(b'=')?;
         let kind = self.string_until(b':')?;
         let value = self.string_until_whitespace()?;
         if kind == "bool" {
             self.str_to_bool(value.as_str())
         } else {
-            Err(self.error(ErrorCode::ExpectedBool))
+            Err(self.error(AsciiErrorCode::ExpectedBool))
         }
     }
     /// Consumes only a bool string and returns its value
-    fn unchecked_bool(&mut self) -> Result<bool> {
+    fn unchecked_bool(&mut self) -> AsciiResult<bool> {
         let value = self.string_until_whitespace()?;
         self.str_to_bool(value.as_str())
     }
     /// Consumes an enum or a integer with name and kind specified and returns its value
-    fn int(&mut self) -> Result<i32> {
+    fn int(&mut self) -> AsciiResult<i32> {
         let _name = self.consume_until(b'=')?;
         let kind = self.string_until(b':')?;
         let value = self.string_until_whitespace()?;
@@ -142,53 +141,53 @@ pub trait AsciiRead: Read + Seek {
         if kind == "int" || kind.contains("enum") {
             self.str_to_i32(value.as_str())
         } else {
-            Err(self.error(ErrorCode::ExpectedInt))
+            Err(self.error(AsciiErrorCode::ExpectedInt))
         }
     }
     /// Consumes only a enum or int string and returns its value
-    fn unchecked_int(&mut self) -> Result<i32> {
+    fn unchecked_int(&mut self) -> AsciiResult<i32> {
         let value = self.string_until_whitespace()?;
         self.str_to_i32(value.as_str())
     }
     /// Consumes a float string with name and kind specified and returns its value
-    fn float(&mut self) -> Result<f32> {
+    fn float(&mut self) -> AsciiResult<f32> {
         let _name = self.consume_until(b'=')?;
         let kind = self.string_until(b':')?;
         let value = self.string_until_whitespace()?;
         if kind == "float" {
             self.str_to_f32(value.as_str())
         } else {
-            Err(self.error(ErrorCode::ExpectedFloat))
+            Err(self.error(AsciiErrorCode::ExpectedFloat))
         }
         // let value = self.string_until_whitespace()?;
         // self.str_to_f32(value.as_str())
     }
     /// Consumes a variable of the type string with name and kind specified and returns its value
-    fn string(&mut self) -> Result<String> {
+    fn string(&mut self) -> AsciiResult<String> {
         let _name = self.consume_until(b'=')?;
         let kind = self.string_until(b':')?;
         let value = self.string_until_whitespace()?;
         if kind == "string" {
             Ok(value)
         } else {
-            Err(self.error(ErrorCode::ExpectedString))
+            Err(self.error(AsciiErrorCode::ExpectedString))
         }
     }
     /// Consumes a variable of the type raw vector and returns its value
-    fn raw(&mut self) -> Result<Vec<u8>> {
+    fn raw(&mut self) -> AsciiResult<Vec<u8>> {
         let _name = self.consume_until(b'=')?;
         let kind = self.string_until(b':')?;
         let value = self.string_until_whitespace()?;
         if kind == "raw" {
             self.str_to_bytes(value.as_str())
         } else {
-            Err(self.error(ErrorCode::ExpectedBytes))
+            Err(self.error(AsciiErrorCode::ExpectedBytes))
         }
         // let value = self.string_until_whitespace()?;
         // self.str_to_bytes(value.as_str())
     }
     /// Convert string to color rgba
-    fn str_to_color(&mut self, string: &str) -> Result<(u8, u8, u8, u8)> {
+    fn str_to_color(&mut self, string: &str) -> AsciiResult<(u8, u8, u8, u8)> {
         let mut nums = vec![];
         for s in string.split_ascii_whitespace() {
             match u8::from_str_radix(s, 10) {
@@ -197,34 +196,34 @@ pub trait AsciiRead: Read + Seek {
             }
         }
         match nums.len() > 4 {
-            true => Err(self.error(ErrorCode::ParseColorError)),
+            true => Err(self.error(AsciiErrorCode::ParseColorError)),
             false => Ok((nums[0], nums[1], nums[2], nums[3])),
         }
     }
     /// Convert string to i32
-    fn str_to_i32(&mut self, string: &str) -> Result<i32> {
+    fn str_to_i32(&mut self, string: &str) -> AsciiResult<i32> {
         match i32::from_str_radix(string, 10) {
             Ok(i) => Ok(i),
             Err(e) => return Err(self.error(e.into())),
         }
     }
     /// Convert string to f32
-    fn str_to_f32(&mut self, string: &str) -> Result<f32> {
+    fn str_to_f32(&mut self, string: &str) -> AsciiResult<f32> {
         match string.parse::<f32>() {
             Ok(f) => Ok(f),
             Err(e) => return Err(self.error(e.into())),
         }
     }
     /// Convert string to bool
-    fn str_to_bool(&mut self, string: &str) -> Result<bool> {
+    fn str_to_bool(&mut self, string: &str) -> AsciiResult<bool> {
         match string {
             "1" => Ok(true),
             "0" => Ok(false),
-            _ => return Err(self.error(ErrorCode::ParseBoolError)),
+            _ => return Err(self.error(AsciiErrorCode::ParseBoolError)),
         }
     }
     /// Convert string to bytes
-    fn str_to_bytes(&mut self, string: &str) -> Result<Vec<u8>> {
+    fn str_to_bytes(&mut self, string: &str) -> AsciiResult<Vec<u8>> {
         let mut buf = vec![];
         for c in string.chars() {
             match c.to_digit(16) {
@@ -233,7 +232,7 @@ pub trait AsciiRead: Read + Seek {
                         buf.push(*b);
                     }
                 }
-                None => return Err(self.error(ErrorCode::ParseBytesError)),
+                None => return Err(self.error(AsciiErrorCode::ParseBytesError)),
             }
         }
         Ok(buf)

@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["MrmMesh","Holds data of an .mrm file Mrm == Mutli Resolution Mesh"]]});

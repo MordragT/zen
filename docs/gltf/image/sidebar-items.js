@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Format","Format of image pixel data."],["Source","Describes an image data source."]],"struct":[["Data","Image data belonging to an imported glTF asset."],["Image","Image data used to create a texture."]]});

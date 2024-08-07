@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Void","Type representing no user-defined data."]],"type":[["Extras","Data type of the `extras` attribute on all glTF objects."]]});

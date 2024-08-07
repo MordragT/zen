@@ -1,1 +1,0 @@
-initSidebarItems({"constant":[["VALID_CAMERA_TYPES","All valid camera types."]],"enum":[["Type","Specifies the camera type."]],"struct":[["Camera","A camera’s projection."],["Orthographic","Values for an orthographic camera."],["Perspective","Values for a perspective camera."]]});

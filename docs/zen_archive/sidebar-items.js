@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Error","Error Object for Vdfs Archives"]],"struct":[["Entry","Vdfs Entry"],["Vdfs","Vdfs archive reader"]]});

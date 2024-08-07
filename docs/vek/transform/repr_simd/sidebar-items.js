@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Transform","A convenient position + orientation + scale container, backed by two `Vec3` and a `Quaternion.`"]]});

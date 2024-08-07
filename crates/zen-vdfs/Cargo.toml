@@ -1,0 +1,16 @@
+[package]
+name = "zen-vdfs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+zen-parser = { path = "../zen-parser" }
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+bevy = { version = "0.14.1", optional = true }
+
+[dev-dependencies]
+zen-core = { path = "../zen-core" }
+
+[features]
+default = ["bevy"]

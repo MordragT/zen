@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["ErrorCode",""]],"struct":[["Error","[crate::AsciiDeserializer] Error"]],"type":[["Result",""]]});

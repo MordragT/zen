@@ -1,5 +1,5 @@
 pub use de::AsciiDeserializer;
-pub use error::{Error, ErrorCode};
+pub use error::{AsciiError, AsciiErrorCode, AsciiResult};
 pub use read::AsciiRead;
 use std::fmt;
 

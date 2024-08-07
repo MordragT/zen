@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["AsciiDeserializer","Deserialize Zengin Ascii Archives"],["BinaryDeserializer","Deserialize Zengin Binary Archives"]],"trait":[["AsciiRead","Provides methods to read an Ascii archive"],["BinaryRead","Provides methods to read a binary archive"]]});

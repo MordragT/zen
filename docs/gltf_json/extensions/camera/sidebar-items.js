@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Camera","A camera’s projection."],["Orthographic","Values for an orthographic camera."],["Perspective","Values for a perspective camera."]]});

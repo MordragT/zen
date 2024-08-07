@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["IntoIter","Consuming iterator over this module’s vector type."],["Vec2","Vector type suited for 2D spatial coordinates."]]});

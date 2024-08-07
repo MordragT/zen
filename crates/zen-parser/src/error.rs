@@ -6,19 +6,19 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// Error Type for all Deserializers
 #[derive(Debug)]
 pub enum Error {
-    Binary(binary::Error),
-    Ascii(ascii::Error),
+    Binary(binary::BinaryError),
+    Ascii(ascii::AsciiError),
     Message(String),
 }
 
-impl From<binary::Error> for Error {
-    fn from(e: binary::Error) -> Self {
+impl From<binary::BinaryError> for Error {
+    fn from(e: binary::BinaryError) -> Self {
         Error::Binary(e)
     }
 }
 
-impl From<ascii::Error> for Error {
-    fn from(e: ascii::Error) -> Self {
+impl From<ascii::AsciiError> for Error {
+    fn from(e: ascii::AsciiError) -> Self {
         Error::Ascii(e)
     }
 }

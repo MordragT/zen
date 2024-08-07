@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["ErrorCode",""]],"struct":[["AsciiDeserializer","Deserialize Zengin Ascii Archives"],["Error","[crate::AsciiDeserializer] Error"],["Position","Position of the Error"]],"trait":[["AsciiRead","Provides methods to read an Ascii archive"]]});

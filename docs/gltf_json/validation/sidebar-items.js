@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Checked","Specifies a type that has been pre-validated during deserialization or otherwise."],["Error","Specifies what kind of error occured during validation."]],"trait":[["Validate","Trait for validating glTF JSON data so that the library can function without panicking."]]});

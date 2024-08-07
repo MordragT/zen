@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Reader","Skin reader."]],"type":[["ReadInverseBindMatrices","Inverse Bind Matrices of type `[[f32; 4]; 4]`."]]});

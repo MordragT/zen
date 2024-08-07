@@ -3,7 +3,7 @@ use std::{fmt, io};
 /// The Error object for the [code](crate::code)
 #[derive(Debug)]
 pub enum Error {
-    Binary(zen_parser::binary::Error),
+    Binary(zen_parser::binary::BinaryError),
     Io(io::Error),
 }
 
@@ -18,8 +18,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<zen_parser::binary::Error> for Error {
-    fn from(e: zen_parser::binary::Error) -> Self {
+impl From<zen_parser::binary::BinaryError> for Error {
+    fn from(e: zen_parser::binary::BinaryError) -> Self {
         Error::Binary(e)
     }
 }

@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["mat2","2x2 matrix."],["mat3","3x3 matrix."],["mat4","4x4 matrix."]]});

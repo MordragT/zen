@@ -1,1 +1,0 @@
-initSidebarItems({"constant":[["FILE_SIGNATURE",""],["FILE_VERSION",""],["PALETTE_ENTRIES","Number of Palellte Entries"]],"enum":[["Format","Render Formats"]],"struct":[["Entry","Palette Entry"],["Header","File Header"],["Info","Info Block"]],"type":[["Palette","Stored Palette"]]});

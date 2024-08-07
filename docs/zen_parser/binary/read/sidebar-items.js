@@ -1,1 +1,0 @@
-initSidebarItems({"trait":[["BinaryRead","Provides methods to read a binary archive"]]});

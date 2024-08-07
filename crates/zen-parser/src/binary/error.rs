@@ -3,14 +3,14 @@ use std::{fmt, io};
 
 /// [crate::BinaryDeserializer] Error
 #[derive(Debug)]
-pub enum Error {
+pub enum BinaryError {
     Message(String),
     Io(io::Error),
     ExpectedAsciiChar(u8),
     ExpectedBool,
 }
 
-impl fmt::Display for Error {
+impl fmt::Display for BinaryError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Message(s) => f.write_str(&s),
@@ -23,18 +23,18 @@ impl fmt::Display for Error {
     }
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for BinaryError {}
 
-impl de::Error for Error {
+impl de::Error for BinaryError {
     fn custom<T: fmt::Display>(msg: T) -> Self {
-        Error::Message(msg.to_string())
+        BinaryError::Message(msg.to_string())
     }
 }
 
-impl From<io::Error> for Error {
+impl From<io::Error> for BinaryError {
     fn from(e: io::Error) -> Self {
         Self::Io(e)
     }
 }
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub type BinaryResult<T> = Result<T, BinaryError>;

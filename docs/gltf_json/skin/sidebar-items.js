@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Skin","Joints and matrices defining a skin."]]});

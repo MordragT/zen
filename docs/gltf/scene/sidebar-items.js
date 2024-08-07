@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Transform","The transform for a `Node`."]],"mod":[["iter","Iterators."]],"struct":[["Node","A node in the node hierarchy."],["Scene","The root nodes of a scene."]]});

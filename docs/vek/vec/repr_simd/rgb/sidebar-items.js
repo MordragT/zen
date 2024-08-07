@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["IntoIter","Consuming iterator over this module’s vector type."],["Rgb","Vector type suited for RGB color data."]]});

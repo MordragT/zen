@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Animation","A keyframe animation."],["Channel","Targets an animation’s sampler at a node’s property."],["Sampler","Defines a keyframe graph but not its target."],["Target","The index of the node and TRS property that an animation channel targets."]]});

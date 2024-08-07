@@ -1,4 +1,4 @@
-use ascii::{AsciiDeserializer, AsciiRead, ErrorCode};
+use ascii::{AsciiDeserializer, AsciiRead, AsciiErrorCode};
 use binary::{BinaryDeserializer, BinaryRead};
 pub use error::Error;
 use error::Result;
@@ -55,11 +55,11 @@ impl Header {
 /// Reads the header and returns it
 pub fn read_header<R: BinaryRead + AsciiRead>(mut reader: R) -> Result<Header> {
     if !reader.consume("ZenGin Archive\n")? {
-        return Err(reader.error(ErrorCode::InvalidHeader).into());
+        return Err(reader.error(AsciiErrorCode::InvalidHeader).into());
     }
 
     if !reader.consume("ver ")? {
-        return Err(reader.error(ErrorCode::InvalidHeader).into());
+        return Err(reader.error(AsciiErrorCode::InvalidHeader).into());
     }
     // Version should always be 1
     let version = reader.unchecked_int()?;
@@ -84,7 +84,7 @@ pub fn read_header<R: BinaryRead + AsciiRead>(mut reader: R) -> Result<Header> {
         false => {
             let e = reader.string_until_whitespace()?;
             return Err(reader
-                .error(ErrorCode::Expected(format!("'saveGame ', got: '{}'", e)))
+                .error(AsciiErrorCode::Expected(format!("'saveGame ', got: '{}'", e)))
                 .into());
         }
     };
@@ -105,13 +105,13 @@ pub fn read_header<R: BinaryRead + AsciiRead>(mut reader: R) -> Result<Header> {
             false => {
                 let e = reader.string_until_whitespace()?;
                 return Err(reader
-                    .error(ErrorCode::Expected(format!("'objects ', got: '{}'", e)))
+                    .error(AsciiErrorCode::Expected(format!("'objects ', got: '{}'", e)))
                     .into());
             }
         };
         <R as AsciiRead>::consume_whitespaces(&mut reader)?;
         if !reader.consume("END\n")? {
-            return Err(reader.error(ErrorCode::ExpectedAsciiHeaderEnd).into());
+            return Err(reader.error(AsciiErrorCode::ExpectedAsciiHeaderEnd).into());
         }
         <R as AsciiRead>::consume_whitespaces(&mut reader)?;
         count
