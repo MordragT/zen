@@ -1,10 +1,6 @@
-use std::{
-    fmt,
-    io::{self, SeekFrom},
-};
+use std::{fmt, io};
 
-use serde::Deserialize;
-use zen_parser::binary::{BinaryDeserializer, BinaryRead};
+use zen_parser::binary::{BinaryDecoder, BinaryIoReader, BinaryRead, BinarySliceReader};
 
 use crate::{
     error::{ZTexError, ZTexResult},
@@ -13,13 +9,13 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ZTex<H> {
+pub struct ZTex<R> {
     header: ZTexHeader,
-    handle: H,
+    decoder: BinaryDecoder<R>,
     offset: u64,
 }
 
-impl<H> ZTex<H> {
+impl<R> ZTex<R> {
     /// Returns width of the biggest mip map
     pub fn width(&self) -> u32 {
         self.header.width
@@ -39,18 +35,36 @@ impl<H> ZTex<H> {
     }
 }
 
-impl<H: BinaryRead> ZTex<H> {
-    pub fn new(mut handle: H) -> ZTexResult<Self> {
-        let mut deser = BinaryDeserializer::from(&mut handle);
+impl<'a> ZTex<BinarySliceReader<'a>> {
+    pub fn from_slice(slice: &'a [u8]) -> ZTexResult<Self> {
+        let decoder = BinaryDecoder::from_slice(slice);
+        Self::from_decoder(decoder)
+    }
+}
 
-        let header = ZTexHeader::deserialize(&mut deser)?;
+impl<R> ZTex<BinaryIoReader<R>>
+where
+    R: io::BufRead + io::Seek,
+{
+    pub fn from_reader(reader: R) -> ZTexResult<Self> {
+        let decoder = BinaryDecoder::from_reader(reader);
+        Self::from_decoder(decoder)
+    }
+}
+
+impl<R> ZTex<R>
+where
+    R: BinaryRead,
+{
+    pub fn from_decoder(mut decoder: BinaryDecoder<R>) -> ZTexResult<Self> {
+        let header = decoder.decode::<ZTexHeader>()?;
         header.validate()?;
 
-        let offset = handle.stream_position()?;
+        let offset = decoder.position()?;
 
         Ok(Self {
             header,
-            handle,
+            decoder,
             offset,
         })
     }
@@ -59,10 +73,10 @@ impl<H: BinaryRead> ZTex<H> {
         let pos = self.header.mip_map_pos(level) as u64;
         let size = self.header.mip_map_size(level) as usize;
 
-        self.handle.seek(SeekFrom::Start(self.offset + pos))?;
-
         let mut pixels = vec![0; size];
-        self.handle.read_exact(&mut pixels)?;
+
+        self.decoder.set_position(self.offset + pos)?;
+        self.decoder.read_bytes(&mut pixels)?;
 
         Ok(pixels)
     }

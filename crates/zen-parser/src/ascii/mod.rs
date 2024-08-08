@@ -1,4 +1,4 @@
-pub use de::AsciiDeserializer;
+pub use de::AsciiDecoder;
 pub use error::{AsciiError, AsciiErrorCode, AsciiResult};
 pub use read::AsciiRead;
 use std::fmt;

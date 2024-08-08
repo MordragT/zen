@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use zen_parser::binary::{BinaryDeserializer, BinaryRead, BinaryResult};
+use zen_parser::binary::{BinaryDecoder, BinaryRead, BinaryResult};
 
 use super::header::ZenMaterialHeader;
 use super::ZenMaterialKind;
@@ -13,16 +13,18 @@ pub struct ZenMaterial {
 }
 
 impl ZenMaterial {
-    pub fn new(handle: impl BinaryRead) -> BinaryResult<Self> {
-        let mut deser = BinaryDeserializer::from(handle);
-        let header = ZenMaterialHeader::deserialize(&mut deser)?;
+    pub fn from_decoder<R>(decoder: &mut BinaryDecoder<R>) -> BinaryResult<Self>
+    where
+        R: BinaryRead,
+    {
+        let header = decoder.decode::<ZenMaterialHeader>()?;
 
         let (kind, color, texture) = if header.is_gothic2() {
-            let props = MaterialPropertiesExtended::deserialize(&mut deser)?;
+            let props = decoder.decode::<MaterialPropertiesExtended>()?;
 
             (props.kind, props.color, props.texture)
         } else {
-            let props = MaterialProperties::deserialize(&mut deser)?;
+            let props = decoder.decode::<MaterialProperties>()?;
 
             (props.kind, props.color, props.texture)
         };

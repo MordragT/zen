@@ -1,6 +1,6 @@
-pub use de::BinaryDeserializer;
+pub use de::BinaryDecoder;
 pub use error::{BinaryError, BinaryResult};
-pub use read::{BinaryRead, BinaryReader};
+pub use read::*;
 
 mod de;
 mod error;

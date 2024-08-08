@@ -1,12 +1,8 @@
 use core::{fmt, str};
-use std::{
-    collections::HashMap,
-    io::{Read, Seek, SeekFrom},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 use serde::{Deserialize, Serialize};
-use zen_parser::binary::{BinaryDeserializer, BinaryRead};
+use zen_parser::binary::{BinaryDecoder, BinaryRead};
 
 use crate::{
     entry::{VdfsEntries, VdfsEntry},
@@ -60,18 +56,17 @@ impl VdfsHeader {
         Ok(())
     }
 
-    pub(crate) fn read_entries<T>(&self, handle: T) -> VdfsResult<VdfsEntries>
+    pub(crate) fn read_entries<R>(&self, decoder: &mut BinaryDecoder<R>) -> VdfsResult<VdfsEntries>
     where
-        T: BinaryRead,
+        R: BinaryRead,
     {
         let mut entries = HashMap::new();
 
-        let mut deser = BinaryDeserializer::from(handle);
-        deser.seek(SeekFrom::Start(self.offset as u64))?;
+        decoder.set_position(self.offset as u64)?;
 
         for index in 0..self.count {
             let mut name_buf = [0_u8; Self::ENTRY_NAME_LENGTH];
-            deser.read_exact(&mut name_buf)?;
+            decoder.read_bytes(&mut name_buf)?;
 
             let end = name_buf
                 .iter()
@@ -87,10 +82,10 @@ impl VdfsHeader {
                 .expect("name should be valid ascii")
                 .into();
 
-            let offset = u32::deserialize(&mut deser)?;
-            let size = u32::deserialize(&mut deser)?;
-            let kind = u32::deserialize(&mut deser)?;
-            let attr = u32::deserialize(&mut deser)?;
+            let offset = decoder.decode::<u32>()?;
+            let size = decoder.decode::<u32>()?;
+            let kind = decoder.decode::<u32>()?;
+            let attr = decoder.decode::<u32>()?;
 
             if kind & Self::ENTRY_DIR != 0 {
                 // return Err(VdfsError::UnknownEntryKind(kind));

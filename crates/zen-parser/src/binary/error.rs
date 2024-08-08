@@ -1,40 +1,35 @@
 use serde::de;
 use std::{fmt, io};
+use thiserror::Error;
 
 /// [crate::BinaryDeserializer] Error
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum BinaryError {
+    #[error("Message: {0}")]
     Message(String),
-    Io(io::Error),
+    #[error("BinaryIoError: {0}")]
+    Io(#[from] io::Error),
+    #[error("ExpectedAsciiChar: not {0}")]
     ExpectedAsciiChar(u8),
+    #[error("ExpectedEndOfStr")]
+    ExpectedEndOfStr,
+    #[error("ExpectedBool")]
     ExpectedBool,
+    #[error("UnexpectedEoF")]
+    UnexpectedEoF,
+    #[error("MissingBufferSize")]
+    MissingBufferSize,
+    #[error("InvalidHeader")]
+    InvalidHeader,
+    #[error("ExpectedSaveGame")]
+    ExpectedSaveGame,
+    #[error("UnexpectedByte")]
+    UnexpectedByte,
 }
-
-impl fmt::Display for BinaryError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Message(s) => f.write_str(&s),
-            Self::Io(e) => f.write_str(&e.to_string()),
-            Self::ExpectedAsciiChar(b) => {
-                f.write_str(&format!("Expected ascii char, not: '{}'", b))
-            }
-            Self::ExpectedBool => f.write_str("Expected bool"),
-        }
-    }
-}
-
-impl std::error::Error for BinaryError {}
 
 impl de::Error for BinaryError {
     fn custom<T: fmt::Display>(msg: T) -> Self {
         BinaryError::Message(msg.to_string())
     }
 }
-
-impl From<io::Error> for BinaryError {
-    fn from(e: io::Error) -> Self {
-        Self::Io(e)
-    }
-}
-
 pub type BinaryResult<T> = Result<T, BinaryError>;

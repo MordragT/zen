@@ -1,11 +1,7 @@
 pub use error::Error;
 use error::Result;
 pub use memory::Memory;
-use serde::Deserialize;
-use std::{
-    collections::HashMap,
-    io::{Read, Seek, SeekFrom},
-};
+use std::{collections::HashMap, io::SeekFrom};
 use symbol::{Flag, Kind, Properties};
 pub use symbol::{Symbol, SymbolKind, SymbolTable};
 use zen_parser::prelude::*;
@@ -28,16 +24,17 @@ pub struct Code {
 
 impl Code {
     /// Creates a new Code object from usually an opened file
-    pub fn new<R: BinaryRead>(reader: R) -> Result<Self> {
-        let mut deserializer = BinaryDeserializer::from(reader);
-
-        let _version = u8::deserialize(&mut deserializer)?;
-        let symbol_count = u32::deserialize(&mut deserializer)?;
+    pub fn from_decoder<R>(mut decoder: BinaryDecoder<R>) -> Result<Self>
+    where
+        R: BinaryRead,
+    {
+        let _version = decoder.decode::<u8>()?;
+        let symbol_count = decoder.decode::<u32>()?;
 
         let addresses = (0..symbol_count)
             .into_iter()
             .map(|_| {
-                let address = u32::deserialize(&mut deserializer)?;
+                let address = decoder.decode::<u32>()?;
                 Ok(address)
             })
             .collect::<Result<Vec<u32>>>()?;
@@ -53,10 +50,10 @@ impl Code {
                         Err(e) => return Err(e),
                     };
 
-                    let named = u32::deserialize(&mut deserializer)?;
+                    let named = decoder.decode::<u32>()?;
                     let name = if named != 0 {
-                        let first = u8::deserialize(&mut deserializer)?;
-                        let mut name = String::deserialize(&mut deserializer)?;
+                        let first = decoder.decode::<u8>()?;
+                        let mut name = decoder.decode::<String>()?;
                         if first != 0xff {
                             name.insert(0, first as char);
                         }
@@ -65,39 +62,35 @@ impl Code {
                         "".to_owned()
                     };
                     let properties = Properties::new(
-                        i32::deserialize(&mut deserializer)?,
-                        u32::deserialize(&mut deserializer)?,
-                        u32::deserialize(&mut deserializer)?,
-                        u32::deserialize(&mut deserializer)?,
-                        u32::deserialize(&mut deserializer)?,
-                        u32::deserialize(&mut deserializer)?,
-                        u32::deserialize(&mut deserializer)?,
+                        decoder.decode::<i32>()?,
+                        decoder.decode::<u32>()?,
+                        decoder.decode::<u32>()?,
+                        decoder.decode::<u32>()?,
+                        decoder.decode::<u32>()?,
+                        decoder.decode::<u32>()?,
+                        decoder.decode::<u32>()?,
                     );
                     let kind = if !properties.has_flag(Flag::ClassVar) {
                         match properties.get_kind() {
                             Kind::Float => {
-                                deserializer.len_queue.push(properties.get_count() as usize);
-                                SymbolKind::Float(<Vec<i32>>::deserialize(&mut deserializer)?)
+                                decoder.push_size(properties.get_count() as usize);
+                                SymbolKind::Float(decoder.decode::<Vec<i32>>()?)
                             }
                             Kind::Int => {
-                                deserializer.len_queue.push(properties.get_count() as usize);
-                                SymbolKind::Int(<Vec<i32>>::deserialize(&mut deserializer)?)
+                                decoder.push_size(properties.get_count() as usize);
+                                SymbolKind::Int(decoder.decode::<Vec<i32>>()?)
                             }
                             Kind::String => {
-                                deserializer.len_queue.push(properties.get_count() as usize);
-                                SymbolKind::String(<Vec<String>>::deserialize(&mut deserializer)?)
+                                decoder.push_size(properties.get_count() as usize);
+                                SymbolKind::String(decoder.decode::<Vec<String>>()?)
                             }
-                            Kind::Class => {
-                                SymbolKind::Class(u32::deserialize(&mut deserializer)? as usize)
-                            }
-                            Kind::Func => {
-                                SymbolKind::Func(u32::deserialize(&mut deserializer)? as usize)
-                            }
+                            Kind::Class => SymbolKind::Class(decoder.decode::<u32>()? as usize),
+                            Kind::Func => SymbolKind::Func(decoder.decode::<u32>()? as usize),
                             Kind::Prototype => {
-                                SymbolKind::Prototype(u32::deserialize(&mut deserializer)? as usize)
+                                SymbolKind::Prototype(decoder.decode::<u32>()? as usize)
                             }
                             Kind::Instance => {
-                                SymbolKind::Instance(u32::deserialize(&mut deserializer)? as usize)
+                                SymbolKind::Instance(decoder.decode::<u32>()? as usize)
                             }
                             Kind::Void => SymbolKind::Void,
                         }
@@ -106,22 +99,20 @@ impl Code {
                         SymbolKind::Void
                     };
 
-                    let parent = i32::deserialize(&mut deserializer)?;
+                    let parent = decoder.decode::<i32>()?;
 
                     table.insert(address as usize, Symbol { name, parent, kind });
                     Ok(table)
                 },
             )?;
 
-        let offset = deserializer.seek(SeekFrom::Current(0))? as usize;
-
-        let len = u32::deserialize(&mut deserializer)? as usize;
+        let offset = decoder.position()? as usize;
+        let len = decoder.decode::<u32>()? as usize;
 
         let mut memory_vec = vec![];
-        let _ = deserializer.read_to_end(&mut memory_vec)?;
+        let _ = decoder.read_to_end(&mut memory_vec)?;
 
         Ok(Self {
-            //deserializer,
             memory: Memory::new(memory_vec),
             symbol_table,
             len,

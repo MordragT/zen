@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{fs::File, io::BufReader};
 
 use bevy::{
     app::{App, Plugin},
@@ -25,7 +25,8 @@ impl Plugin for VdfsPlugin {
 
         let source = AssetSource::build().with_reader(move || {
             let file = File::open(path).unwrap();
-            Box::new(VdfsArchive::new(file).unwrap())
+            let reader = BufReader::new(file);
+            Box::new(VdfsArchive::from_reader(reader).unwrap())
         });
 
         app.register_asset_source(AssetSourceId::default(), source);

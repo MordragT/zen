@@ -1,40 +1,34 @@
 use super::error::*;
 use super::read::AsciiRead;
-use crate::binary::{BinaryDeserializer, BinaryRead};
+use crate::binary::{BinaryDecoder, BinaryRead};
 use serde::de::{self, Deserializer, Visitor};
 use std::convert::TryFrom;
 use std::io::{Read, Seek, SeekFrom};
 
 /// Deserialize Zengin Ascii Archives
-pub struct AsciiDeserializer<R> {
+pub struct AsciiDecoder<R> {
     pub(crate) parser: R,
 }
 
-impl<R: AsciiRead> From<R> for AsciiDeserializer<R> {
+impl<R: AsciiRead> From<R> for AsciiDecoder<R> {
     fn from(parser: R) -> Self {
         Self { parser }
     }
 }
 
-impl<R: BinaryRead + AsciiRead> From<BinaryDeserializer<R>> for AsciiDeserializer<R> {
-    fn from(b: BinaryDeserializer<R>) -> Self {
-        b.parser.into()
-    }
-}
-
-impl<R: AsciiRead> Read for AsciiDeserializer<R> {
+impl<R: AsciiRead> Read for AsciiDecoder<R> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.parser.read(buf)
     }
 }
 
-impl<R: AsciiRead> Seek for AsciiDeserializer<R> {
+impl<R: AsciiRead> Seek for AsciiDecoder<R> {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
         self.parser.seek(pos)
     }
 }
 
-impl<R: AsciiRead> AsciiDeserializer<R> {
+impl<R: AsciiRead> AsciiDecoder<R> {
     fn has_element(&mut self) -> AsciiResult<bool> {
         self.parser.consume_whitespaces()?;
         match self.parser.peek_tuple() {
@@ -45,7 +39,7 @@ impl<R: AsciiRead> AsciiDeserializer<R> {
     }
 }
 
-impl<'de, 'a, R: AsciiRead> Deserializer<'de> for &'a mut AsciiDeserializer<R> {
+impl<'de, 'a, R: AsciiRead> Deserializer<'de> for &'a mut AsciiDecoder<R> {
     type Error = AsciiError;
     fn deserialize_any<V>(self, _visitor: V) -> AsciiResult<V::Value>
     where
@@ -325,7 +319,7 @@ impl<'de, 'a, R: AsciiRead> Deserializer<'de> for &'a mut AsciiDeserializer<R> {
     }
 }
 
-impl<'de, 'a, R: AsciiRead> de::SeqAccess<'de> for AsciiDeserializer<R> {
+impl<'de, 'a, R: AsciiRead> de::SeqAccess<'de> for AsciiDecoder<R> {
     type Error = AsciiError;
 
     fn next_element_seed<T>(&mut self, seed: T) -> AsciiResult<Option<T::Value>>

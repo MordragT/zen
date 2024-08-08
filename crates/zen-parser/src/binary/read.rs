@@ -1,118 +1,175 @@
-use super::error::*;
-use std::{
-    io::{Read, Seek, SeekFrom},
-    mem,
-};
+use std::io::{self, SeekFrom};
 
-pub type BinaryReader = Box<dyn BinaryRead>;
+mod private {
+    pub trait Sealed {}
+}
 
-impl<R: Read + Seek> BinaryRead for R {}
+pub trait BinaryRead: private::Sealed {
+    /// Peek for next byte if present without advancing the reader
+    fn peek(&mut self) -> io::Result<Option<u8>>;
+    /// Consumes the next byte if present and returns its value
+    fn next(&mut self) -> io::Result<Option<u8>>;
+    /// Consumes the next chunk if present and returns its value
+    fn next_chunk<const N: usize>(&mut self) -> io::Result<Option<[u8; N]>>;
+    /// Fills the provided buffer with bytes
+    fn read_bytes(&mut self, buf: &mut [u8]) -> io::Result<()>;
+    /// Returns the current position
+    fn position(&mut self) -> io::Result<u64>;
+    /// Sets the position
+    fn set_position(&mut self, pos: u64) -> io::Result<()>;
+    /// Changes the current position by the given amount
+    fn offset_position(&mut self, n: i64) -> io::Result<()>;
+}
 
-/// Provides methods to read a binary archive
-pub trait BinaryRead: Read + Seek {
-    /// Peek for next byte without advancing the reader
-    fn peek(&mut self) -> BinaryResult<u8> {
-        let mut buf = [0_u8; mem::size_of::<u8>()];
-        self.read_exact(&mut buf)?;
-        self.seek(SeekFrom::Current(-(mem::size_of::<u8>() as i64)))?;
-        Ok(u8::from_le_bytes(buf))
+pub struct BinaryIoReader<R>
+where
+    R: io::BufRead + io::Seek,
+{
+    reader: R,
+}
+
+impl<R> BinaryIoReader<R>
+where
+    R: io::BufRead + io::Seek,
+{
+    pub fn new(reader: R) -> Self {
+        Self { reader }
     }
-    /// Consumes all whitespaces until a non whitespace char occurs
-    fn consume_whitespaces(&mut self) -> BinaryResult<()> {
-        loop {
-            let p = self.peek()?;
-            if p == b' ' || p == b'\r' || p == b'\t' || p == b'\n' || p == 0 {
-                self.seek(SeekFrom::Current(1))?;
-            } else {
-                break;
+}
+
+impl<R> private::Sealed for BinaryIoReader<R> where R: io::BufRead + io::Seek {}
+
+impl<R> BinaryRead for BinaryIoReader<R>
+where
+    R: io::BufRead + io::Seek,
+{
+    fn peek(&mut self) -> io::Result<Option<u8>> {
+        let mut buf = [0; 1];
+
+        match self.reader.read(&mut buf)? {
+            0 => Ok(None),
+            _ => {
+                self.reader.seek_relative(-1)?;
+                Ok(Some(u8::from_le_bytes(buf)))
             }
         }
+    }
+
+    fn next(&mut self) -> io::Result<Option<u8>> {
+        let mut buf = [0; 1];
+
+        match self.reader.read(&mut buf)? {
+            0 => Ok(None),
+            _ => Ok(Some(u8::from_le_bytes(buf))),
+        }
+    }
+
+    fn next_chunk<const N: usize>(&mut self) -> io::Result<Option<[u8; N]>> {
+        let mut buf = [0; N];
+
+        match self.reader.read_exact(&mut buf) {
+            Ok(()) => Ok(Some(buf)),
+            Err(e) => {
+                if e.kind() == io::ErrorKind::UnexpectedEof {
+                    Ok(None)
+                } else {
+                    Err(e.into())
+                }
+            }
+        }
+    }
+
+    fn read_bytes(&mut self, buf: &mut [u8]) -> io::Result<()> {
+        self.reader.read_exact(buf)?;
         Ok(())
     }
-    /// Consumes a bool value and returns its value
-    fn bool(&mut self) -> BinaryResult<bool> {
-        let val = self.u8()?;
-        match val {
-            0 => Ok(false),
-            1 => Ok(true),
-            _ => Err(BinaryError::ExpectedBool),
+
+    fn position(&mut self) -> io::Result<u64> {
+        let pos = self.reader.stream_position()?;
+        Ok(pos)
+    }
+
+    fn set_position(&mut self, pos: u64) -> io::Result<()> {
+        self.reader.seek(SeekFrom::Start(pos))?;
+        Ok(())
+    }
+
+    fn offset_position(&mut self, n: i64) -> io::Result<()> {
+        self.reader.seek_relative(n)?;
+        Ok(())
+    }
+}
+
+pub struct BinarySliceReader<'a> {
+    slice: &'a [u8],
+    position: usize,
+}
+
+impl<'a> BinarySliceReader<'a> {
+    pub fn new(slice: &'a [u8]) -> Self {
+        Self { slice, position: 0 }
+    }
+}
+
+impl<'a> private::Sealed for BinarySliceReader<'a> {}
+
+impl<'a> BinaryRead for BinarySliceReader<'a> {
+    fn peek(&mut self) -> io::Result<Option<u8>> {
+        Ok(if self.position < self.slice.len() {
+            Some(self.slice[self.position])
+        } else {
+            None
+        })
+    }
+
+    fn next(&mut self) -> io::Result<Option<u8>> {
+        Ok(if self.position < self.slice.len() {
+            self.position += 1;
+            Some(self.slice[self.position])
+        } else {
+            None
+        })
+    }
+
+    fn next_chunk<const N: usize>(&mut self) -> io::Result<Option<[u8; N]>> {
+        let end = self.position + N;
+
+        Ok(if end <= self.slice.len() {
+            let chunk = self.slice[self.position..end].try_into().unwrap();
+            self.position += N;
+            Some(chunk)
+        } else {
+            None
+        })
+    }
+
+    fn read_bytes(&mut self, buf: &mut [u8]) -> io::Result<()> {
+        let end = self.position + buf.len();
+
+        if end <= self.slice.len() {
+            let chunk = &self.slice[self.position..end];
+            self.position += buf.len();
+            buf.copy_from_slice(chunk);
+            Ok(())
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "Unable to fill the provided buffer",
+            ))
         }
     }
-    /// Consumes a char value and returns its value
-    fn char(&mut self) -> BinaryResult<char> {
-        let val = self.u8()?;
-        Ok(val as char)
+
+    fn position(&mut self) -> io::Result<u64> {
+        Ok(self.position as u64)
     }
-    /// Consumes an u8 value and returns its value
-    fn u8(&mut self) -> BinaryResult<u8> {
-        let mut buf = [0_u8; mem::size_of::<u8>()];
-        self.read_exact(&mut buf)?;
-        Ok(u8::from_le_bytes(buf))
+
+    fn set_position(&mut self, pos: u64) -> io::Result<()> {
+        self.position = pos as usize;
+        Ok(())
     }
-    /// Consumes an u16 value and returns its value
-    fn u16(&mut self) -> BinaryResult<u16> {
-        let mut buf = [0_u8; mem::size_of::<u16>()];
-        self.read_exact(&mut buf)?;
-        Ok(u16::from_le_bytes(buf))
-    }
-    /// Consumes an u32 value and returns its value
-    fn u32(&mut self) -> BinaryResult<u32> {
-        let mut buf = [0_u8; mem::size_of::<u32>()];
-        self.read_exact(&mut buf)?;
-        Ok(u32::from_le_bytes(buf))
-    }
-    /// Consumes an u64 value and returns its value
-    fn u64(&mut self) -> BinaryResult<u64> {
-        let mut buf = [0_u8; mem::size_of::<u64>()];
-        self.read_exact(&mut buf)?;
-        Ok(u64::from_le_bytes(buf))
-    }
-    /// Consumes an i8 value and returns its value
-    fn i8(&mut self) -> BinaryResult<i8> {
-        let mut buf = [0_u8; mem::size_of::<i8>()];
-        self.read_exact(&mut buf)?;
-        Ok(i8::from_le_bytes(buf))
-    }
-    /// Consumes an i16 value and returns its value
-    fn i16(&mut self) -> BinaryResult<i16> {
-        let mut buf = [0_u8; mem::size_of::<i16>()];
-        self.read_exact(&mut buf)?;
-        Ok(i16::from_le_bytes(buf))
-    }
-    /// Consumes an i32 value and returns its value
-    fn i32(&mut self) -> BinaryResult<i32> {
-        let mut buf = [0_u8; mem::size_of::<i32>()];
-        self.read_exact(&mut buf)?;
-        Ok(i32::from_le_bytes(buf))
-    }
-    /// Consumes an i64 value and returns its value
-    fn i64(&mut self) -> BinaryResult<i64> {
-        let mut buf = [0_u8; mem::size_of::<i64>()];
-        self.read_exact(&mut buf)?;
-        Ok(i64::from_le_bytes(buf))
-    }
-    /// Consumes an f32 value and returns its value
-    fn f32(&mut self) -> BinaryResult<f32> {
-        let mut buf = [0_u8; mem::size_of::<f32>()];
-        self.read_exact(&mut buf)?;
-        Ok(f32::from_le_bytes(buf))
-    }
-    /// Consumes an f64 value and returns its value
-    fn f64(&mut self) -> BinaryResult<f64> {
-        let mut buf = [0_u8; mem::size_of::<f64>()];
-        self.read_exact(&mut buf)?;
-        Ok(f64::from_le_bytes(buf))
-    }
-    /// Consumes a string value and returns its value
-    fn string(&mut self) -> BinaryResult<String> {
-        let mut res = String::new();
-        loop {
-            match self.u8()? {
-                0 | 10 => return Ok(res),
-                x if x > 0 && x < 128 => res.push(x as char),
-                x => return Err(BinaryError::ExpectedAsciiChar(x)),
-                //x => res.push(x as char),
-            }
-        }
+
+    fn offset_position(&mut self, n: i64) -> io::Result<()> {
+        self.position += n as usize;
+        Ok(())
     }
 }

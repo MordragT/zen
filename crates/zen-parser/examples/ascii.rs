@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use std::fs::File;
-use zen_parser::prelude::{read_header, AsciiDeserializer};
+use zen_parser::prelude::{read_header, AsciiDecoder};
 
 #[derive(Deserialize, Debug)]
 struct LensFlareFX {
@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut file =
         File::open("/home/tom/Git/Rust/zen-loader/crates/zen-parser/examples/example.zen")?;
     let header = read_header(&mut file)?;
-    let mut de = AsciiDeserializer::from(file);
+    let mut de = AsciiDecoder::from(file);
     let lens_flare = LensFlareFX::deserialize(&mut de)?;
     println!("{:?}", lens_flare);
     Ok(())
