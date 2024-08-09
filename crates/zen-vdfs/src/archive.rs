@@ -1,7 +1,7 @@
 use core::fmt;
 use std::{io, sync::Mutex};
 
-use zen_parser::binary::{BinaryDecoder, BinaryIoReader, BinaryRead, BinarySliceReader};
+use zen_parser::binary::{BinaryBytesReader, BinaryDecoder, BinaryIoReader, BinaryRead};
 
 use crate::{
     entry::{VdfsEntries, VdfsEntry},
@@ -51,9 +51,9 @@ where
     }
 }
 
-impl<'a> VdfsArchive<BinarySliceReader<'a>> {
-    pub fn from_slice(slice: &'a [u8]) -> VdfsResult<Self> {
-        let decoder = BinaryDecoder::from_slice(slice);
+impl VdfsArchive<BinaryBytesReader> {
+    pub fn from_bytes(bytes: impl Into<Vec<u8>>) -> VdfsResult<Self> {
+        let decoder = BinaryDecoder::from_bytes(bytes);
         Self::from_decoder(decoder)
     }
 }
@@ -107,58 +107,5 @@ impl<H> fmt::Display for VdfsArchive<H> {
         }
 
         self.header.fmt(f)
-    }
-}
-
-#[cfg(feature = "bevy")]
-mod bevy {
-    use bevy::{
-        asset::io::{AssetReader, AssetReaderError, PathStream, Reader},
-        tasks::futures_lite::io::Cursor,
-        utils::ConditionalSendFuture,
-    };
-    use std::path::Path;
-    use zen_parser::binary::BinaryRead;
-
-    use super::VdfsArchive;
-
-    impl<H: BinaryRead + Send + Sync + 'static> AssetReader for VdfsArchive<H> {
-        fn read<'a>(
-            &'a self,
-            path: &'a Path,
-        ) -> impl ConditionalSendFuture<Output = Result<Box<Reader<'a>>, AssetReaderError>>
-        {
-            Box::pin(async move {
-                let entry = self
-                    .get(path.to_string_lossy())
-                    .ok_or(AssetReaderError::NotFound(path.to_owned()))?;
-                let data = self.fetch(&entry)?;
-
-                Ok(Box::new(Cursor::new(data)) as Box<Reader<'a>>)
-            })
-        }
-
-        fn read_meta<'a>(
-            &'a self,
-            _path: &'a Path,
-        ) -> impl ConditionalSendFuture<Output = Result<Box<Reader<'a>>, AssetReaderError>>
-        {
-            Box::pin(async { unimplemented!() })
-        }
-
-        fn read_directory<'a>(
-            &'a self,
-            _path: &'a Path,
-        ) -> impl ConditionalSendFuture<Output = Result<Box<PathStream>, AssetReaderError>>
-        {
-            Box::pin(async { unimplemented!() })
-        }
-
-        fn is_directory<'a>(
-            &'a self,
-            _path: &'a Path,
-        ) -> impl ConditionalSendFuture<Output = Result<bool, AssetReaderError>> {
-            Box::pin(async { Ok(false) })
-        }
     }
 }

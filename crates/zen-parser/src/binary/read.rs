@@ -100,32 +100,35 @@ where
     }
 }
 
-pub struct BinarySliceReader<'a> {
-    slice: &'a [u8],
+pub struct BinaryBytesReader {
+    bytes: Vec<u8>,
     position: usize,
 }
 
-impl<'a> BinarySliceReader<'a> {
-    pub fn new(slice: &'a [u8]) -> Self {
-        Self { slice, position: 0 }
+impl BinaryBytesReader {
+    pub fn new(bytes: impl Into<Vec<u8>>) -> Self {
+        Self {
+            bytes: bytes.into(),
+            position: 0,
+        }
     }
 }
 
-impl<'a> private::Sealed for BinarySliceReader<'a> {}
+impl private::Sealed for BinaryBytesReader {}
 
-impl<'a> BinaryRead for BinarySliceReader<'a> {
+impl BinaryRead for BinaryBytesReader {
     fn peek(&mut self) -> io::Result<Option<u8>> {
-        Ok(if self.position < self.slice.len() {
-            Some(self.slice[self.position])
+        Ok(if self.position < self.bytes.len() {
+            Some(self.bytes[self.position])
         } else {
             None
         })
     }
 
     fn next(&mut self) -> io::Result<Option<u8>> {
-        Ok(if self.position < self.slice.len() {
+        Ok(if self.position < self.bytes.len() {
             self.position += 1;
-            Some(self.slice[self.position])
+            Some(self.bytes[self.position])
         } else {
             None
         })
@@ -134,8 +137,8 @@ impl<'a> BinaryRead for BinarySliceReader<'a> {
     fn next_chunk<const N: usize>(&mut self) -> io::Result<Option<[u8; N]>> {
         let end = self.position + N;
 
-        Ok(if end <= self.slice.len() {
-            let chunk = self.slice[self.position..end].try_into().unwrap();
+        Ok(if end <= self.bytes.len() {
+            let chunk = self.bytes[self.position..end].try_into().unwrap();
             self.position += N;
             Some(chunk)
         } else {
@@ -146,8 +149,8 @@ impl<'a> BinaryRead for BinarySliceReader<'a> {
     fn read_bytes(&mut self, buf: &mut [u8]) -> io::Result<()> {
         let end = self.position + buf.len();
 
-        if end <= self.slice.len() {
-            let chunk = &self.slice[self.position..end];
+        if end <= self.bytes.len() {
+            let chunk = &self.bytes[self.position..end];
             self.position += buf.len();
             buf.copy_from_slice(chunk);
             Ok(())

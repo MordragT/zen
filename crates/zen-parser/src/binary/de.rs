@@ -2,7 +2,7 @@ use crate::binsafe::BinSafeHeader;
 use crate::header::{ArchiveHeader, ArchiveKind};
 
 use super::read::BinaryRead;
-use super::{error::*, BinaryIoReader, BinarySliceReader};
+use super::{error::*, BinaryBytesReader, BinaryIoReader};
 use serde::de::{Deserializer, Visitor};
 use serde::Deserialize;
 use std::io;
@@ -43,10 +43,10 @@ where
     }
 }
 
-impl<'a> BinaryDecoder<BinarySliceReader<'a>> {
-    pub fn from_slice(slice: &'a [u8]) -> Self {
+impl BinaryDecoder<BinaryBytesReader> {
+    pub fn from_bytes(bytes: impl Into<Vec<u8>>) -> Self {
         Self {
-            reader: BinarySliceReader::new(slice),
+            reader: BinaryBytesReader::new(bytes),
             size_stack: Vec::new(),
         }
     }

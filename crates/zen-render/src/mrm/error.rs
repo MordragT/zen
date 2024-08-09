@@ -4,6 +4,8 @@ use thiserror::Error;
 use zen_parser::ascii;
 use zen_parser::binary;
 
+use crate::material::ZMatError;
+
 #[derive(Error, Debug)]
 pub enum MrmError {
     #[error("{0}")]
@@ -18,6 +20,10 @@ pub enum MrmError {
     ExpectedIdentifier(String),
     #[error("Unexpected header id: {0}")]
     UnexpectedHeaderId(u16),
+    #[error("Unknown version: {0}")]
+    UnknownVersion(u16),
+    #[error(transparent)]
+    Material(#[from] ZMatError),
 }
 
 impl de::Error for MrmError {

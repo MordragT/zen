@@ -13,15 +13,6 @@ use std::collections::{HashMap, VecDeque};
 #[cfg(feature = "gltf-json")]
 pub mod gltf;
 
-#[repr(C)]
-#[derive(Clone, Debug, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-/// A simple Vertex
-pub struct Vertex {
-    pub position: [f32; 3],
-    pub normal: [f32; 3],
-    pub tex_coords: [f32; 2],
-}
-
 // #[derive(Bundle, Clone, TypeUuid, Default)]
 // #[uuid = "2e393245-9977-43a8-97f2-2a0d54700b9d"]
 // pub struct ZenModelBundle {
@@ -152,58 +143,6 @@ impl From<ZenMesh> for Mesh {
 // }
 
 impl ZenMesh {
-    pub fn plane(size: f32) -> Self {
-        let vertices = vec![
-            Vertex {
-                position: [0.0, 0.0, 0.0],
-                tex_coords: [0.0, 0.0],
-                normal: [0.0, 0.0, 0.0],
-            },
-            Vertex {
-                position: [size, 0.0, 0.0],
-                tex_coords: [1.0, 0.0],
-                normal: [1.0, 0.0, 0.0],
-            },
-            Vertex {
-                position: [0.0, 0.0, size],
-                tex_coords: [0.0, 1.0],
-                normal: [0.0, 0.0, 1.0],
-            },
-            Vertex {
-                position: [size, 0.0, size],
-                tex_coords: [1.0, 1.0],
-                normal: [1.0, 0.0, 1.0],
-            },
-        ];
-
-        let indices = vec![0, 1, 2, 1, 3, 2];
-        Self { vertices, indices }
-    }
-
-    pub fn extreme_coordinates(&self) -> (Vec3<f32>, Vec3<f32>) {
-        self.vertices.iter().fold(
-            (
-                Vec3::new(std::f32::MAX, std::f32::MAX, std::f32::MAX),
-                Vec3::new(std::f32::MIN, std::f32::MIN, std::f32::MIN),
-            ),
-            |(mut min, mut max), vertex| {
-                let pos = Vec3::from(vertex.position);
-                min.min(&pos);
-                max.max(&pos);
-                (min, max)
-            },
-        )
-    }
-
-    pub fn scale(&mut self, factor: f32) {
-        //let origin = self.positions[0];
-        for vertex in self.vertices.iter_mut() {
-            vertex.position[0] *= factor;
-            vertex.position[1] *= factor;
-            vertex.position[2] *= factor;
-        }
-    }
-
     // TODO not working
     pub fn pack(self) -> Self {
         let ZenMesh { vertices, indices } = self;

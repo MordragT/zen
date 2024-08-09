@@ -12,7 +12,15 @@ keywords = ["gothic", "zen", "game-engine", "data-formats", "loader"]
 [workspace]
 members = ["crates/*"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_repr = "0.1"
+thiserror = "1.0"
+bevy = "0.14.1"
+image = "0.25"
+gltf-json = "1.4"
+gltf = "1.4"
+
 
 [dependencies]
 zen-core = { path = "crates/zen-core" }

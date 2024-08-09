@@ -6,10 +6,12 @@ pub enum ZTexError {
     WrongSignature,
     #[error("Wrong ZTEX version")]
     WrongVersion,
-    #[error("ZTEX Binary Error: {0}")]
+    #[error(transparent)]
     Binary(#[from] zen_parser::binary::BinaryError),
-    #[error("ZTEX IO Error: {0}")]
+    #[error(transparent)]
     Io(#[from] std::io::Error),
+    #[error(transparent)]
+    Image(#[from] image::ImageError),
 }
 
 pub type ZTexResult<T> = Result<T, ZTexError>;

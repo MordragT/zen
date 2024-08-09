@@ -1,6 +1,8 @@
+mod error;
 mod header;
 mod kind;
 mod material;
 
-pub use kind::ZenMaterialKind;
-pub use material::ZenMaterial;
+pub use error::*;
+pub use kind::ZMatKind;
+pub use material::ZMat;

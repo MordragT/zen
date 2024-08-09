@@ -2,10 +2,7 @@ use std::{fs::File, io::BufReader};
 
 use bevy::{
     app::{App, Plugin},
-    asset::{
-        io::{AssetSource, AssetSourceId},
-        AssetApp, AssetPlugin,
-    },
+    asset::{io::AssetSource, AssetApp, AssetPlugin},
 };
 
 use crate::VdfsArchive;
@@ -13,6 +10,7 @@ use crate::VdfsArchive;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct VdfsPlugin {
     pub path: &'static str,
+    pub id: &'static str,
 }
 
 impl Plugin for VdfsPlugin {
@@ -22,6 +20,7 @@ impl Plugin for VdfsPlugin {
         }
 
         let path = self.path;
+        let id = self.id;
 
         let source = AssetSource::build().with_reader(move || {
             let file = File::open(path).unwrap();
@@ -29,6 +28,6 @@ impl Plugin for VdfsPlugin {
             Box::new(VdfsArchive::from_reader(reader).unwrap())
         });
 
-        app.register_asset_source(AssetSourceId::default(), source);
+        app.register_asset_source(id, source);
     }
 }

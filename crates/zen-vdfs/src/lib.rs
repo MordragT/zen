@@ -23,14 +23,13 @@
 //! ```
 
 mod archive;
+mod asset_reader;
 mod entry;
 mod header;
-#[cfg(feature = "bevy")]
 mod plugin;
 
 pub mod error;
 
 pub use archive::VdfsArchive;
 pub use entry::VdfsEntry;
-#[cfg(feature = "bevy")]
 pub use plugin::VdfsPlugin;

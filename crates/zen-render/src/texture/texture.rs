@@ -1,8 +1,8 @@
 use std::{fmt, io};
 
-use zen_parser::binary::{BinaryDecoder, BinaryIoReader, BinaryRead, BinarySliceReader};
+use zen_parser::binary::{BinaryBytesReader, BinaryDecoder, BinaryIoReader, BinaryRead};
 
-use crate::{
+use super::{
     error::{ZTexError, ZTexResult},
     format::ZTexFormat,
     header::ZTexHeader,
@@ -35,9 +35,9 @@ impl<R> ZTex<R> {
     }
 }
 
-impl<'a> ZTex<BinarySliceReader<'a>> {
-    pub fn from_slice(slice: &'a [u8]) -> ZTexResult<Self> {
-        let decoder = BinaryDecoder::from_slice(slice);
+impl ZTex<BinaryBytesReader> {
+    pub fn from_bytes(bytes: impl Into<Vec<u8>>) -> ZTexResult<Self> {
+        let decoder = BinaryDecoder::from_bytes(bytes);
         Self::from_decoder(decoder)
     }
 }
@@ -88,7 +88,6 @@ impl<H> fmt::Display for ZTex<H> {
     }
 }
 
-#[cfg(feature = "encode")]
 impl<H: BinaryRead> ZTex<H> {
     pub fn encode<E: image::ImageEncoder>(&mut self, encoder: E) -> image::ImageResult<()> {
         use texpresso::Format;
@@ -194,7 +193,6 @@ impl<H: BinaryRead> ZTex<H> {
     }
 }
 
-#[cfg(feature = "bevy")]
 impl<H: BinaryRead> TryFrom<ZTex<H>> for bevy::prelude::Image {
     type Error = ZTexError;
 

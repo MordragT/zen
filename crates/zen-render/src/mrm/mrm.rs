@@ -1,8 +1,12 @@
-use zen_parser::{binary::BinaryResult, prelude::*};
+use std::io;
 
-use super::{header::*, sub_mesh::*, MrmResult};
+use bevy::asset::LoadContext;
+use gltf_json as json;
+use zen_parser::prelude::*;
+
+use super::{header::*, mesh::*, MrmResult};
 use crate::{
-    material::ZenMaterial,
+    material::{ZMat, ZMatResult},
     math::{Vec2, Vec3, Vec4},
 };
 
@@ -12,14 +16,28 @@ use crate::{
 pub struct Mrm {
     pub vertices: Vec<Vec3<f32>>,
     pub normals: Vec<Vec3<f32>>,
-    pub sub_meshes: Vec<SubMesh>,
+    pub materials: Vec<ZMat>,
+    pub meshes: Vec<MrmMesh>,
     pub alpha_test: bool,
     pub bounding_box: (Vec3<f32>, Vec3<f32>),
 }
 
 impl Mrm {
+    pub fn from_reader<R>(reader: R) -> MrmResult<Self>
+    where
+        R: io::BufRead + io::Seek,
+    {
+        let mut decoder = BinaryDecoder::from_reader(reader);
+        Self::from_decoder(&mut decoder)
+    }
+
+    pub fn from_bytes(bytes: impl Into<Vec<u8>>) -> MrmResult<Self> {
+        let mut decoder = BinaryDecoder::from_bytes(bytes);
+        Self::from_decoder(&mut decoder)
+    }
+
     /// Creates a new mutli resolution mesh from a reader
-    pub fn from_decoder<R>(decoder: &mut BinaryDecoder<R>) -> MrmResult<Mrm>
+    pub fn from_decoder<R>(decoder: &mut BinaryDecoder<R>) -> MrmResult<Self>
     where
         R: BinaryRead,
     {
@@ -29,17 +47,17 @@ impl Mrm {
         let data_pos = decoder.position()?;
         decoder.offset_position(header.size as i64)?;
 
-        let sub_mesh_count = decoder.decode::<u8>()?;
+        let mesh_count = decoder.decode::<u8>()?;
         let offsets = decoder.decode::<Offsets>()?;
 
-        decoder.push_size(sub_mesh_count as usize);
-        let sub_mesh_offsets = decoder.decode::<Vec<SubMeshOffsets>>()?;
+        decoder.push_size(mesh_count as usize);
+        let mesh_offsets = decoder.decode::<Vec<SubMeshOffsets>>()?;
 
         let _header = decoder.decode_header()?;
 
-        let mut materials = (0..sub_mesh_count)
-            .map(|_| ZenMaterial::from_decoder(decoder))
-            .collect::<BinaryResult<Vec<ZenMaterial>>>()?;
+        let materials = (0..mesh_count)
+            .map(|_| ZMat::from_decoder(decoder))
+            .collect::<ZMatResult<Vec<ZMat>>>()?;
 
         // TODO gothic 1 should not read byte
         let alpha_test = decoder.decode::<bool>()?;
@@ -56,7 +74,7 @@ impl Mrm {
         decoder.push_size(offsets.normal.size as usize);
         let normals = decoder.decode::<Vec<Vec3<f32>>>()?;
 
-        let sub_meshes = sub_mesh_offsets
+        let meshes = mesh_offsets
             .into_iter()
             .map(|offset| {
                 decoder.set_position(data_pos + offset.triangles.offset as u64)?;
@@ -95,8 +113,7 @@ impl Mrm {
                 decoder.push_size(offset.wedge_map.size as usize);
                 let wedge_map = decoder.decode::<Vec<u16>>()?;
 
-                Ok(SubMesh {
-                    material: materials.remove(0),
+                Ok(MrmMesh {
                     triangles,
                     wedges,
                     colors,
@@ -108,16 +125,23 @@ impl Mrm {
                     edge_scores,
                 })
             })
-            .collect::<MrmResult<Vec<SubMesh>>>()?;
+            .collect::<MrmResult<Vec<MrmMesh>>>()?;
 
         decoder.set_position(data_pos + header.chunk_length())?;
 
         Ok(Self {
             vertices,
             normals,
-            sub_meshes,
+            materials,
+            meshes,
             alpha_test,
             bounding_box,
         })
+    }
+}
+
+impl Mrm {
+    pub fn into_gltf(self, load_context: &mut LoadContext<'_>) -> json::Root {
+        todo!()
     }
 }

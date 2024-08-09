@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use zen_core::GameKind;
 
 use super::{MrmError, MrmResult};
 
@@ -11,14 +12,29 @@ pub(crate) struct MrmHeader {
 }
 
 impl MrmHeader {
-    const PROG_MESH: u16 = 45312;
-    //const PROG_MESH_END: u16 = 45567;
+    const PROG_MESH: u16 = 0xB100;
+    //const PROG_MESH_END: u16 = 0xB1FF;
+
+    const MRM_VERSION_G1: u16 = 0x305;
+    const MRM_VERSION_G2: u16 = 0x905;
 
     pub(crate) fn validate(&self) -> MrmResult<()> {
         if self.id != Self::PROG_MESH {
             Err(MrmError::UnexpectedHeaderId(self.id))
+        } else if self.kind() == GameKind::Unknown {
+            Err(MrmError::UnknownVersion(self.version))
         } else {
             Ok(())
+        }
+    }
+
+    pub(crate) fn kind(&self) -> GameKind {
+        if self.version == Self::MRM_VERSION_G1 {
+            GameKind::Gothic1
+        } else if self.version == Self::MRM_VERSION_G2 {
+            GameKind::Gothic2
+        } else {
+            GameKind::Unknown
         }
     }
 
@@ -27,19 +43,19 @@ impl MrmHeader {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 pub(crate) struct Offset {
     pub offset: u32,
     pub size: u32,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 pub(crate) struct Offsets {
     pub position: Offset,
     pub normal: Offset,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 pub(crate) struct SubMeshOffsets {
     pub triangles: Offset,
     pub wedges: Offset,

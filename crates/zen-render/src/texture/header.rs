@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::{cmp, fmt};
 
-use crate::{
+use super::{
     error::{ZTexError, ZTexResult},
     format::ZTexFormat,
 };
@@ -9,7 +9,7 @@ use crate::{
 /// File Header
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 pub(crate) struct ZTexHeader {
-    pub signature: u32,
+    pub signature: [u8; 4],
     pub version: u32,
     pub format: ZTexFormat,
     pub width: u32,        // mipmap 0
@@ -21,10 +21,7 @@ pub(crate) struct ZTexHeader {
 }
 
 impl ZTexHeader {
-    /// 'XETZ' (little-endian)
-    const FILE_SIGNATURE: u32 = 0x5845545A;
-    // /// 'ZTEX' (big-endian)
-    // const FILE_SIGNATURE: usize = 0x5A544558;
+    const FILE_SIGNATURE: [u8; 4] = *b"ZTEX";
     const FILE_VERSION: u32 = 0x0;
 
     pub fn validate(&self) -> ZTexResult<()> {
@@ -90,7 +87,7 @@ impl fmt::Display for ZTexHeader {
             avg_color: _,
         } = self;
 
-        write!(f, "Signature: {signature}\n")?;
+        write!(f, "Signature: {}\n", String::from_utf8_lossy(signature))?;
         write!(f, "Version: {version}\n")?;
         write!(f, "Format: {format}\n")?;
         write!(f, "Width: {width}\n")?;

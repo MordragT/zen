@@ -1,6 +1,9 @@
+mod asset;
 mod error;
 mod header;
+mod mesh;
 mod mrm;
-mod sub_mesh;
 
 pub use error::*;
+pub use mesh::*;
+pub use mrm::Mrm;

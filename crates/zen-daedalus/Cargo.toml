@@ -8,4 +8,4 @@ edition = "2021"
 
 [dependencies]
 zen-parser = { path = "../zen-parser" }
-serde = { version = "1.0", features = ["derive"] }
+serde.workspace = true

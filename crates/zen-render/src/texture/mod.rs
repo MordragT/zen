@@ -1,5 +1,3 @@
-#![feature(array_chunks)]
-
 //! Definitions for compressed ZenGin Textures (.tex)
 //! Gothic stores its textures in a proprietary format called ZTEX, which is basically DDS
 //! with a different Header and some minor other modifications.
@@ -12,11 +10,15 @@
 
 //! In case there is no such compiled ZTEX file, we will try to load the original TGA file instead.
 
+mod asset_loader;
 mod format;
 mod header;
+mod plugin;
 mod texture;
 
 pub mod error;
 
+pub use asset_loader::*;
 pub use format::ZTexFormat;
+pub use plugin::ZTexPlugin;
 pub use texture::ZTex;

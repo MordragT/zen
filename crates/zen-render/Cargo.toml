@@ -8,21 +8,19 @@ edition = "2021"
 
 [dependencies]
 zen-parser = { path = "../zen-parser" }
-bytemuck = "1.16"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_repr = "0.1"
-thiserror = "1.0"
-miette = "7.2"
-image = "0.25"
+zen-core = { path = "../zen-core" }
+serde.workspace = true
+serde_repr.workspace = true
+thiserror.workspace = true
+gltf.workspace = true
+gltf-json.workspace = true
+bevy.workspace = true
+image.workspace = true
 texpresso = "2.0"
-walkdir = "2"
-bevy = { version = "0.14.1", optional = true }
-gltf = { version = "1.4", optional = true }
-gltf-json = { version = "1.4", optional = true }
+bytemuck = "1.16"
+# serde_json = "1.0"
+# miette = "7.2"
+# walkdir = "2"
 
 [dev-dependencies]
-gltf = "1.4"
-
-[features]
-default = ["gltf", "gltf-json", "bevy"]
+zen-vdfs = { path = "../zen-vdfs" }
